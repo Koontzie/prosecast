@@ -680,8 +680,7 @@ async function playChapter(slug, chapterIdx) {
   }
 
   // Load audio
-  const wavFile = `${slug}_ch${chapterIdx}.wav`;
-  audioEl.src = `/audio/${wavFile}`;
+  audioEl.src = `/audio/${slug}/ch${chapterIdx}.wav`;
   audioEl.load();
   await audioEl.play();
   playPauseBtn.disabled = false;

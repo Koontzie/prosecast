@@ -9,7 +9,10 @@ __pycache__/
 # Books: copyrighted EPUBs stay local
 books/
 
-# Generated output: renders, IR, voice maps (5+ GB; IR backed up separately)
+# Per-book library: IR, voice maps, journals, renders (contains full book text)
+library/
+
+# Legacy flat output dir (pre-2026-06-10 layout; leftovers only)
 output/
 
 # macOS

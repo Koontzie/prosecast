@@ -4,16 +4,17 @@
 **Updated:** 2026-06-10
 
 ## Where it's at
-Pipeline solid (99.8% attribution on Parade; tagging validated on Frankenstein, zero errors). This session: project hygiene — git initialized, stray file removed, requirements.txt + tests added, corrections journal wired into server.py. GitHub push still pending.
+Pipeline solid (99.8% attribution on Parade; tagging validated on Frankenstein, zero errors). This session: git initialized (3+ commits), requirements.txt + golden tests added, corrections journal wired in, and output/ restructured into per-book `library/<slug>/` (all paths via `prosecast/library.py`). 5.5GB of disposable test renders deleted. GitHub push still pending.
 
 ## Next step
-Create `Koontzie/prosecast` on GitHub and push (PAT in 1Password: "GitHub PAT — CLAIY+Mac").
+Create `Koontzie/prosecast` on GitHub and push (PAT in 1Password: "GitHub PAT — CLAIY+Mac"). Then: M4B chapterized export (agreed next build).
 
 ## Blocked on
 Nothing — GitHub push just needs Tyler at the keyboard for the PAT.
 
 ## Notes
-- Run tests after touching attribution layers: `.venv/bin/pytest tests/ -v`
-- Corrections journal: `output/{slug}_corrections.jsonl` — append-only, training flywheel data, never rewrite
-- Agreed roadmap (not yet built): library/ restructure of output/, pipeline-in-UI jobs, cast review screen, per-chapter narrator dropdown, m4b export
-- output/ is ~5.8 GB, mostly disposable `say`-engine test renders; IR JSONs + voice maps + corrections journals are the precious part
+- Run tests after touching attribution layers: `.venv/bin/pytest tests/ -v` (needs spaCy + en_core_web_sm; skips otherwise)
+- All book paths via `prosecast/library.py` — `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/}`
+- corrections.jsonl is append-only training flywheel data — never rewrite
+- renders/ is disposable; everything else in a book dir is Tyler's labor — back it up
+- Build queue after M4B: cast review screen, pipeline-in-UI jobs, per-chapter narrator dropdown

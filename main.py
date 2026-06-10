@@ -16,10 +16,12 @@ What it does:
   3. Synthesizes audio per block using the best available TTS
   4. Merges blocks into a final chapter .wav/.mp3 file
 
-Outputs (all in ./output/):
-  output/<bookname>_ir.json          — the full IR
-  output/<bookname>_ch0_blocks/      — individual block audio files
-  output/<bookname>_ch0.wav          — final chapter audio
+Outputs (per-book library layout — see prosecast/library.py):
+  library/<slug>/ir.json               — the full IR
+  library/<slug>/voice_map.json        — character→voice assignments
+  library/<slug>/corrections.jsonl     — append-only correction journal
+  library/<slug>/renders/ch0.wav       — final chapter audio
+  library/<slug>/renders/ch0_blocks/   — individual block audio files
 """
 
 import argparse
@@ -40,7 +42,9 @@ from prosecast.ir_generator import migrate_ir
 from prosecast.tag_generator import tag_ir, check_gideon
 
 
-OUTPUT_DIR = Path(__file__).parent / "output"
+from prosecast import library as lib
+
+BOOKS_DIR = Path(__file__).parent / "books"
 
 
 # ---------------------------------------------------------------------------
@@ -86,7 +90,7 @@ def print_ir_report(ir_data: dict):
 def generate_audio(ir_data: dict, chapter_index: int, book_slug: str, tts_override: str = None, ir_path: str = None):
     engine = TTSEngine(engine=tts_override)
 
-    voice_map_path = OUTPUT_DIR / f"{book_slug}_voice_map.json"
+    voice_map_path = lib.voice_map_path(book_slug)
     if voice_map_path.exists():
         with open(voice_map_path) as f:
             engine.load_voice_map(json.load(f).get("map", {}))
@@ -95,7 +99,7 @@ def generate_audio(ir_data: dict, chapter_index: int, book_slug: str, tts_overri
     chapter = ir_data['chapters'][chapter_index]
     blocks = chapter['blocks']
 
-    blocks_dir = OUTPUT_DIR / f"{book_slug}_ch{chapter_index}_blocks"
+    blocks_dir = lib.chapter_blocks_dir(book_slug, chapter_index)
     blocks_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"\n[Audio] Generating {len(blocks)} blocks for '{chapter['title']}'...")
@@ -118,7 +122,7 @@ def generate_audio(ir_data: dict, chapter_index: int, book_slug: str, tts_overri
             print(f"  ✗ block {i:04d} failed — skipping")
 
     # Merge
-    final_path = str(OUTPUT_DIR / f"{book_slug}_ch{chapter_index}.wav")
+    final_path = str(lib.chapter_wav_path(book_slug, chapter_index))
     merge_blocks(block_files, final_path)
 
     print(f"\n[Done] Final audio → {final_path}")
@@ -151,7 +155,8 @@ def _find_ir_by_name(query: str) -> str | None:
     if not query_words:
         return None
 
-    for ir_file in sorted(OUTPUT_DIR.glob("*_ir.json")):
+    for slug in lib.list_book_slugs():
+        ir_file = lib.ir_path(slug)
         try:
             with open(ir_file) as f:
                 title = json.load(f).get("book_title", "")
@@ -214,12 +219,12 @@ def main():
     parser.add_argument("--tag-dialogue-only", action="store_true", help="Only tag dialogue blocks, skip narration (faster)")
     args = parser.parse_args()
 
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    lib.LIBRARY_DIR.mkdir(exist_ok=True)
 
     # ── Choose input ────────────────────────────────────────────────────────
     ir_path = None
     if args.sample:
-        sample_path = str(OUTPUT_DIR / "sample_book.txt")
+        sample_path = str(BOOKS_DIR / "sample_book.txt")
         write_sample_book(sample_path)
         book_path = sample_path
     elif args.book_name and not args.book:
@@ -231,10 +236,10 @@ def main():
             ir_path = _find_ir_by_name(args.book_name)
             if not ir_path:
                 print(f"❌  No book found matching '{args.book_name}'")
-                print(f"    Available books in {OUTPUT_DIR}:")
-                for f in sorted(OUTPUT_DIR.glob("*_ir.json")):
+                print(f"    Available books in {lib.LIBRARY_DIR}:")
+                for slug in lib.list_book_slugs():
                     try:
-                        title = json.load(open(f)).get("book_title", f.stem)
+                        title = json.load(open(lib.ir_path(slug))).get("book_title", slug)
                         print(f"      {title}")
                     except Exception:
                         pass
@@ -251,12 +256,13 @@ def main():
 
     # ── Derive slug and IR path ──────────────────────────────────────────────
     if ir_path:
-        # IR was located by name lookup — derive slug from its filename
-        book_slug = re.sub(r'_ir$', '', Path(ir_path).stem)
+        # IR was located by name lookup — slug is the library folder name
+        book_slug = Path(ir_path).parent.name
     else:
         book_title = Path(book_path).stem.replace("_", " ").title()
         book_slug = re.sub(r'[^\w]', '_', book_title.lower())[:30]
-        ir_path = str(OUTPUT_DIR / f"{book_slug}_ir.json")
+        lib.ensure_book_dir(book_slug)
+        ir_path = str(lib.ir_path(book_slug))
 
     if args.use_existing_ir:
         # ── Load pre-built IR from disk ──────────────────────────────────────

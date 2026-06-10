@@ -11,6 +11,7 @@ A multi-voice audiobook narration app that parses books and plays them back with
 - **Corrections journal** — `server.py` now appends every manual correction to `output/{slug}_corrections.jsonl` (append-only; events: `speaker_correction`, `merge_next`, `character_deleted`). This is the raw labeled data for the attribution training flywheel. Never rewrite this file.
 - **Golden-file tests** — `tests/test_attribution.py` runs the built-in sample through `build_ir` and asserts 0 unresolved + exact speaker set. Run `.venv/bin/pytest tests/ -v` after touching any attribution layer. Requires spaCy + `en_core_web_sm` (skips otherwise).
 - **STATUS.md added** per the cross-project STATUS protocol.
+- **Per-book library layout** — replaced the flat `output/` with `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/}`. All paths go through `prosecast/library.py` — never construct book paths by hand. Audio endpoint is now `GET /audio/{slug}/ch{N}.wav`. Render artifacts (`renders/`) are disposable; everything else in a book dir is precious. ~5.5GB of old say-engine test renders were deleted (Tyler-approved); legacy `output/` retains only el_test files and a log.
 
 Planned next (agreed with Tyler, not yet built): per-book `library/` restructure of `output/`, pipeline-in-UI processing jobs, cast review screen (merge/ignore noisy characters), per-chapter narrator dropdown, m4b chapterized export.
 

@@ -3,7 +3,7 @@ ProseCast — Phase 3a/3b/3c local web server
 
 Endpoints:
   GET  /                                        → index.html UI
-  GET  /books                                   → list of processed books (IR files in output/)
+  GET  /books                                   → list of processed books (library/<slug>/ir.json)
   POST /books/upload                            → upload an EPUB, run pipeline, return slug
   GET  /chapters/{book_slug}                    → chapter titles + block counts + audio availability
   GET  /ir/{book_slug}                          → full IR JSON
@@ -12,7 +12,7 @@ Endpoints:
   GET  /ir/{book_slug}/unresolved/{ch}          → unresolved blocks in a chapter
   PATCH /ir/{book_slug}/block/{segment_id}      → correct a block's speaker
   POST  /ir/{book_slug}/block/{segment_id}/merge_next → merge block with next
-  GET  /audio/{filename}                        → stream WAV from output/
+  GET  /audio/{book_slug}/{filename}            → stream WAV from library/<slug>/renders/
   GET  /timeline/{book_slug}/{chapter_index}    → per-block speaker timeline
   GET  /voices                                  → available voices for the active TTS engine
   GET  /voice_map/{book_slug}                   → character→voice assignments (or auto-assigned defaults)
@@ -37,9 +37,10 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from prosecast import library as lib
+
 app = FastAPI(title="ProseCast")
 
-OUTPUT_DIR = Path(__file__).parent / "output"
 STATIC_DIR = Path(__file__).parent / "static"
 STATIC_DIR.mkdir(exist_ok=True)
 
@@ -88,7 +89,9 @@ def _journal(book_slug: str, event: str, payload: dict) -> None:
         **payload,
     }
     try:
-        with open(OUTPUT_DIR / f"{book_slug}_corrections.jsonl", "a", encoding="utf-8") as f:
+        path = lib.journal_path(book_slug)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
             f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     except OSError:
         pass  # journaling must never break the correction itself
@@ -179,10 +182,9 @@ def _default_voice_map(characters: list[str], engine: str) -> dict[str, str]:
 @app.get("/books")
 def list_books():
     books = []
-    for ir_file in sorted(OUTPUT_DIR.glob("*_ir.json")):
-        slug = ir_file.stem[:-3]  # strip "_ir"
+    for slug in lib.list_book_slugs():
         try:
-            with open(ir_file) as f:
+            with open(lib.ir_path(slug)) as f:
                 ir = json.load(f)
             books.append({
                 "slug": slug,
@@ -212,7 +214,6 @@ async def upload_book(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Only .epub files are accepted")
 
     BOOKS_DIR.mkdir(exist_ok=True)
-    OUTPUT_DIR.mkdir(exist_ok=True)
 
     # Save the uploaded file
     safe_name = re.sub(r"[^\w\-.]", "_", file.filename)
@@ -226,7 +227,8 @@ async def upload_book(file: UploadFile = File(...)):
     # Derive slug the same way main.py does
     book_title = book_path.stem.replace("_", " ").title()
     book_slug = re.sub(r"[^\w]", "_", book_title.lower())[:30]
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    lib.ensure_book_dir(book_slug)
+    ir_path = lib.ir_path(book_slug)
 
     try:
         from prosecast.book_parser import parse_book
@@ -258,7 +260,7 @@ def get_characters(book_slug: str):
 
     NARRATOR is always first. User-introduced names (via corrections) are included.
     """
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
     ir = _load_ir(ir_path)
@@ -273,12 +275,12 @@ def get_cast_candidates(book_slug: str):
 
     Used by the pre-casting modal. Also reports whether a voice map already exists.
     """
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
     ir = _load_ir(ir_path)
-    vm_path = OUTPUT_DIR / f"{book_slug}_voice_map.json"
+    vm_path = lib.voice_map_path(book_slug)
     has_voice_map = vm_path.exists()
     engine = _get_active_engine()
 
@@ -335,7 +337,7 @@ def get_cast_candidates(book_slug: str):
 
 @app.get("/chapters/{book_slug}")
 def get_chapters(book_slug: str):
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -346,14 +348,14 @@ def get_chapters(book_slug: str):
         blocks = ch.get("blocks", [])
         dialogue = [b for b in blocks if b["type"] == "dialogue"]
         unresolved = [b for b in dialogue if b.get("unresolved")]
-        wav_name = f"{book_slug}_ch{i}.wav"
+        wav_name = f"ch{i}.wav"
         chapters.append({
             "index": i,
             "title": ch.get("title", f"Chapter {i}"),
             "block_count": len(blocks),
             "dialogue_count": len(dialogue),
             "unresolved_count": len(unresolved),
-            "has_audio": (OUTPUT_DIR / wav_name).exists(),
+            "has_audio": lib.chapter_wav_path(book_slug, i).exists(),
             "wav_file": wav_name,
         })
     return {"book_title": ir.get("book_title", book_slug), "chapters": chapters}
@@ -370,7 +372,7 @@ def get_timeline(book_slug: str, chapter_index: int):
     """
     import wave
 
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR for '{book_slug}'")
 
@@ -380,7 +382,7 @@ def get_timeline(book_slug: str, chapter_index: int):
     if chapter_index >= len(chapters):
         raise HTTPException(status_code=404, detail=f"Chapter index {chapter_index} out of range")
 
-    blocks_dir = OUTPUT_DIR / f"{book_slug}_ch{chapter_index}_blocks"
+    blocks_dir = lib.chapter_blocks_dir(book_slug, chapter_index)
     chapter = chapters[chapter_index]
     blocks = chapter.get("blocks", [])
 
@@ -416,7 +418,7 @@ def get_timeline(book_slug: str, chapter_index: int):
 
 @app.get("/ir/{book_slug}")
 def get_ir(book_slug: str):
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
     return JSONResponse(content=_load_ir(ir_path))
@@ -427,7 +429,7 @@ def get_ir(book_slug: str):
 @app.get("/ir/{book_slug}/unresolved/{chapter_index}")
 def get_unresolved(book_slug: str, chapter_index: int):
     """Return all unresolved dialogue blocks in a chapter, with surrounding context."""
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -469,7 +471,7 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
     if not speaker:
         raise HTTPException(status_code=400, detail="speaker must not be empty")
 
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -537,7 +539,7 @@ def merge_next(book_slug: str, segment_id: str):
     The next block is deleted. The current block's speaker and metadata
     are preserved. Returns the updated block and new unresolved_count.
     """
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -594,7 +596,7 @@ def delete_character(book_slug: str, name: str):
     Removes {name} from ir['characters'] and ir['user_characters'] if present.
     Returns the count of reassigned blocks.
     """
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -643,7 +645,7 @@ def list_voices():
 @app.get("/voice_map/{book_slug}")
 def get_voice_map(book_slug: str):
     """Return saved character→voice assignments, or auto-assigned defaults."""
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -651,7 +653,7 @@ def get_voice_map(book_slug: str):
     characters = _speaking_characters(ir)
     engine = _get_active_engine()
 
-    vm_path = OUTPUT_DIR / f"{book_slug}_voice_map.json"
+    vm_path = lib.voice_map_path(book_slug)
     if vm_path.exists():
         with open(vm_path) as f:
             saved = json.load(f)
@@ -674,7 +676,7 @@ class VoiceMapBody(BaseModel):
 @app.post("/voice_map/{book_slug}")
 def save_voice_map(book_slug: str, body: VoiceMapBody):
     """Save character→voice assignments. Validates all voice IDs against the active engine's pool."""
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -691,7 +693,7 @@ def save_voice_map(book_slug: str, body: VoiceMapBody):
                        f"Valid voices: {sorted(valid_voices)}",
             )
 
-    vm_path = OUTPUT_DIR / f"{book_slug}_voice_map.json"
+    vm_path = lib.voice_map_path(book_slug)
     with open(vm_path, "w", encoding="utf-8") as f:
         json.dump({"engine": engine, "map": body.map}, f, indent=2, ensure_ascii=False)
 
@@ -763,12 +765,12 @@ def preview_voice(
 
 # ── /audio/{filename} ────────────────────────────────────────────────────────
 
-@app.get("/audio/{filename}")
-def stream_audio(filename: str):
-    # Safety: only allow filenames, no path traversal
-    if "/" in filename or ".." in filename:
-        raise HTTPException(status_code=400, detail="Invalid filename")
-    wav_path = OUTPUT_DIR / filename
+@app.get("/audio/{book_slug}/{filename}")
+def stream_audio(book_slug: str, filename: str):
+    # Safety: only allow plain names, no path traversal
+    if any("/" in part or ".." in part for part in (book_slug, filename)):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    wav_path = lib.renders_dir(book_slug) / filename
     if not wav_path.exists():
         raise HTTPException(status_code=404, detail=f"Audio file '{filename}' not found")
     return FileResponse(
@@ -798,7 +800,7 @@ def _run_render_job(job_id: str, ir: dict, chapter_indices: list[int], book_slug
 @app.post("/render/{book_slug}/{chapter_index}")
 def render_chapter(book_slug: str, chapter_index: int):
     """Trigger a background re-render of one chapter. Returns a job_id to poll."""
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
@@ -822,7 +824,7 @@ def render_chapter(book_slug: str, chapter_index: int):
 @app.post("/render/{book_slug}")
 def render_book(book_slug: str):
     """Trigger a background re-render of all chapters. Returns a job_id to poll."""
-    ir_path = OUTPUT_DIR / f"{book_slug}_ir.json"
+    ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
 
