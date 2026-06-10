@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProseCast</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f0f0f;
+      color: #e8e8e8;
+      height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      grid-template-rows: 56px 1fr 110px;
+      grid-template-areas:
+        "header header"
+        "sidebar main"
+        "player player";
+    }
+
+    /* ── Header ── */
+    header {
+      grid-area: header;
+      background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      gap: 12px;
+    }
+    header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: .04em; color: #fff; }
+    header .tagline { font-size: .8rem; color: #666; }
+
+    /* ── Sidebar ── */
+    aside {
+      grid-area: sidebar;
+      background: #141414;
+      border-right: 1px solid #222;
+      display: flex;
+      flex-direction: column;
+    }
+    #book-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 0;
+    }
+    .book-btn {
+      display: block; width: 100%; text-align: left;
+      padding: 10px 16px; background: none; border: none;
+      color: #ccc; cursor: pointer; font-size: .85rem;
+      border-left: 3px solid transparent;
+      transition: background .15s, color .15s;
+    }
+    .book-btn:hover { background: #1e1e1e; color: #fff; }
+    .book-btn.active { border-left-color: #7c6dfa; color: #fff; background: #1c1c2e; }
+    .book-btn small { display: block; color: #555; font-size: .75rem; margin-top: 2px; }
+
+    /* ── Main ── */
+    main {
+      grid-area: main;
+      overflow-y: auto;
+      padding: 24px;
+    }
+    .book-title {
+      font-size: 1.3rem; font-weight: 600; margin-bottom: 18px; color: #fff;
+    }
+    .chapter-list { display: flex; flex-direction: column; gap: 6px; }
+
+    .chapter-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 14px; border-radius: 8px;
+      background: #1a1a1a; border: 1px solid #242424;
+      transition: border-color .15s, background .15s;
+    }
+    .chapter-row:hover { background: #1e1e1e; border-color: #333; }
+    .chapter-row.playing { border-color: #7c6dfa; background: #1c1c2e; }
+
+    .chapter-index { color: #444; font-size: .8rem; width: 32px; flex-shrink: 0; text-align: right; }
+    .chapter-title { flex: 1; font-size: .9rem; }
+    .chapter-meta { font-size: .75rem; color: #555; flex-shrink: 0; }
+    .unresolved-badge {
+      font-size: .7rem; background: #3a2020; color: #e07070;
+      padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+      border: none; cursor: pointer;
+      transition: background .15s;
+    }
+    .unresolved-badge:hover { background: #4a2828; }
+    .no-audio { font-size: .75rem; color: #3a3a3a; flex-shrink: 0; }
+
+    /* ── Correction panel ── */
+    #correction-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 420px;
+      background: #181818; border-left: 1px solid #2a2a2a;
+      display: flex; flex-direction: column;
+      z-index: 100; transform: translateX(100%);
+      transition: transform .25s ease;
+    }
+    #correction-panel.open { transform: translateX(0); }
+
+    .panel-header {
+      padding: 16px 20px; border-bottom: 1px solid #242424;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .panel-header h2 { font-size: .95rem; font-weight: 600; }
+    .panel-header small { color: #555; font-size: .75rem; }
+    #panel-close {
+      background: none; border: none; color: #666; cursor: pointer;
+      font-size: 1.1rem; padding: 4px 8px; border-radius: 4px;
+    }
+    #panel-close:hover { color: #ccc; background: #222; }
+
+    #panel-blocks {
+      flex: 1; overflow-y: auto; padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    .correction-block {
+      background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .correction-block .ctx { font-size: .73rem; color: #555; font-style: italic; margin-bottom: 6px; }
+    .correction-block .dlg { font-size: .85rem; color: #ddd; margin-bottom: 10px; line-height: 1.4; }
+    .correction-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .speaker-input {
+      flex: 1; background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 5px 10px; border-radius: 5px; font-size: .82rem;
+    }
+    .speaker-input:focus { outline: none; border-color: #7c6dfa; }
+    .save-btn {
+      background: #7c6dfa; border: none; color: #fff;
+      padding: 5px 12px; border-radius: 5px; cursor: pointer; font-size: .8rem;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .save-btn:hover { background: #9585ff; }
+    .save-btn:disabled { background: #2a2a2a; color: #555; cursor: default; }
+    .correction-block.resolved { opacity: .45; }
+    .correction-block.resolved .dlg::after {
+      content: " ✓"; color: #50c8a8;
+    }
+
+    .panel-empty { color: #555; font-size: .85rem; text-align: center; padding: 32px 0; }
+
+    .play-btn {
+      background: #7c6dfa; border: none; color: #fff;
+      width: 32px; height: 32px; border-radius: 50%;
+      cursor: pointer; font-size: .9rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, transform .1s;
+    }
+    .play-btn:hover { background: #9585ff; transform: scale(1.08); }
+    .play-btn:disabled { background: #2a2a2a; color: #444; cursor: default; transform: none; }
+    .play-btn.active { background: #e07070; }
+
+    /* ── Player bar ── */
+    #player-bar {
+      grid-area: player;
+      background: #161616;
+      border-top: 1px solid #222;
+      padding: 14px 24px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .player-top {
+      display: flex; align-items: center; gap: 16px;
+    }
+    #speaker-wrap {
+      display: flex; align-items: center; gap: 5px;
+      flex-shrink: 0; min-width: 160px;
+    }
+    #speaker-display {
+      font-size: 1.1rem; font-weight: 600;
+      transition: color .3s;
+    }
+    #speaker-edit-icon {
+      font-size: .8rem; color: #444; flex-shrink: 0;
+      transition: color .2s;
+    }
+    #speaker-wrap:hover #speaker-edit-icon { color: #888; }
+    #block-text-display {
+      flex: 1; font-size: .82rem; color: #777;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden; cursor: pointer; line-height: 1.45;
+      border-radius: 4px; padding: 2px 4px; margin: -2px -4px;
+    }
+    #block-text-display:hover { background: #1e1e1e; color: #aaa; }
+    #block-text-display:empty { cursor: default; }
+    #time-display { font-size: .8rem; color: #555; white-space: nowrap; flex-shrink: 0; }
+
+    .player-controls {
+      display: flex; align-items: center; gap: 12px;
+    }
+    #play-pause-btn {
+      background: #7c6dfa; border: none; color: #fff;
+      width: 38px; height: 38px; border-radius: 50%;
+      cursor: pointer; font-size: 1rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #play-pause-btn:hover { background: #9585ff; }
+    #play-pause-btn:disabled { background: #2a2a2a; color: #444; cursor: default; }
+
+    #seek-bar {
+      flex: 1; height: 4px; border-radius: 2px;
+      accent-color: #7c6dfa; cursor: pointer;
+    }
+
+    .idle-msg { color: #444; font-size: .85rem; padding: 18px 0; text-align: center; }
+
+    /* Speaker color cycling */
+    .spk-0 { color: #7c6dfa; }
+    .spk-1 { color: #50c8a8; }
+    .spk-2 { color: #e8944a; }
+    .spk-3 { color: #e06080; }
+    .spk-4 { color: #60aadc; }
+    .spk-narrator { color: #888; }
+
+    /* ── Inline speaker correction ── */
+    #speaker-wrap {
+      cursor: pointer;
+      border-radius: 4px;
+      padding: 2px 6px;
+      margin: -2px -6px;
+    }
+    #speaker-wrap:hover { background: #222; }
+
+    #inline-correction {
+      position: absolute;
+      bottom: 115px; /* above player bar */
+      left: 24px;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 260px;
+      z-index: 50;
+      box-shadow: 0 4px 16px rgba(0,0,0,.5);
+    }
+    #inline-correction.visible { display: flex; }
+    #inline-correction label { font-size: .75rem; color: #666; }
+    #inline-speaker-input {
+      background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 5px 10px; border-radius: 5px; font-size: .85rem; width: 100%;
+    }
+    #inline-speaker-input:focus { outline: none; border-color: #7c6dfa; }
+    .inline-btns { display: flex; gap: 8px; }
+    #inline-save-btn {
+      flex: 1; background: #7c6dfa; border: none; color: #fff;
+      padding: 5px 0; border-radius: 5px; cursor: pointer; font-size: .82rem;
+    }
+    #inline-save-btn:hover { background: #9585ff; }
+    #inline-merge-btn {
+      background: #2a2a2a; border: 1px solid #3a3a3a; color: #aaa;
+      padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: .75rem;
+      white-space: nowrap;
+    }
+    #inline-merge-btn:hover { background: #333; color: #ccc; }
+    #inline-merge-btn:disabled { opacity: .4; cursor: default; }
+
+    /* ── Voice panel ── */
+    #voice-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 460px;
+      background: #181818; border-left: 1px solid #2a2a2a;
+      display: flex; flex-direction: column;
+      z-index: 100; transform: translateX(100%);
+      transition: transform .25s ease;
+    }
+    #voice-panel.open { transform: translateX(0); }
+
+    #voice-rows {
+      flex: 1; overflow-y: auto; padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+
+    .voice-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; background: #1e1e1e;
+      border: 1px solid #2a2a2a; border-radius: 7px;
+    }
+    .voice-char {
+      flex: 1; font-size: .85rem; overflow: hidden;
+      white-space: nowrap; text-overflow: ellipsis;
+    }
+    .voice-select {
+      background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 4px 8px; border-radius: 5px; font-size: .8rem;
+      flex-shrink: 0; min-width: 160px;
+    }
+    .voice-select:focus { outline: none; border-color: #7c6dfa; }
+    .voice-preview-btn {
+      background: #2a2a2a; border: 1px solid #3a3a3a; color: #aaa;
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; font-size: .75rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .voice-preview-btn:hover { background: #333; color: #fff; }
+    .voice-preview-btn.playing { background: #7c6dfa; color: #fff; border-color: #7c6dfa; }
+    .voice-preview-btn:disabled { opacity: .4; cursor: default; }
+    .voice-delete-btn {
+      background: none; border: none; color: #444; cursor: pointer;
+      font-size: .85rem; flex-shrink: 0; padding: 4px 6px; border-radius: 4px;
+      transition: color .15s, background .15s;
+    }
+    .voice-delete-btn:hover { color: #e07070; background: #2a1a1a; }
+    .voice-reassign-msg {
+      font-size: .72rem; color: #50c8a8; margin-top: 2px; padding: 0 10px;
+    }
+
+    .voice-panel-footer {
+      padding: 14px 16px; border-top: 1px solid #242424;
+      display: flex; gap: 10px; flex-shrink: 0;
+    }
+    #voice-save-btn {
+      flex: 1; background: #7c6dfa; border: none; color: #fff;
+      padding: 8px 0; border-radius: 6px; cursor: pointer; font-size: .85rem;
+      font-weight: 500;
+    }
+    #voice-save-btn:hover { background: #9585ff; }
+    #voice-save-btn:disabled { background: #2a2a2a; color: #555; cursor: default; }
+    #voice-save-status { font-size: .78rem; color: #555; align-self: center; }
+
+    .voices-btn {
+      background: #1e1e2e; border: 1px solid #3a3a5a; color: #9585ff;
+      padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: .78rem;
+      flex-shrink: 0;
+    }
+    .voices-btn:hover { background: #26263e; }
+
+    /* ── Add book button ── */
+    #add-book-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      width: calc(100% - 24px); margin: 8px 12px 12px;
+      padding: 8px 0; border-radius: 6px;
+      background: none; border: 1px dashed #2e2e2e; color: #555;
+      cursor: pointer; font-size: .82rem;
+      transition: border-color .15s, color .15s, background .15s;
+    }
+    #add-book-btn:hover { border-color: #7c6dfa; color: #9585ff; background: #1c1c2e; }
+    #add-book-btn:disabled { opacity: .5; cursor: default; }
+    #upload-error {
+      margin: 0 12px 8px;
+      padding: 8px 10px;
+      background: #2a1515; border: 1px solid #5a2a2a; border-radius: 5px;
+      font-size: .76rem; color: #e07070; line-height: 1.4;
+      display: none;
+    }
+    #upload-error.visible { display: block; }
+    #add-book-btn .spinner {
+      width: 12px; height: 12px; border: 2px solid #555;
+      border-top-color: #7c6dfa; border-radius: 50%;
+      animation: spin .7s linear infinite; flex-shrink: 0;
+    }
+
+    /* ── Regenerate button ── */
+    .regen-btn {
+      background: none; border: 1px solid #2a2a2a; color: #444;
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; font-size: .85rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: color .15s, border-color .15s, background .15s;
+    }
+    .regen-btn:hover { color: #aaa; border-color: #555; }
+    .regen-btn.rendering { color: #7c6dfa; border-color: #7c6dfa; animation: spin .8s linear infinite; }
+    .regen-btn.done { color: #50c8a8; border-color: #50c8a8; animation: none; }
+    .regen-btn.error { color: #e07070; border-color: #e07070; animation: none; }
+    .regen-btn:disabled { opacity: .4; cursor: default; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    /* ── Pre-casting modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.78);
+      z-index: 200;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .modal-overlay.hidden { display: none; }
+    .casting-modal {
+      background: #181818; border: 1px solid #2a2a2a; border-radius: 12px;
+      width: 640px; max-height: 82vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 8px 48px rgba(0,0,0,.7);
+    }
+    .casting-modal-header { padding: 20px 24px; border-bottom: 1px solid #242424; flex-shrink: 0; }
+    .casting-modal-header h2 { font-size: 1.05rem; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .casting-modal-header p { font-size: .8rem; color: #555; }
+    .casting-char-list { flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .casting-char-row {
+      background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px 14px;
+    }
+    .casting-char-top { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+    .casting-char-name { font-size: .88rem; font-weight: 500; flex: 1; }
+    .casting-char-count { font-size: .72rem; color: #555; flex-shrink: 0; }
+    .casting-char-sample {
+      font-size: .77rem; color: #555; font-style: italic; margin-bottom: 8px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .casting-voice-row { display: flex; align-items: center; gap: 8px; }
+    .casting-voice-select {
+      background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 4px 8px; border-radius: 5px; font-size: .8rem; flex: 1;
+    }
+    .casting-voice-select:focus { outline: none; border-color: #7c6dfa; }
+    .casting-preview-btn {
+      background: #2a2a2a; border: 1px solid #3a3a3a; color: #aaa;
+      width: 28px; height: 28px; border-radius: 50%;
+      cursor: pointer; font-size: .75rem; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .casting-preview-btn:hover { background: #333; color: #fff; }
+    .casting-preview-btn.playing { background: #7c6dfa; color: #fff; border-color: #7c6dfa; }
+    .casting-preview-btn:disabled { opacity: .4; cursor: default; }
+    .casting-modal-footer {
+      padding: 16px 20px; border-top: 1px solid #242424;
+      display: flex; gap: 10px; align-items: center; flex-shrink: 0;
+    }
+    #cast-save-btn {
+      flex: 1; background: #7c6dfa; border: none; color: #fff;
+      padding: 9px 0; border-radius: 7px; cursor: pointer; font-size: .88rem; font-weight: 500;
+    }
+    #cast-save-btn:hover { background: #9585ff; }
+    #cast-save-btn:disabled { background: #2a2a2a; color: #555; cursor: default; }
+    #cast-skip-btn {
+      background: none; border: 1px solid #333; color: #666;
+      padding: 9px 16px; border-radius: 7px; cursor: pointer; font-size: .82rem;
+    }
+    #cast-skip-btn:hover { color: #aaa; border-color: #555; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎙 ProseCast</h1>
+  <span class="tagline">multi-voice audiobook player</span>
+</header>
+
+<aside>
+  <div id="book-list">
+    <p style="padding:16px;color:#444;font-size:.8rem;">Loading books…</p>
+  </div>
+  <div id="upload-error"></div>
+  <input id="epub-file-input" type="file" accept=".epub" style="display:none">
+  <button id="add-book-btn" onclick="triggerEpubPicker()" title="Upload an EPUB to process">
+    <span id="add-book-label">+ Add Book</span>
+  </button>
+</aside>
+
+<main id="main">
+  <p class="idle-msg">Select a book to begin.</p>
+</main>
+
+<!-- Inline correction popup (anchored above player bar) -->
+<div id="inline-correction">
+  <label>Reassign speaker</label>
+  <input id="inline-speaker-input" list="inline-char-list" placeholder="Character name…"
+         autocomplete="off">
+  <datalist id="inline-char-list"></datalist>
+  <small style="color:#555;font-size:.72rem;">Select from list or type a new name</small>
+  <div class="inline-btns">
+    <button id="inline-save-btn">Save</button>
+    <button id="inline-merge-btn" title="Merge with next segment">Merge next ↓</button>
+  </div>
+</div>
+
+<div id="player-bar" style="position:relative;">
+  <div class="player-top">
+    <div id="speaker-wrap" title="Click to reassign speaker">
+      <span id="speaker-display" class="spk-narrator">—</span>
+      <span id="speaker-edit-icon">✎</span>
+    </div>
+    <span id="block-text-display"></span>
+    <span id="time-display">0:00 / 0:00</span>
+  </div>
+  <div class="player-controls">
+    <button id="play-pause-btn" disabled>▶</button>
+    <input id="seek-bar" type="range" min="0" max="100" value="0" step="0.1">
+  </div>
+</div>
+
+<audio id="audio-el" preload="auto"></audio>
+
+<!-- ── Voice panel ── -->
+<div id="voice-panel">
+  <div class="panel-header">
+    <div>
+      <h2 id="voice-panel-title">Voice Assignment</h2>
+      <small id="voice-panel-subtitle"></small>
+    </div>
+    <button id="panel-close" onclick="closeVoicePanel()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:4px;">✕</button>
+  </div>
+  <div id="voice-rows"></div>
+  <div class="voice-panel-footer">
+    <button id="voice-save-btn" onclick="saveVoiceMap()">Save voice map</button>
+    <span id="voice-save-status"></span>
+  </div>
+</div>
+<audio id="preview-audio-el"></audio>
+
+<!-- ── Pre-casting modal ── -->
+<div id="casting-modal-overlay" class="modal-overlay hidden">
+  <div class="casting-modal">
+    <div class="casting-modal-header">
+      <h2>🎭 Cast your book</h2>
+      <p>Assign a voice to each character before generating audio. You can change these later.</p>
+    </div>
+    <div id="casting-char-list" class="casting-char-list"></div>
+    <div class="casting-modal-footer">
+      <button id="cast-save-btn" onclick="saveCastAndContinue()">Cast the book →</button>
+      <button id="cast-skip-btn" onclick="skipCasting()">Skip for now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Correction panel ── -->
+<div id="correction-panel">
+  <div class="panel-header">
+    <div>
+      <h2 id="panel-title">Unresolved blocks</h2>
+      <small id="panel-subtitle"></small>
+    </div>
+    <button id="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div id="panel-blocks"></div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+const state = {
+  books: [],
+  currentBook: null,
+  chapters: [],
+  timeline: [],        // [{start, duration, speaker, text, type, block_index, segment_id?}, ...]
+  playingChapterIdx: null,
+  speakerColors: {},   // speaker → css class
+  colorIdx: 0,
+  activeBlock: null,   // timeline entry currently playing
+  bookCharacters: [],  // character list for the loaded book
+};
+
+const COLORS = ['spk-0','spk-1','spk-2','spk-3','spk-4'];
+
+function speakerColor(speaker) {
+  if (!speaker || speaker === 'NARRATOR') return 'spk-narrator';
+  if (!state.speakerColors[speaker]) {
+    state.speakerColors[speaker] = COLORS[state.colorIdx % COLORS.length];
+    state.colorIdx++;
+  }
+  return state.speakerColors[speaker];
+}
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+const bookList      = document.getElementById('book-list');
+const mainEl        = document.getElementById('main');
+const audioEl       = document.getElementById('audio-el');
+const speakerWrap   = document.getElementById('speaker-wrap');
+const speakerEl     = document.getElementById('speaker-display');
+const blockTextEl   = document.getElementById('block-text-display');
+const timeEl        = document.getElementById('time-display');
+const playPauseBtn  = document.getElementById('play-pause-btn');
+const seekBar       = document.getElementById('seek-bar');
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+async function init() {
+  const books = await fetchJSON('/books');
+  state.books = books;
+  renderBookList(books);
+  if (books.length === 1) loadBook(books[0].slug);
+}
+
+async function fetchJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${r.status} ${url}`);
+  return r.json();
+}
+
+// ── Sidebar ────────────────────────────────────────────────────────────────
+function renderBookList(books) {
+  if (!books.length) {
+    bookList.innerHTML = '<p style="padding:16px;color:#444;font-size:.8rem;">No processed books found in output/.</p>';
+    return;
+  }
+  bookList.innerHTML = books.map(b => `
+    <button class="book-btn" onclick="loadBook('${b.slug}')" data-slug="${b.slug}">
+      ${b.title}
+      <small>${b.chapters} chapters</small>
+    </button>
+  `).join('');
+}
+
+// ── Book / chapter list ────────────────────────────────────────────────────
+async function loadBook(slug) {
+  document.querySelectorAll('.book-btn').forEach(el =>
+    el.classList.toggle('active', el.dataset.slug === slug)
+  );
+  state.currentBook = slug;
+  state.speakerColors = {};
+  state.colorIdx = 0;
+  state.bookCharacters = [];
+
+  mainEl.innerHTML = '<p class="idle-msg">Loading chapters…</p>';
+  const [chapData, charData, candidates] = await Promise.all([
+    fetchJSON(`/chapters/${slug}`),
+    fetchJSON(`/ir/${slug}/characters`).catch(() => ({characters: ['NARRATOR']})),
+    fetchJSON(`/ir/${slug}/cast_candidates`).catch(() => null),
+  ]);
+  state.chapters = chapData.chapters;
+  state.bookCharacters = charData.characters;
+
+  // Populate inline correction datalist
+  refreshCharDatalist();
+
+  // Show pre-casting modal if no voice map exists and there are named characters
+  if (candidates && !candidates.has_voice_map && candidates.characters.length > 1) {
+    showCastingModal(slug, candidates, chapData);
+  } else {
+    renderChapterList(slug, chapData.book_title, chapData.chapters);
+  }
+}
+
+function renderChapterList(slug, title, chapters) {
+  const rows = chapters.map(ch => {
+    const metaStr = ch.dialogue_count ? `${ch.dialogue_count} dialogue` : 'Narration only';
+    const unresBadge = ch.unresolved_count
+      ? `<button class="unresolved-badge" id="unresbadge-${ch.index}" onclick="openPanel('${slug}', ${ch.index})">⚠ ${ch.unresolved_count} unresolved</button>`
+      : '';
+    const playBtn = ch.has_audio
+      ? `<button class="play-btn" id="playbtn-${ch.index}" onclick="playChapter('${slug}', ${ch.index})" title="Play">▶</button>`
+      : `<button class="play-btn" id="playbtn-${ch.index}" disabled title="No audio rendered">▶</button>`;
+    const noAudio = ch.has_audio ? '' : '<span class="no-audio">no audio</span>';
+    const regenBtn = `<button class="regen-btn" id="regenbtn-${ch.index}"
+      onclick="renderChapter('${slug}', ${ch.index})" title="Regenerate audio">↺</button>`;
+    return `
+      <div class="chapter-row" id="chrow-${ch.index}">
+        <span class="chapter-index">${ch.index + 1}</span>
+        <span class="chapter-title">${ch.title}</span>
+        <span class="chapter-meta">${metaStr}</span>
+        ${unresBadge}
+        ${noAudio}
+        ${regenBtn}
+        ${playBtn}
+      </div>`;
+  }).join('');
+
+  mainEl.innerHTML = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+      <div class="book-title" style="margin-bottom:0;flex:1;">${title}</div>
+      <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">↺ Regenerate all</button>
+      <button class="voices-btn" onclick="openVoicePanel('${slug}')">🎤 Voices</button>
+    </div>
+    <div class="chapter-list">${rows}</div>`;
+}
+
+// ── Playback ───────────────────────────────────────────────────────────────
+async function playChapter(slug, chapterIdx) {
+  // If already playing this chapter, toggle pause
+  if (state.playingChapterIdx === chapterIdx && !audioEl.paused) {
+    audioEl.pause();
+    return;
+  }
+
+  // Highlight row
+  document.querySelectorAll('.chapter-row').forEach(r => r.classList.remove('playing'));
+  document.querySelectorAll('.play-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`chrow-${chapterIdx}`)?.classList.add('playing');
+  document.getElementById(`playbtn-${chapterIdx}`)?.classList.add('active');
+
+  state.playingChapterIdx = chapterIdx;
+
+  // Load timeline for speaker sync
+  try {
+    const tl = await fetchJSON(`/timeline/${slug}/${chapterIdx}`);
+    state.timeline = tl.timeline;
+  } catch {
+    state.timeline = [];
+  }
+
+  // Load audio
+  const wavFile = `${slug}_ch${chapterIdx}.wav`;
+  audioEl.src = `/audio/${wavFile}`;
+  audioEl.load();
+  await audioEl.play();
+  playPauseBtn.disabled = false;
+}
+
+// ── Timeline sync ──────────────────────────────────────────────────────────
+function currentBlock(currentTime) {
+  const tl = state.timeline;
+  if (!tl.length) return null;
+  // Walk backwards to find the last block whose start <= currentTime
+  for (let i = tl.length - 1; i >= 0; i--) {
+    if (tl[i].start <= currentTime) return tl[i];
+  }
+  return tl[0];
+}
+
+audioEl.addEventListener('timeupdate', () => {
+  const t = audioEl.currentTime;
+  const dur = audioEl.duration || 0;
+
+  // Seek bar
+  seekBar.value = dur ? (t / dur) * 100 : 0;
+
+  // Time display
+  timeEl.textContent = `${fmt(t)} / ${fmt(dur)}`;
+
+  // Speaker + block text display
+  const block = currentBlock(t);
+  if (block) {
+    const spk = block.speaker || 'NARRATOR';
+    speakerEl.textContent = spk;
+    speakerEl.className = speakerColor(spk);
+    state.activeBlock = block;
+    blockTextEl.textContent = block.text.replace(/^"|"$/g, '');
+  }
+});
+
+audioEl.addEventListener('play',  () => { playPauseBtn.textContent = '⏸'; });
+audioEl.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; });
+audioEl.addEventListener('ended', () => {
+  playPauseBtn.textContent = '▶';
+  speakerEl.textContent = '—';
+  speakerEl.className = 'spk-narrator';
+  blockTextEl.textContent = '';
+  state.activeBlock = null;
+  document.querySelectorAll('.chapter-row').forEach(r => r.classList.remove('playing'));
+  document.querySelectorAll('.play-btn').forEach(b => b.classList.remove('active'));
+});
+
+playPauseBtn.addEventListener('click', () => {
+  if (audioEl.paused) audioEl.play(); else audioEl.pause();
+});
+
+seekBar.addEventListener('input', () => {
+  if (audioEl.duration) audioEl.currentTime = (seekBar.value / 100) * audioEl.duration;
+});
+
+function fmt(s) {
+  if (!s || isNaN(s)) return '0:00';
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+
+// ── Character datalist helpers ────────────────────────────────────────────
+function refreshCharDatalist() {
+  const chars = state.bookCharacters;
+  document.getElementById('inline-char-list').innerHTML =
+    chars.map(c => `<option value="${c}">`).join('');
+  // Also refresh the panel datalist if it exists
+  const panelDl = document.getElementById('char-list');
+  if (panelDl) panelDl.innerHTML = chars.map(c => `<option value="${c}">`).join('');
+}
+
+function mergeCharacters(updated) {
+  if (!updated?.length) return;
+  state.bookCharacters = updated;
+  refreshCharDatalist();
+}
+
+// ── Inline speaker correction ─────────────────────────────────────────────
+const inlineCorrection  = document.getElementById('inline-correction');
+const inlineSpeakerInput = document.getElementById('inline-speaker-input');
+const inlineSaveBtn     = document.getElementById('inline-save-btn');
+const inlineMergeBtn    = document.getElementById('inline-merge-btn');
+
+function openInlineCorrection() {
+  if (!state.activeBlock) return;
+  inlineSpeakerInput.value = '';
+  inlineCorrection.classList.add('visible');
+  inlineSpeakerInput.focus();
+  inlineMergeBtn.disabled = state.activeBlock.type !== 'dialogue';
+}
+
+speakerWrap.addEventListener('click', openInlineCorrection);
+blockTextEl.addEventListener('click', () => {
+  if (blockTextEl.textContent) openInlineCorrection();
+});
+
+// Close on click outside
+document.addEventListener('click', e => {
+  if (!inlineCorrection.contains(e.target)
+      && e.target !== speakerWrap
+      && !speakerWrap.contains(e.target)
+      && e.target !== blockTextEl) {
+    inlineCorrection.classList.remove('visible');
+  }
+});
+
+inlineSpeakerInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') inlineSaveBtn.click();
+  if (e.key === 'Escape') inlineCorrection.classList.remove('visible');
+});
+
+inlineSaveBtn.addEventListener('click', async () => {
+  const block = state.activeBlock;
+  if (!block?.segment_id) return;
+  const speaker = inlineSpeakerInput.value.trim();
+  if (!speaker) { inlineSpeakerInput.focus(); return; }
+
+  inlineSaveBtn.textContent = '…';
+  inlineSaveBtn.disabled = true;
+  try {
+    const r = await fetch(`/ir/${state.currentBook}/block/${block.segment_id}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({speaker}),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    // Update speaker in timeline so display refreshes on next tick
+    block.speaker = speaker;
+    speakerEl.textContent = speaker;
+    mergeCharacters(data.characters);
+    inlineCorrection.classList.remove('visible');
+  } catch {
+    inlineSaveBtn.style.background = '#8b2020';
+    setTimeout(() => { inlineSaveBtn.style.background = ''; }, 1500);
+  } finally {
+    inlineSaveBtn.textContent = 'Save';
+    inlineSaveBtn.disabled = false;
+  }
+});
+
+inlineMergeBtn.addEventListener('click', async () => {
+  const block = state.activeBlock;
+  if (!block?.segment_id) return;
+
+  inlineMergeBtn.disabled = true;
+  inlineMergeBtn.textContent = '…';
+  try {
+    const r = await fetch(`/ir/${state.currentBook}/block/${block.segment_id}/merge_next`, {
+      method: 'POST',
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+    // Update the active block's text in the timeline
+    block.text = data.merged_block.text;
+    inlineCorrection.classList.remove('visible');
+  } catch (e) {
+    inlineMergeBtn.style.background = '#8b2020';
+    setTimeout(() => { inlineMergeBtn.style.background = ''; }, 1500);
+  } finally {
+    inlineMergeBtn.disabled = false;
+    inlineMergeBtn.textContent = 'Merge next ↓';
+  }
+});
+
+// ── Voice panel ───────────────────────────────────────────────────────────
+const voicePanel       = document.getElementById('voice-panel');
+const voiceRows        = document.getElementById('voice-rows');
+const voicePanelTitle  = document.getElementById('voice-panel-title');
+const voicePanelSub    = document.getElementById('voice-panel-subtitle');
+const voiceSaveStatus  = document.getElementById('voice-save-status');
+const previewAudioEl   = document.getElementById('preview-audio-el');
+
+let voicePanelSlug = null;
+let currentVoiceMap = {};   // speaker → voice_id (live state while panel is open)
+let availableVoices = [];   // voice IDs for the active engine
+
+async function openVoicePanel(slug) {
+  voicePanelSlug = slug;
+  voiceRows.innerHTML = '<p class="panel-empty">Loading…</p>';
+  voicePanel.classList.add('open');
+  // Close correction panel if open
+  correctionPanel.classList.remove('open');
+
+  let voicesData, vmData;
+  try {
+    [voicesData, vmData] = await Promise.all([
+      fetchJSON('/voices'),
+      fetchJSON(`/voice_map/${slug}`),
+    ]);
+  } catch (e) {
+    voiceRows.innerHTML = `<p class="panel-empty" style="color:#e07070">Error: ${e.message}</p>`;
+    return;
+  }
+
+  // voices is [{id, name}] — normalise older [{id==name}] format from non-EL engines
+  availableVoices = voicesData.voices;
+  currentVoiceMap = vmData.map;
+
+  voicePanelTitle.textContent = 'Voice Assignment';
+  voicePanelSub.textContent = `${voicesData.engine} · ${availableVoices.length} voices`;
+  voiceSaveStatus.textContent = '';
+
+  const chars = state.bookCharacters.length
+    ? state.bookCharacters
+    : Object.keys(currentVoiceMap);
+
+  voiceRows.innerHTML = chars.map(char => {
+    const current = currentVoiceMap[char] || (availableVoices[0]?.id ?? '');
+    const options = availableVoices.map(v =>
+      `<option value="${esc(v.id)}"${v.id === current ? ' selected' : ''}>${esc(v.name)}</option>`
+    ).join('');
+    const delBtn = char === 'NARRATOR' ? '' :
+      `<button class="voice-delete-btn" onclick="deleteCharacter('${esc(char)}')" title="Reassign all blocks to NARRATOR">✕</button>`;
+    return `
+      <div class="voice-row" id="vrow-${esc(char)}">
+        <span class="voice-char ${char === 'NARRATOR' ? 'spk-narrator' : ''}"
+              style="${char !== 'NARRATOR' ? `color:${cssColorForChar(char)}` : ''}"
+        >${esc(char)}</span>
+        <select class="voice-select" id="vsel-${esc(char)}"
+                onchange="currentVoiceMap['${esc(char)}'] = this.value">
+          ${options}
+        </select>
+        <button class="voice-preview-btn" id="vprev-${esc(char)}"
+                onclick="previewVoice('${esc(char)}')" title="Preview voice">▶</button>
+        ${delBtn}
+      </div>`;
+  }).join('');
+}
+
+function closeVoicePanel() {
+  voicePanel.classList.remove('open');
+  // Stop any playing preview
+  previewAudioEl.pause();
+  previewAudioEl.src = '';
+}
+
+function cssColorForChar(char) {
+  const cls = speakerColor(char);
+  const map = {
+    'spk-0': '#7c6dfa', 'spk-1': '#50c8a8', 'spk-2': '#e8944a',
+    'spk-3': '#e06080', 'spk-4': '#60aadc', 'spk-narrator': '#888',
+  };
+  return map[cls] || '#ccc';
+}
+
+async function previewVoice(char) {
+  const sel = document.getElementById(`vsel-${char}`);
+  const btn = document.getElementById(`vprev-${char}`);
+  if (!sel || !btn) return;
+
+  const voiceId = sel.value;
+  btn.classList.add('playing');
+  btn.disabled = true;
+
+  // Stop any prior preview
+  previewAudioEl.pause();
+
+  const url = `/voice/preview/${encodeURIComponent(voiceId)}?character=${encodeURIComponent(char)}`;
+  previewAudioEl.src = url;
+  try {
+    await previewAudioEl.play();
+  } catch {
+    // autoplay blocked or fetch error — ignore
+  }
+
+  previewAudioEl.onended = () => {
+    btn.classList.remove('playing');
+    btn.disabled = false;
+  };
+  // Fallback: re-enable button after 8s in case onended doesn't fire
+  setTimeout(() => {
+    btn.classList.remove('playing');
+    btn.disabled = false;
+  }, 8000);
+}
+
+async function deleteCharacter(char) {
+  const row = document.getElementById(`vrow-${char}`);
+  if (!row) return;
+
+  // Optimistically remove from UI and state
+  delete currentVoiceMap[char];
+  state.bookCharacters = state.bookCharacters.filter(c => c !== char);
+  refreshCharDatalist();
+
+  // Call server to reassign all IR blocks for this speaker to NARRATOR
+  try {
+    const r = await fetch(`/ir/${voicePanelSlug}/character/${encodeURIComponent(char)}`, {
+      method: 'DELETE',
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const data = await r.json();
+
+    // Replace the row with a confirmation message, then remove after delay
+    row.outerHTML = `<div class="voice-reassign-msg" id="vrow-${esc(char)}">
+      ✓ ${esc(char)} removed — ${data.reassigned} block${data.reassigned !== 1 ? 's' : ''} reassigned to NARRATOR
+    </div>`;
+    setTimeout(() => {
+      document.getElementById(`vrow-${esc(char)}`)?.remove();
+    }, 3000);
+  } catch (e) {
+    // Restore row on failure
+    row.style.opacity = '1';
+    voiceSaveStatus.textContent = `✗ ${e.message}`;
+    voiceSaveStatus.style.color = '#e07070';
+  }
+}
+
+async function saveVoiceMap() {
+  const btn = document.getElementById('voice-save-btn');
+  btn.disabled = true;
+  voiceSaveStatus.textContent = 'Saving…';
+
+  try {
+    const r = await fetch(`/voice_map/${voicePanelSlug}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({map: currentVoiceMap}),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({detail: `HTTP ${r.status}`}));
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
+    voiceSaveStatus.textContent = '✓ Saved';
+    voiceSaveStatus.style.color = '#50c8a8';
+    setTimeout(() => { voiceSaveStatus.textContent = ''; }, 3000);
+  } catch (e) {
+    voiceSaveStatus.textContent = `✗ ${e.message}`;
+    voiceSaveStatus.style.color = '#e07070';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Correction panel ───────────────────────────────────────────────────────
+const correctionPanel = document.getElementById('correction-panel');
+const panelTitle      = document.getElementById('panel-title');
+const panelSubtitle   = document.getElementById('panel-subtitle');
+const panelBlocks     = document.getElementById('panel-blocks');
+
+let panelSlug = null;
+let panelChapterIdx = null;
+
+async function openPanel(slug, chapterIdx) {
+  panelSlug = slug;
+  panelChapterIdx = chapterIdx;
+  panelBlocks.innerHTML = '<p class="panel-empty">Loading…</p>';
+  correctionPanel.classList.add('open');
+
+  let data;
+  try {
+    data = await fetchJSON(`/ir/${slug}/unresolved/${chapterIdx}`);
+  } catch (e) {
+    panelBlocks.innerHTML = `<p class="panel-empty" style="color:#e07070">Error: ${e.message}</p>`;
+    return;
+  }
+
+  panelTitle.textContent = data.title || `Chapter ${chapterIdx + 1}`;
+  panelSubtitle.textContent = `${data.unresolved.length} unresolved block${data.unresolved.length !== 1 ? 's' : ''}`;
+
+  if (!data.unresolved.length) {
+    panelBlocks.innerHTML = '<p class="panel-empty">No unresolved blocks.</p>';
+    return;
+  }
+
+  // Use the already-filtered speaking characters list from state
+  const characters = state.bookCharacters.length ? state.bookCharacters : (data.characters || []);
+  const datalist = `<datalist id="char-list">${characters.map(c => `<option value="${c}">`).join('')}</datalist>`;
+
+  panelBlocks.innerHTML = datalist + data.unresolved.map(b => `
+    <div class="correction-block" id="cb-${b.segment_id}">
+      ${b.context_before ? `<div class="ctx">${esc(b.context_before.slice(-120))}</div>` : ''}
+      <div class="dlg">${esc(b.text)}</div>
+      <div class="correction-row">
+        <input class="speaker-input" list="char-list"
+               id="inp-${b.segment_id}" placeholder="Select or type a name…"
+               onkeydown="if(event.key==='Enter') saveCorrection('${b.segment_id}')">
+        <button class="save-btn" id="savebtn-${b.segment_id}"
+                onclick="saveCorrection('${b.segment_id}')">Save</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function closePanel() {
+  correctionPanel.classList.remove('open');
+}
+
+async function saveCorrection(segmentId) {
+  const input = document.getElementById(`inp-${segmentId}`);
+  const btn   = document.getElementById(`savebtn-${segmentId}`);
+  const speaker = input.value.trim();
+  if (!speaker) { input.focus(); return; }
+
+  btn.disabled = true;
+  btn.textContent = '…';
+
+  try {
+    const result = await fetch(`/ir/${panelSlug}/block/${segmentId}`, {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({speaker}),
+    });
+    if (!result.ok) throw new Error(`HTTP ${result.status}`);
+    const data = await result.json();
+
+    mergeCharacters(data.characters);
+
+    // Mark block resolved in panel
+    document.getElementById(`cb-${segmentId}`)?.classList.add('resolved');
+    btn.textContent = '✓';
+
+    // Update the badge count on the chapter row
+    const badge = document.getElementById(`unresbadge-${panelChapterIdx}`);
+    if (badge) {
+      if (data.unresolved_count <= 0) {
+        badge.remove();
+      } else {
+        badge.textContent = `⚠ ${data.unresolved_count} unresolved`;
+      }
+    }
+    panelSubtitle.textContent = `${data.unresolved_count} unresolved block${data.unresolved_count !== 1 ? 's' : ''}`;
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = 'Save';
+    btn.style.background = '#8b2020';
+    setTimeout(() => { btn.style.background = ''; }, 1500);
+  }
+}
+
+function esc(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close panels on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closePanel(); closeVoicePanel(); closeCastingModal(); }
+});
+
+// ── EPUB upload ───────────────────────────────────────────────────────────
+const epubFileInput = document.getElementById('epub-file-input');
+const addBookBtn    = document.getElementById('add-book-btn');
+const addBookLabel  = document.getElementById('add-book-label');
+const uploadErrorEl = document.getElementById('upload-error');
+
+function showUploadError(msg) {
+  uploadErrorEl.textContent = msg;
+  uploadErrorEl.classList.add('visible');
+}
+function clearUploadError() {
+  uploadErrorEl.classList.remove('visible');
+  uploadErrorEl.textContent = '';
+}
+
+function triggerEpubPicker() {
+  clearUploadError();
+  epubFileInput.value = '';
+  epubFileInput.click();
+}
+
+epubFileInput.addEventListener('change', async () => {
+  const file = epubFileInput.files[0];
+  console.log('[upload] change event fired, file:', file?.name ?? '(none)');
+  if (!file) return;
+
+  clearUploadError();
+  addBookBtn.disabled = true;
+  addBookLabel.innerHTML = '<span class="spinner"></span> Processing…';
+
+  try {
+    console.log('[upload] building FormData and sending POST /books/upload');
+    const form = new FormData();
+    form.append('file', file);
+
+    const r = await fetch('/books/upload', {method: 'POST', body: form});
+    console.log('[upload] response status:', r.status);
+
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({detail: `HTTP ${r.status}`}));
+      console.error('[upload] server error:', err);
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
+
+    const data = await r.json();
+    console.log('[upload] success:', data);
+
+    console.log('[upload] refreshing book list');
+    const books = await fetchJSON('/books');
+    state.books = books;
+    renderBookList(books);
+
+    addBookBtn.disabled = false;
+    addBookLabel.textContent = '+ Add Book';
+
+    console.log('[upload] loading book slug:', data.slug);
+    await loadBook(data.slug);
+  } catch (e) {
+    console.error('[upload] caught error:', e);
+    addBookBtn.disabled = false;
+    addBookLabel.textContent = '+ Add Book';
+    showUploadError(`Upload failed: ${e.message}`);
+  }
+});
+
+// ── Pre-casting modal ─────────────────────────────────────────────────────
+const castingModalOverlay = document.getElementById('casting-modal-overlay');
+const castingCharListEl   = document.getElementById('casting-char-list');
+
+let castingCtx = null;  // {slug, characters, voices, voice_map, chapData}
+
+function showCastingModal(slug, candidates, chapData) {
+  castingCtx = {
+    slug,
+    characters: candidates.characters,
+    voices: candidates.voices,
+    voice_map: Object.assign({}, candidates.voice_map),
+    chapData,
+  };
+
+  castingCharListEl.innerHTML = candidates.characters.map(char => {
+    const voiceId = candidates.voice_map[char.name] || (candidates.voices[0]?.id ?? '');
+    const options = candidates.voices.map(v =>
+      `<option value="${esc(v.id)}"${v.id === voiceId ? ' selected' : ''}>${esc(v.name)}</option>`
+    ).join('');
+    const colorStyle = char.name === 'NARRATOR'
+      ? 'color:#888'
+      : `color:${cssColorForChar(char.name)}`;
+    const countStr = char.name === 'NARRATOR'
+      ? 'narration'
+      : `${char.dialogue_count} line${char.dialogue_count !== 1 ? 's' : ''}`;
+    const sample = char.sample_line
+      ? `<div class="casting-char-sample">"${esc(char.sample_line.slice(0, 110))}"</div>`
+      : '';
+    return `
+      <div class="casting-char-row">
+        <div class="casting-char-top">
+          <span class="casting-char-name" style="${colorStyle}">${esc(char.name)}</span>
+          <span class="casting-char-count">${countStr}</span>
+        </div>
+        ${sample}
+        <div class="casting-voice-row">
+          <select class="casting-voice-select" id="csel-${esc(char.name)}"
+                  onchange="castingCtx.voice_map['${esc(char.name)}'] = this.value">
+            ${options}
+          </select>
+          <button class="casting-preview-btn" id="cprev-${esc(char.name)}"
+                  onclick="previewCastingVoice('${esc(char.name)}')" title="Preview voice">▶</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('cast-save-btn').textContent = 'Cast the book →';
+  document.getElementById('cast-save-btn').disabled = false;
+  castingModalOverlay.classList.remove('hidden');
+}
+
+function closeCastingModal() {
+  castingModalOverlay.classList.add('hidden');
+  previewAudioEl.pause();
+  previewAudioEl.src = '';
+}
+
+async function saveCastAndContinue() {
+  if (!castingCtx) return;
+  const btn = document.getElementById('cast-save-btn');
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/voice_map/${castingCtx.slug}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({map: castingCtx.voice_map}),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  } catch (e) {
+    btn.textContent = '✗ Save failed — retry?';
+    btn.disabled = false;
+    return;
+  }
+  closeCastingModal();
+  renderChapterList(castingCtx.slug, castingCtx.chapData.book_title, castingCtx.chapData.chapters);
+}
+
+function skipCasting() {
+  if (!castingCtx) return;
+  closeCastingModal();
+  renderChapterList(castingCtx.slug, castingCtx.chapData.book_title, castingCtx.chapData.chapters);
+}
+
+async function previewCastingVoice(char) {
+  if (!castingCtx) return;
+  const sel = document.getElementById(`csel-${char}`);
+  const btn = document.getElementById(`cprev-${char}`);
+  if (!sel || !btn) return;
+
+  const voiceId = sel.value;
+  const charData = castingCtx.characters.find(c => c.name === char);
+  const sampleText = charData?.sample_line?.slice(0, 150) ?? '';
+
+  btn.classList.add('playing');
+  btn.disabled = true;
+  previewAudioEl.pause();
+
+  let url = `/voice/preview/${encodeURIComponent(voiceId)}?character=${encodeURIComponent(char)}`;
+  if (sampleText) url += `&text=${encodeURIComponent(sampleText)}`;
+  previewAudioEl.src = url;
+  try { await previewAudioEl.play(); } catch {}
+
+  previewAudioEl.onended = () => { btn.classList.remove('playing'); btn.disabled = false; };
+  setTimeout(() => { btn.classList.remove('playing'); btn.disabled = false; }, 14000);
+}
+
+// ── Regenerate ────────────────────────────────────────────────────────────
+
+function pollRenderStatus(jobId) {
+  return new Promise((resolve, reject) => {
+    const tick = async () => {
+      try {
+        const s = await fetchJSON(`/render_status/${jobId}`);
+        if (s.status === 'done') return resolve(s);
+        if (s.status === 'error') return reject(new Error(s.error || 'Render failed'));
+        // Update "Regenerate all" button text if total is known
+        const allBtn = document.getElementById('regen-all-btn');
+        if (allBtn && s.total > 1) {
+          allBtn.textContent = `↺ Chapter ${s.progress + 1}/${s.total}…`;
+        }
+        setTimeout(tick, 1500);
+      } catch (e) { reject(e); }
+    };
+    tick();
+  });
+}
+
+async function renderChapter(slug, chIdx) {
+  const btn = document.getElementById(`regenbtn-${chIdx}`);
+  if (!btn || btn.classList.contains('rendering')) return;
+
+  btn.classList.add('rendering');
+  btn.disabled = true;
+  btn.title = 'Rendering…';
+
+  try {
+    const r = await fetch(`/render/${slug}/${chIdx}`, {method: 'POST'});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const {job_id} = await r.json();
+
+    await pollRenderStatus(job_id);
+
+    // Refresh chapter data to update has_audio and badges
+    const chapData = await fetchJSON(`/chapters/${slug}`);
+    state.chapters = chapData.chapters;
+    const ch = chapData.chapters[chIdx];
+    if (ch?.has_audio) {
+      const playBtn = document.getElementById(`playbtn-${chIdx}`);
+      if (playBtn) { playBtn.disabled = false; }
+      document.getElementById(`chrow-${chIdx}`)
+        ?.querySelector('.no-audio')?.remove();
+    }
+
+    btn.classList.remove('rendering');
+    btn.classList.add('done');
+    btn.title = 'Rendered ✓';
+    setTimeout(() => {
+      btn.classList.remove('done');
+      btn.disabled = false;
+      btn.title = 'Regenerate audio';
+    }, 3000);
+  } catch (e) {
+    btn.classList.remove('rendering');
+    btn.classList.add('error');
+    btn.title = `Error: ${e.message}`;
+    btn.disabled = false;
+    setTimeout(() => {
+      btn.classList.remove('error');
+      btn.title = 'Regenerate audio';
+    }, 5000);
+  }
+}
+
+async function renderAll(slug) {
+  const btn = document.getElementById('regen-all-btn');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.textContent = '↺ Starting…';
+
+  try {
+    const r = await fetch(`/render/${slug}`, {method: 'POST'});
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const {job_id} = await r.json();
+
+    await pollRenderStatus(job_id);
+
+    // Full chapter list refresh
+    const chapData = await fetchJSON(`/chapters/${slug}`);
+    state.chapters = chapData.chapters;
+    renderChapterList(slug, chapData.book_title, chapData.chapters);
+  } catch (e) {
+    if (btn) {
+      btn.textContent = '↺ Error';
+      btn.disabled = false;
+      setTimeout(() => { btn.textContent = '↺ Regenerate all'; }, 4000);
+    }
+  }
+}
+
+// ── Go ─────────────────────────────────────────────────────────────────────
+init().catch(e => {
+  bookList.innerHTML = `<p style="padding:16px;color:#e07070;font-size:.8rem;">Error: ${e.message}</p>`;
+});
+</script>
+</body>
+</html>

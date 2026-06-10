@@ -1,0 +1,19 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Secrets — never commit
+.env
+
+# Books: copyrighted EPUBs stay local
+books/
+
+# Generated output: renders, IR, voice maps (5+ GB; IR backed up separately)
+output/
+
+# macOS
+.DS_Store
+
+# Local Claude settings
+.claude/settings.local.json
