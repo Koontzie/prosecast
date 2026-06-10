@@ -1,0 +1,23 @@
+# ProseCast dependencies — install into .venv:
+#   python3 -m venv .venv && source .venv/bin/activate
+#   pip install -r requirements.txt
+#   python -m spacy download en_core_web_sm
+#
+# Note: EPUB parsing is stdlib (zipfile + ElementTree) — no ebooklib/bs4/lxml needed.
+# LLM calls (Ollama, ElevenLabs) use urllib — no requests needed.
+
+# Attribution
+spacy
+
+# TTS / audio
+gtts
+pydub
+miniaudio
+
+# Server
+fastapi
+uvicorn
+python-multipart
+
+# Tests
+pytest

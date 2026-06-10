@@ -2,7 +2,19 @@
 
 A multi-voice audiobook narration app that parses books and plays them back with distinct voices for narration and dialogue.
 
-## Last Session (2026-05-28)
+## Last Session (2026-06-10)
+
+**Project hygiene pass** (no pipeline behavior changes):
+- **Git initialized** — `.gitignore` excludes `.venv`, `output/`, `books/` (copyrighted EPUBs), `.env`, `__pycache__`. GitHub remote: pending (`Koontzie/prosecast` planned).
+- **Stray root `ir_generator.py` removed** — was an accidental paste from another project's terminal session (preserved in git history at the initial commit).
+- **`requirements.txt` added** — note: `ebooklib`/`beautifulsoup4`/`lxml` were never imported (EPUB parsing is stdlib) and are dropped. `SETUP.sh` rewritten: venv-aware, installs from requirements.txt.
+- **Corrections journal** — `server.py` now appends every manual correction to `output/{slug}_corrections.jsonl` (append-only; events: `speaker_correction`, `merge_next`, `character_deleted`). This is the raw labeled data for the attribution training flywheel. Never rewrite this file.
+- **Golden-file tests** — `tests/test_attribution.py` runs the built-in sample through `build_ir` and asserts 0 unresolved + exact speaker set. Run `.venv/bin/pytest tests/ -v` after touching any attribution layer. Requires spaCy + `en_core_web_sm` (skips otherwise).
+- **STATUS.md added** per the cross-project STATUS protocol.
+
+Planned next (agreed with Tyler, not yet built): per-book `library/` restructure of `output/`, pipeline-in-UI processing jobs, cast review screen (merge/ignore noisy characters), per-chapter narrator dropdown, m4b chapterized export.
+
+## Previous Session (2026-05-28)
 
 ### What's working end-to-end
 
@@ -19,8 +31,6 @@ A multi-voice audiobook narration app that parses books and plays them back with
 - Gideon connectivity checked at startup; graceful skip if unreachable
 
 **Tag mapper** (`prosecast/tag_mapper.py`): translates abstract IR tags to engine-specific parameters at render time. ElevenLabs (stability/style), Orpheus (inline tags), Chatterbox (exaggeration/speed) all wired. say/gtts/stub/piper return `{}` — no tag support.
-
-**Pipeline:** EPUB/TXT → IR (rule-based + LLM attribution) → TTS → WAV. `main.py` CLI handles all steps; `--narrator` for POV, `--llm` for the LLM pass, `--use-existing-ir` to skip rebuild.
 
 **Web UI** (`server.py` + `static/index.html`), all verified working:
 - Book list sidebar, chapter list with titles and 1-based numbering
@@ -44,8 +54,9 @@ A multi-voice audiobook narration app that parses books and plays them back with
 ### Known issues not yet tackled
 
 1. **Fuzzy name matching** — alias collapse doesn't catch alternate spellings (e.g. `Kimberly` vs `Kimberley`). Needs Levenshtein distance ≤ 2 matching in `build_alias_map()`.
-2. **Multiple POV narrators** — some books (and Carousel specifically) shift first-person POV between chapters or scenes. The `--narrator` flag only accepts one name. The IR generator needs chapter-level or scene-level POV detection, and the LLM pass needs context to distinguish which POV character is speaking.
-3. **`--tts` flag missing `elevenlabs` option** — `choices=["piper","say","gtts","stub"]` doesn't include `elevenlabs`, so you can't force it explicitly (though it auto-detects fine). Add `elevenlabs` to the choices list.
+2. **Multiple POV narrators** — some books (and Carousel specifically) shift first-person POV between chapters or scenes. The `--narrator` flag only accepts one name. The IR generator needs chapter-level or scene-level POV detection, and the LLM pass needs context to distinguish which POV character is speaking. Agreed direction (2026-06-10): per-chapter narrator dropdown in the UI rather than automatic detection.
+
+~~3. `--tts` flag missing `elevenlabs` option~~ — fixed; `elevenlabs` is in the choices list.
 
 ### IR file state
 
@@ -366,9 +377,10 @@ Long-horizon feature. Architecture decisions now must not block it — keep IR e
 ```bash
 # create venv first
 python3 -m venv .venv && source .venv/bin/activate
-pip install ebooklib beautifulsoup4 lxml gtts pydub spacy miniaudio
+pip install -r requirements.txt
 python -m spacy download en_core_web_sm
 # ffmpeg optional — needed only if pydub MP3 merging is required
+# Note: ebooklib/beautifulsoup4/lxml are NOT needed — EPUB parsing is stdlib
 ```
 
 **Note:** `pip` / `python` resolve to the venv. Always run via `.venv/bin/python` or activate first.

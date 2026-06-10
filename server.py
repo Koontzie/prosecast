@@ -72,6 +72,28 @@ def _load_ir(ir_path: Path) -> dict:
     return ir
 
 
+# ── Corrections journal ───────────────────────────────────────────────────────
+
+def _journal(book_slug: str, event: str, payload: dict) -> None:
+    """Append a correction event to the book's append-only journal.
+
+    {slug}_corrections.jsonl is the raw labeled data for the attribution
+    training flywheel — every manual correction is a training example.
+    Append-only: never rewrite or reorder this file.
+    """
+    from datetime import datetime, timezone
+    entry = {
+        "ts": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "event": event,
+        **payload,
+    }
+    try:
+        with open(OUTPUT_DIR / f"{book_slug}_corrections.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        pass  # journaling must never break the correction itself
+
+
 # ── Speaking characters helper ────────────────────────────────────────────────
 
 def _speaking_characters(ir: dict) -> list[str]:
@@ -456,9 +478,13 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
     # Find the block by segmentId across all chapters
     found = False
     unresolved_total = 0
+    old_speaker = None
+    old_method = None
     for chapter in ir.get("chapters", []):
         for block in chapter.get("blocks", []):
             if block.get("segmentId") == segment_id:
+                old_speaker = block.get("speaker")
+                old_method = block.get("attribution_method")
                 block["speaker"] = speaker
                 block["unresolved"] = False
                 block["attribution_method"] = "manual"
@@ -486,6 +512,13 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
     with open(ir_path, "w", encoding="utf-8") as f:
         json.dump(ir, f, indent=2, ensure_ascii=False)
 
+    _journal(book_slug, "speaker_correction", {
+        "segment_id": segment_id,
+        "old_speaker": old_speaker,
+        "new_speaker": speaker,
+        "old_method": old_method,
+    })
+
     return {
         "segment_id": segment_id,
         "speaker": speaker,
@@ -511,6 +544,7 @@ def merge_next(book_slug: str, segment_id: str):
     ir = _load_ir(ir_path)
 
     merged_block = None
+    absorbed_segment_id = None
     for chapter in ir.get("chapters", []):
         blocks = chapter.get("blocks", [])
         for i, block in enumerate(blocks):
@@ -518,6 +552,7 @@ def merge_next(book_slug: str, segment_id: str):
                 if i + 1 >= len(blocks):
                     raise HTTPException(status_code=400, detail="No next block to merge into")
                 next_block = blocks[i + 1]
+                absorbed_segment_id = next_block.get("segmentId")
                 block["text"] = block["text"].rstrip('"') + " " + next_block["text"].lstrip('"')
                 if not block["text"].startswith('"'):
                     pass  # narration merge; text is fine as-is
@@ -541,6 +576,12 @@ def merge_next(book_slug: str, segment_id: str):
     with open(ir_path, "w", encoding="utf-8") as f:
         json.dump(ir, f, indent=2, ensure_ascii=False)
 
+    _journal(book_slug, "merge_next", {
+        "segment_id": segment_id,
+        "absorbed_segment_id": absorbed_segment_id,
+        "speaker": merged_block.get("speaker"),
+    })
+
     return {"segment_id": segment_id, "merged_block": merged_block, "unresolved_count": unresolved_total}
 
 
@@ -560,6 +601,7 @@ def delete_character(book_slug: str, name: str):
     ir = _load_ir(ir_path)
 
     reassigned = 0
+    reassigned_segments = []
     for chapter in ir.get("chapters", []):
         for block in chapter.get("blocks", []):
             if block.get("speaker") == name:
@@ -568,6 +610,7 @@ def delete_character(book_slug: str, name: str):
                 block["confidence"] = 1.0
                 if block.get("type") == "dialogue":
                     reassigned += 1
+                    reassigned_segments.append(block.get("segmentId"))
 
     # Remove from character lists
     ir["characters"] = [c for c in ir.get("characters", []) if c != name]
@@ -575,6 +618,13 @@ def delete_character(book_slug: str, name: str):
 
     with open(ir_path, "w", encoding="utf-8") as f:
         json.dump(ir, f, indent=2, ensure_ascii=False)
+
+    _journal(book_slug, "character_deleted", {
+        "name": name,
+        "reassigned_to": "NARRATOR",
+        "reassigned_count": reassigned,
+        "segment_ids": reassigned_segments,
+    })
 
     return {"name": name, "reassigned": reassigned}
 
