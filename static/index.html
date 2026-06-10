@@ -650,6 +650,7 @@ function renderChapterList(slug, title, chapters) {
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
       <div class="book-title" style="margin-bottom:0;flex:1;">${title}</div>
       <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">↺ Regenerate all</button>
+      <button class="voices-btn" id="export-m4b-btn" onclick="exportM4B('${slug}')" title="Export rendered chapters as a chapterized audiobook">⬇ Export M4B</button>
       <button class="voices-btn" onclick="openVoicePanel('${slug}')">🎤 Voices</button>
     </div>
     <div class="chapter-list">${rows}</div>`;
@@ -1388,6 +1389,37 @@ async function renderAll(slug) {
       btn.disabled = false;
       setTimeout(() => { btn.textContent = '↺ Regenerate all'; }, 4000);
     }
+  }
+}
+
+// ── M4B export ─────────────────────────────────────────────────────────────
+async function exportM4B(slug) {
+  const btn = document.getElementById('export-m4b-btn');
+  if (!btn || btn.disabled) return;
+
+  btn.disabled = true;
+  btn.textContent = '⬇ Exporting…';
+
+  try {
+    const r = await fetch(`/export/${slug}`, {method: 'POST'});
+    if (!r.ok) {
+      const detail = (await r.json().catch(() => ({})))?.detail;
+      throw new Error(detail || `HTTP ${r.status}`);
+    }
+    const {job_id} = await r.json();
+    const s = await pollRenderStatus(job_id);
+
+    const res = s.result || {};
+    const mb = res.size_bytes ? ` (${(res.size_bytes / 1048576).toFixed(1)} MB)` : '';
+    btn.textContent = `⬇ Done${mb}`;
+    // Trigger the browser download
+    window.location.href = `/export/${slug}/file`;
+    setTimeout(() => { btn.textContent = '⬇ Export M4B'; btn.disabled = false; }, 4000);
+  } catch (e) {
+    btn.textContent = '⬇ Export failed';
+    btn.title = e.message;
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = '⬇ Export M4B'; btn.title = 'Export rendered chapters as a chapterized audiobook'; }, 5000);
   }
 }
 

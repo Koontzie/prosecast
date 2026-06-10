@@ -13,7 +13,9 @@ A multi-voice audiobook narration app that parses books and plays them back with
 - **STATUS.md added** per the cross-project STATUS protocol.
 - **Per-book library layout** — replaced the flat `output/` with `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/}`. All paths go through `prosecast/library.py` — never construct book paths by hand. Audio endpoint is now `GET /audio/{slug}/ch{N}.wav`. Render artifacts (`renders/`) are disposable; everything else in a book dir is precious. ~5.5GB of old say-engine test renders were deleted (Tyler-approved); legacy `output/` retains only el_test files and a log.
 
-Planned next (agreed with Tyler, not yet built): per-book `library/` restructure of `output/`, pipeline-in-UI processing jobs, cast review screen (merge/ignore noisy characters), per-chapter narrator dropdown, m4b chapterized export.
+- **M4B export shipped** — `prosecast/m4b_export.py` builds a chapterized .m4b from rendered chapter WAVs + IR titles (ffmpeg concat + FFMETADATA, AAC 64k mono, faststart). CLI: `--export-m4b [--author "Name"]` (export-only unless render flags also given). Server: `POST /export/{slug}` (background job, poll via `/render_status/{job_id}`) + `GET /export/{slug}/file` (download, friendly filename). UI: ⬇ Export M4B button in the book header. Unrendered chapters are skipped, not blocking. Output: `library/<slug>/exports/<slug>.m4b` (disposable). **Requires ffmpeg on PATH** (`brew install ffmpeg`).
+
+Planned next (agreed with Tyler, not yet built): pipeline-in-UI processing jobs, cast review screen (merge/ignore noisy characters), per-chapter narrator dropdown.
 
 ## Previous Session (2026-05-28)
 

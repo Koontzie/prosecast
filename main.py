@@ -217,6 +217,8 @@ def main():
     parser.add_argument("--retag",         action="store_true", help="Force re-tagging of blocks that already have tags")
     parser.add_argument("--tag-model",     default="mistral:7b", help="Ollama model to use for tagging (default: mistral:7b)")
     parser.add_argument("--tag-dialogue-only", action="store_true", help="Only tag dialogue blocks, skip narration (faster)")
+    parser.add_argument("--export-m4b",    action="store_true", help="Export rendered chapters as a chapterized .m4b audiobook (needs ffmpeg)")
+    parser.add_argument("--author",        default="", help="Author metadata for the m4b export")
     args = parser.parse_args()
 
     lib.LIBRARY_DIR.mkdir(exist_ok=True)
@@ -356,11 +358,28 @@ def main():
             print(f"❌  Chapter {args.chapter} not found (book has {chapter_count} chapters, 1–{chapter_count})")
             sys.exit(1)
         ch_indices = [ch_idx]
+    elif args.export_m4b:
+        ch_indices = []  # export-only run: don't trigger the default ch0 render
     else:
         ch_indices = [0]  # default: first chapter
 
     for ch_idx in ch_indices:
         generate_audio(ir_data, ch_idx, book_slug, tts_override=args.tts, ir_path=ir_path)
+
+    # ── M4B export ───────────────────────────────────────────────────────────
+    if args.export_m4b:
+        from prosecast.m4b_export import export_m4b, M4BExportError
+        try:
+            res = export_m4b(book_slug, author=args.author)
+        except M4BExportError as e:
+            print(f"❌  M4B export failed: {e}")
+            sys.exit(1)
+        mins = res["duration_ms"] / 60000
+        mb = res["size_bytes"] / 1_048_576
+        print(f"\n[M4B] {res['exported_chapters']} chapters, {mins:.1f} min, {mb:.1f} MB")
+        if res["skipped_chapters"]:
+            print(f"[M4B] Skipped {len(res['skipped_chapters'])} unrendered chapters")
+        print(f"[M4B] → {res['path']}")
 
 
 # needed for the import in generate_audio

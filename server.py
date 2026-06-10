@@ -20,7 +20,9 @@ Endpoints:
   GET  /voice/preview/{voice_name}              → synthesize and stream a short sample WAV
   POST /render/{book_slug}/{chapter_index}      → background re-render of one chapter
   POST /render/{book_slug}                      → background re-render of all chapters
-  GET  /render_status/{job_id}                  → poll render job status
+  GET  /render_status/{job_id}                  → poll render/export job status
+  POST /export/{book_slug}                      → background m4b export of rendered chapters
+  GET  /export/{book_slug}/file                 → download the m4b
 """
 
 import json
@@ -847,10 +849,69 @@ def render_book(book_slug: str):
 
 @app.get("/render_status/{job_id}")
 def get_render_status(job_id: str):
-    """Poll the status of a background render job."""
+    """Poll the status of a background render or export job."""
     if job_id not in _render_jobs:
         raise HTTPException(status_code=404, detail=f"No job '{job_id}'")
     return _render_jobs[job_id]
+
+
+# ── M4B export endpoints ──────────────────────────────────────────────────────
+
+def _run_export_job(job_id: str, book_slug: str, author: str = ""):
+    """Background thread target: builds the m4b and updates _render_jobs."""
+    from prosecast.m4b_export import export_m4b, M4BExportError
+    try:
+        res = export_m4b(book_slug, author=author)
+        _render_jobs[job_id]["progress"] = 1
+        _render_jobs[job_id]["status"] = "done"
+        _render_jobs[job_id]["result"] = {
+            "exported_chapters": res["exported_chapters"],
+            "skipped_chapters": len(res["skipped_chapters"]),
+            "duration_ms": res["duration_ms"],
+            "size_bytes": res["size_bytes"],
+        }
+    except Exception as e:
+        _render_jobs[job_id]["status"] = "error"
+        _render_jobs[job_id]["error"] = str(e)
+
+
+@app.post("/export/{book_slug}")
+def export_book(book_slug: str, author: str = Query(default="")):
+    """Trigger a background m4b export of all rendered chapters. Returns a job_id to poll."""
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+
+    ir = _load_ir(ir_path)
+    rendered = [
+        i for i in range(len(ir.get("chapters", [])))
+        if lib.chapter_wav_path(book_slug, i).exists()
+    ]
+    if not rendered:
+        raise HTTPException(status_code=400, detail="No rendered chapters — render audio first")
+
+    job_id = uuid.uuid4().hex[:10]
+    _render_jobs[job_id] = {"status": "running", "progress": 0, "total": 1, "error": None}
+    t = threading.Thread(target=_run_export_job, args=(job_id, book_slug, author), daemon=True)
+    t.start()
+    return {"job_id": job_id, "rendered_chapters": len(rendered)}
+
+
+@app.get("/export/{book_slug}/file")
+def download_m4b(book_slug: str):
+    """Download the most recent m4b export for this book."""
+    m4b = lib.m4b_path(book_slug)
+    if not m4b.exists():
+        raise HTTPException(status_code=404, detail="No m4b export — run POST /export/{slug} first")
+
+    # Friendly download filename from the book title
+    nice_name = book_slug
+    try:
+        title = json.load(open(lib.ir_path(book_slug))).get("book_title", book_slug)
+        nice_name = re.sub(r"[^\w\- ]", "", title).strip() or book_slug
+    except Exception:
+        pass
+    return FileResponse(path=str(m4b), media_type="audio/mp4", filename=f"{nice_name}.m4b")
 
 
 # ── / → index.html ────────────────────────────────────────────────────────────

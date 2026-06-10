@@ -7,6 +7,7 @@ Layout:
         corrections.jsonl    — append-only correction journal; precious (training flywheel)
         renders/ch{N}.wav    — merged chapter audio; disposable, reproducible
         renders/ch{N}_blocks/block_{i:04d}.wav — per-block audio; disposable
+        exports/<slug>.m4b   — chapterized audiobook export; disposable
 
 Anything in renders/ can be deleted and re-rendered. Everything else is
 the product of pipeline runs plus Tyler's manual correction labor — back it up.
@@ -45,6 +46,10 @@ def chapter_wav_path(slug: str, chapter_index: int) -> Path:
 
 def chapter_blocks_dir(slug: str, chapter_index: int) -> Path:
     return renders_dir(slug) / f"ch{chapter_index}_blocks"
+
+
+def m4b_path(slug: str) -> Path:
+    return book_dir(slug) / "exports" / f"{slug}.m4b"
 
 
 def ensure_book_dir(slug: str) -> Path:
