@@ -15,6 +15,9 @@ library/
 # Legacy flat output dir (pre-2026-06-10 layout; leftovers only)
 output/
 
+# Backup credentials + logs — never commit
+.backup/
+
 # macOS
 .DS_Store
 

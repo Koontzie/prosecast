@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  ProseCast nightly library backup → Bolt (Gideon).
+  Install (one-time, on the Mac):
+    cp "$HOME/Audio Book Narration App/scripts/com.prosecast.backup.plist" ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.prosecast.backup.plist
+  Verify: launchctl list | grep prosecast   → shows the job
+  Logs:   .backup/last_backup.log in the project folder
+  Runs daily at 21:30; if the Mac was asleep, launchd fires it on next wake.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.prosecast.backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/YOUR_USER/Audio Book Narration App/scripts/backup_library.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>21</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/tmp/prosecast-backup.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/prosecast-backup.err</string>
+</dict>
+</plist>
