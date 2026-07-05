@@ -3,7 +3,7 @@
 <!--
   ProseCast nightly library backup → Bolt (Gideon).
   Install (one-time, on the Mac):
-    cp "$HOME/Audio Book Narration App/scripts/com.prosecast.backup.plist" ~/Library/LaunchAgents/
+    cp "$HOME/dev/prosecast/scripts/com.prosecast.backup.plist" ~/Library/LaunchAgents/
     launchctl load ~/Library/LaunchAgents/com.prosecast.backup.plist
   Verify: launchctl list | grep prosecast   → shows the job
   Logs:   .backup/last_backup.log in the project folder
@@ -16,7 +16,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/YOUR_USER/Audio Book Narration App/scripts/backup_library.sh</string>
+    <string>/Users/YOUR_USER/dev/prosecast/scripts/backup_library.sh</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>

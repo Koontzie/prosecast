@@ -1,18 +1,31 @@
 # PROSECAST — STATUS
 
 **Status:** Active
-**Updated:** 2026-06-10
+**Updated:** 2026-07-03
 
 ## Where it's at
-Pipeline solid (99.8% attribution on Parade; tagging validated on Frankenstein, zero errors). Repo live at `Koontzie/prosecast`. This session: hygiene pass + library/ restructure + **M4B export shipped** — `prosecast/m4b_export.py`, `--export-m4b` CLI flag, `POST /export/{slug}` + download endpoint, ⬇ Export M4B button in the UI. Verified end-to-end: ffprobe shows correct chapter markers, titles, and metadata. Needs ffmpeg on the Mac (`brew install ffmpeg`).
+Planning + triage session (no code changes). **PRD.md** now defines the dogfood MVP:
+Tyler listens to Parade end-to-end, multi-voice, on his phone. Phases: A) Chatterbox
+backend + listen test (THE GATE — no Chatterbox backend exists in tts_engine.py yet,
+only the tag_mapper half) → B) cast review screen → C) resumable full-book render →
+D) listen-through. **test_books/ATTRIBUTION_SCORECARD.md** scores all 6 books (Yumi
+looks excellent rules-only: 22 clean speakers; Frankenstein attribution is actually
+37.5% unresolved — the old "zero-error" result was tagging, not attribution).
+**docs/market-research-communities-marketplaces.md** covers marketplace + community
+models (ElevenLabs payouts, Nexus DP, SponsorBlock corrections, CCC talent pool,
+NO FAKES Act implications).
 
 ## Next step
-At the Mac: `git push`, then (optional, recommended) install the nightly backup job:
-`cp scripts/com.prosecast.backup.plist ~/Library/LaunchAgents/ && launchctl load ~/Library/LaunchAgents/com.prosecast.backup.plist`
-Then on to the next build: cast review screen / pipeline-in-UI / narrator dropdown.
+**Phase A smoke test (~10 min):** confirm Chatterbox-Turbo answers on Gideon
+(`curl http://GIDEON_HOST:8101/docs` or its health route), generate ONE line of
+dialogue via curl, listen to the WAV. If it sounds good → build the `chatterbox`
+backend in tts_engine.py. If not → PRD gate fails, rethink render tier before
+building anything else.
 
 ## Blocked on
-Nothing.
+Nothing. (LLM pass for Yumi/Frankenstein IR needs Ollama reachable — note
+llm_attributor defaults to localhost:11434; from the Mac that means either local
+Ollama or pointing it at Gideon.)
 
 ## Backup (2026-06-12)
 - **Where:** `NAS_USER@GIDEON_HOST:/mnt/bolt/backups/prosecast/library/` (ZFS dataset `bolt/backups`, owned by NAS_USER)
