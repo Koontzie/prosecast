@@ -4,28 +4,46 @@
 **Updated:** 2026-07-10
 
 ## Where it's at
-Planning + triage session (no code changes). **PRD.md** now defines the dogfood MVP:
-Tyler listens to Parade end-to-end, multi-voice, on his phone. Phases: A) Chatterbox
-backend + listen test (THE GATE — no Chatterbox backend exists in tts_engine.py yet,
-only the tag_mapper half) → B) cast review screen → C) resumable full-book render →
-D) listen-through. **test_books/ATTRIBUTION_SCORECARD.md** scores all 6 books (Yumi
-looks excellent rules-only: 22 clean speakers; Frankenstein attribution is actually
-37.5% unresolved — the old "zero-error" result was tagging, not attribution).
-**docs/market-research-communities-marketplaces.md** covers marketplace + community
-models (ElevenLabs payouts, Nexus DP, SponsorBlock corrections, CCC talent pool,
-NO FAKES Act implications).
+**Chatterbox backend is wired** (CC brief 2026-07-10). The `chatterbox` engine now
+exists in `prosecast/tts_engine.py` — no longer just the tag_mapper half:
+- `_synthesize_chatterbox()` POSTs to the devnen server `/tts` in clone mode with a
+  per-character reference clip, driving `exaggeration`/`cfg_weight`/`speed_factor` from
+  `map_tags(tags, "chatterbox")`. Non-200s print the server body (no silent swallow).
+- `test_chatterbox_connection()` GETs `/api/model-info` and prints `Connection OK ✓`, plus
+  a **LOUD Turbo guard** — the server currently has the *turbo* model loaded, which IGNORES
+  exaggeration/cfg, so emotion tags won't affect delivery until Tyler switches to base.
+- `CHATTERBOX_VOICES` pool + `VoiceAssigner` branch (narrator=slot 0, round-robin), pool
+  repopulated live from `/get_reference_files` at construction; static fallback otherwise.
+- Auto-detect priority: ElevenLabs (if key) > chatterbox (if server answers) > piper/say/gtts.
+- `tag_mapper._map_chatterbox` finished: emotion-arousal table nudges exaggeration/speed
+  (high-arousal up, low-arousal down); `speed` renamed to `speed_factor` at the payload edge.
+- Real server contract captured in **`docs/chatterbox-contract.md`** (built from the live
+  `/openapi.json` — not the mapper's old assumptions).
+- Smoke CLI: **`scripts/chatterbox_smoke.py`** (renders one line to `output/chatterbox_smoke.wav`).
+- Tests: **`tests/test_chatterbox.py`** — 12 offline/mocked tests (mapper bounds, pool
+  assignment, payload shape incl. the speed→speed_factor rename, Turbo guard). All green;
+  no network, no precious data touched.
+
+Prior context: **PRD.md** defines the dogfood MVP (Tyler listens to Parade end-to-end,
+multi-voice, on phone). Phases: A) Chatterbox backend + listen test (THE GATE) → B) cast
+review screen → C) resumable full-book render → D) listen-through.
 
 ## Next step
-**Phase A smoke test (~10 min):** confirm Chatterbox-Turbo answers on Gideon
-(`curl http://GIDEON_HOST:8101/docs` or its health route), generate ONE line of
-dialogue via curl, listen to the WAV. If it sounds good → build the `chatterbox`
-backend in tts_engine.py. If not → PRD gate fails, rethink render tier before
-building anything else.
+**Two YELLOW items that need Tyler (his infra / server-state — CC was not allowed to do these):**
+1. **Switch the server to base `ResembleAI/chatterbox`** — the Turbo model ignores
+   exaggeration/cfg, so emotion tags are inert until this changes. (The connection check
+   warns loudly when Turbo is loaded.)
+2. **Upload VCTK voices:** `.venv/bin/python scripts/stage_vctk_voices.py --from-dir ./vctk_voices
+   --upload-to http://GIDEON_HOST:8101` (only Gianna.wav / Robert.wav exist as references now).
+
+Then run **`.venv/bin/python scripts/chatterbox_smoke.py`** and **LISTEN** — that WAV is the
+Phase A gate. (CC did not run the render: the guardrail was GET-only against the server, and
+judging audio quality is Tyler's call.)
 
 ## Blocked on
-Nothing. (LLM pass for Yumi/Frankenstein IR needs Ollama reachable — note
-llm_attributor defaults to localhost:11434; from the Mac that means either local
-Ollama or pointing it at Gideon.)
+Nothing — awaiting Tyler's Phase A listen test (needs the two YELLOW items above first).
+(Aside: LLM pass for Yumi/Frankenstein IR still needs Ollama reachable — llm_attributor
+defaults to localhost:11434.)
 
 ## Backup (2026-06-12)
 - **Where:** `NAS_USER@GIDEON_HOST:/mnt/bolt/backups/prosecast/library/` (ZFS dataset `bolt/backups`, owned by NAS_USER)

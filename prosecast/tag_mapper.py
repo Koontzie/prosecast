@@ -113,21 +113,56 @@ def _map_orpheus(tags: dict) -> dict:
     return {"prefix_tag": prefix_tag} if prefix_tag else {}
 
 
-# ── Chatterbox-Turbo ─────────────────────────────────────────────────────────
+# ── Chatterbox ────────────────────────────────────────────────────────────────
 #
-# Chatterbox supports:
+# Chatterbox (devnen server) supports, on the *base* ResembleAI/chatterbox model:
 #   exaggeration (0-1): amplifies emotion in the generated voice
-#   speed (float): delivery speed multiplier (stub — actual API TBD)
-# Higher intensity → higher exaggeration.
+#   speed (float):      delivery-speed multiplier (server field: speed_factor)
+# The backend renames speed → speed_factor when building the /tts payload.
+# NOTE: on the Turbo model both exaggeration and cfg are ignored by the server.
+#
+# Mapping = base level from `pace`/`intensity`, nudged by an emotion-arousal
+# table. High-arousal emotions (anger, panic, joy) push exaggeration up and speed
+# up; low-arousal emotions (calm, grief, tenderness) pull both down. Keep this
+# table small and legible — it's config, not cleverness.
 
 _CHATTERBOX_SPEED = {"slow": 0.85, "measured": 1.0, "brisk": 1.10, "urgent": 1.25}
+
+# Emotion keyword → (exaggeration delta, speed delta). Matched as substrings
+# against the `emotion` phrase. First match wins per bucket direction.
+_CB_HIGH_AROUSAL = {
+    "anger", "angry", "furious", "rage", "outrage",
+    "excite", "thrill", "elat", "ecstat", "joy", "glee",
+    "panic", "terror", "fear", "afraid", "frantic", "desperat",
+    "shock", "alarm", "urgent", "manic",
+}
+_CB_LOW_AROUSAL = {
+    "calm", "serene", "tranquil", "gentle", "tender", "soft",
+    "sad", "grief", "sorrow", "melanchol", "somber", "wistful",
+    "weary", "tired", "resign", "content", "contemplat", "reflect",
+    "reserve", "solemn", "hush",
+}
 
 
 def _map_chatterbox(tags: dict) -> dict:
     intensity = tags.get("intensity", 0.5)
     pace = tags.get("pace", "measured")
-    exaggeration = min(1.0, round(intensity * 1.1, 2))
+    emotion = str(tags.get("emotion", "")).lower()
+
+    # Base exaggeration tracks intensity; base speed tracks pace.
+    exaggeration = intensity
     speed = _CHATTERBOX_SPEED.get(pace, 1.0)
+
+    # Emotion arousal nudges both up or down.
+    if any(word in emotion for word in _CB_HIGH_AROUSAL):
+        exaggeration += 0.20
+        speed += 0.08
+    elif any(word in emotion for word in _CB_LOW_AROUSAL):
+        exaggeration -= 0.15
+        speed -= 0.08
+
+    exaggeration = round(min(1.0, max(0.0, exaggeration)), 2)
+    speed = round(min(1.5, max(0.5, speed)), 2)
     return {"exaggeration": exaggeration, "speed": speed}
 
 
