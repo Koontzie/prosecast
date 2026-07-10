@@ -24,7 +24,7 @@ Everything below is scoped to that sentence. If a feature doesn't move a full-bo
 - Web UI: playback, inline correction, unresolved drawer, voices panel, upload. ✅
 - Per-book `library/` layout, corrections journal, golden tests, nightly Bolt backup. ✅
 - M4B export with chapters (skips unrendered chapters gracefully). ✅
-- ElevenLabs backend (premium tier, quota-limited). ✅
+- ElevenLabs backend — optional, **bring-your-own-key** cloud voices (higher quality; the user pays ElevenLabs directly, we never touch their money). Quota-limited by *their* plan. ✅ (setup: `docs/elevenlabs-setup.md`)
 
 ## The gap
 

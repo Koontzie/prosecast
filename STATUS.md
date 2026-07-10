@@ -1,7 +1,7 @@
 # PROSECAST — STATUS
 
 **Status:** Active
-**Updated:** 2026-07-03
+**Updated:** 2026-07-10
 
 ## Where it's at
 Planning + triage session (no code changes). **PRD.md** now defines the dogfood MVP:
@@ -42,3 +42,8 @@ Ollama or pointing it at Gideon.)
 - renders/ is disposable; everything else in a book dir is Tyler's labor — back it up
 - Build queue: cast review screen, pipeline-in-UI jobs, per-chapter narrator dropdown
 - Backup gap CLOSED — see Backup section above.
+- **Money model shift (2026-07-10):** ProseCast follows the AnimaForge model — free local
+  Chatterbox tier is complete; ElevenLabs is optional, **bring-your-own-key** (affiliate, no
+  markup, user pays EL directly). No ProseCast-run premium/payment economy near-term; the
+  marketplace/royalty/coin research is moonshot-only. Reframed in PRD.md + market-research doc;
+  new user guide at `docs/elevenlabs-setup.md`.

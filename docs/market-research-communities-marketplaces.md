@@ -4,6 +4,14 @@ Research for ProseCast's long-term model: local free-to-premium app + marketplac
 VO artists offer cloned voices for books/PDFs, community castings/tags/corrections,
 coin economy. Sources inline.
 
+> **Direction update (2026-07-10).** ProseCast is *not* going to run its own premium render
+> economy or payment rails. The model is the AnimaForge one: a **complete free local tier**
+> (Chatterbox — free forever, not a crippled trial), and for higher-quality cloud voices the
+> user brings their **own ElevenLabs account / API key** (affiliate referral, no markup, we
+> never touch their money — see `elevenlabs-setup.md`). The marketplace / royalty / coin
+> research below is **preserved as moonshot thinking, not the near-term plan.** Read the
+> "Monetization spine" note in the Synthesis with that reframe in mind.
+
 ## 1. Voice/audio marketplaces
 
 ### ElevenLabs Voice Library — the closest existing model
@@ -87,11 +95,15 @@ coin economy. Sources inline.
 
 ## Synthesis — the ProseCast model
 
-1. **Monetization spine:** usage-metered royalties (per rendered hour/character) with
-   creator-set restrictions and notice periods — and *publish the rate math*. Creator
-   share ≥50% (Steam's 25% is the proven failure line; ACX just moved to 50%). Free tier
-   (local Chatterbox) never pays and never charges; premium renders (ElevenLabs or
-   marketplace voices) carry the economy.
+1. **Monetization spine (revised 2026-07-10):** near-term there is **no ProseCast-run
+   payment economy.** Free tier = local Chatterbox, complete and free forever. Higher-quality
+   voices = the user's **own ElevenLabs key** (affiliate/referral, no markup); ProseCast never
+   processes render payments. Being upfront about the referral *is* the pitch, not a footnote.
+   *Moonshot only —* if ProseCast ever runs its own voice marketplace, the research below
+   holds: usage-metered royalties (per rendered hour/character), creator share ≥50% (Steam's
+   25% is the proven failure line; ACX moved to 50%), *published* rate math, creator-set
+   restrictions + notice periods. Don't build a payment rail before the free tier has an
+   audience.
 2. **Community spine:** participation is always free (Casting Call Club). Corrections
    use SponsorBlock-style vote-weighting + MusicBrainz reputation-scaled auto-approval.
    Casts get Chub-style ratings/usage counts. A gated librarian tier handles catalog
