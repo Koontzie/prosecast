@@ -79,6 +79,9 @@ defaults to localhost:11434.)
 - Initial backup verified 2026-06-12: 61/61 files, checksum-clean, IR readable from server
 
 ## Notes
+- **Pattern library (Tyler, 2026-07-13):** treat `animaforge/briefs/` as a reusable
+  pattern library when writing CC briefs for this project — the **memory-shim brief**
+  especially is close to copy-adapt.
 - Run tests after touching attribution layers: `.venv/bin/pytest tests/ -v` (needs spaCy + en_core_web_sm; skips otherwise)
 - All book paths via `prosecast/library.py` — `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/}`
 - corrections.jsonl is append-only training flywheel data — never rewrite
