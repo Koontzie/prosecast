@@ -207,7 +207,7 @@ def main():
     parser.add_argument("--chapters", help="Chapter(s) to render, 1-based: '3', '1-5', '1,3,5' (default: chapter 1)")
     parser.add_argument("--all-chapters", action="store_true", help="Render audio for every chapter in the book")
     parser.add_argument("--ir-only",  action="store_true", help="Generate IR only, skip audio")
-    parser.add_argument("--tts",      choices=["elevenlabs", "piper", "say", "gtts", "stub"], help="Override TTS engine")
+    parser.add_argument("--tts",      choices=["elevenlabs", "chatterbox", "piper", "say", "gtts", "stub"], help="Override TTS engine")
     parser.add_argument("--narrator",   help="POV character name for first-person dialogue (e.g. 'Lucky')")
     parser.add_argument("--use-existing-ir", action="store_true", help="Load IR from disk instead of rebuilding (skips parse/IR/LLM steps)")
     parser.add_argument("--llm",        action="store_true", help="Run Ollama LLM pass on unresolved blocks after rule-based IR")
