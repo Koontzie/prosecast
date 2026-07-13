@@ -117,19 +117,26 @@ def _map_orpheus(tags: dict) -> dict:
 #
 # Chatterbox (devnen server) supports, on the *base* ResembleAI/chatterbox model:
 #   exaggeration (0-1): amplifies emotion in the generated voice
-#   speed (float):      delivery-speed multiplier (server field: speed_factor)
-# The backend renames speed → speed_factor when building the /tts payload.
+#   cfg_weight (0-1):   generation guidance — affects pacing/adherence
 # NOTE: on the Turbo model both exaggeration and cfg are ignored by the server.
 #
-# Mapping = base level from `pace`/`intensity`, nudged by an emotion-arousal
-# table. High-arousal emotions (anger, panic, joy) push exaggeration up and speed
-# up; low-arousal emotions (calm, grief, tenderness) pull both down. Keep this
-# table small and legible — it's config, not cleverness.
+# Rev 2 (2026-07-13 listen tests, Tyler's ears):
+#   - `speed` REMOVED — the server's speed_factor is a post-process time-stretch
+#     that smears the audio into an echo/reverb artifact. NEVER emit it.
+#   - cfg_weight NOT emitted — listen tests swept 0.25/0.35/0.5/0.7/0.9 and the
+#     server default (0.5) beat every deviation in both directions (higher got
+#     faster + robotic, lower also read as fast). It's a stability knob, not a
+#     pace knob. `pace` is therefore unmapped for chatterbox: punctuation and
+#     sentence rhythm in the text carry pacing.
+#   - exaggeration compressed to [0.20, 0.85] — at 1.0 the model appends a
+#     mouth-noise artifact after the line; 0.7 carries clear emotion cleanly.
+#     Known tradeoff: higher exaggeration natively speeds delivery a touch
+#     (generation-time, artifact-free) — acceptable per 2026-07-13 listen.
+#
+# Mapping = base level from `intensity`, nudged by an emotion-arousal table.
+# Keep this table small and legible — it's config, not cleverness.
 
-_CHATTERBOX_SPEED = {"slow": 0.85, "measured": 1.0, "brisk": 1.10, "urgent": 1.25}
-
-# Emotion keyword → (exaggeration delta, speed delta). Matched as substrings
-# against the `emotion` phrase. First match wins per bucket direction.
+# Emotion keyword buckets. Matched as substrings against the `emotion` phrase.
 _CB_HIGH_AROUSAL = {
     "anger", "angry", "furious", "rage", "outrage",
     "excite", "thrill", "elat", "ecstat", "joy", "glee",
@@ -146,24 +153,23 @@ _CB_LOW_AROUSAL = {
 
 def _map_chatterbox(tags: dict) -> dict:
     intensity = tags.get("intensity", 0.5)
-    pace = tags.get("pace", "measured")
     emotion = str(tags.get("emotion", "")).lower()
 
-    # Base exaggeration tracks intensity; base speed tracks pace.
-    exaggeration = intensity
-    speed = _CHATTERBOX_SPEED.get(pace, 1.0)
+    # Base exaggeration tracks intensity, compressed into the artifact-free band:
+    # intensity 0.0 → 0.30, 0.5 → 0.55, 1.0 → 0.80.
+    exaggeration = 0.30 + intensity * 0.50
 
-    # Emotion arousal nudges both up or down.
+    # Emotion arousal nudges up or down.
     if any(word in emotion for word in _CB_HIGH_AROUSAL):
-        exaggeration += 0.20
-        speed += 0.08
+        exaggeration += 0.10
     elif any(word in emotion for word in _CB_LOW_AROUSAL):
-        exaggeration -= 0.15
-        speed -= 0.08
+        exaggeration -= 0.10
 
-    exaggeration = round(min(1.0, max(0.0, exaggeration)), 2)
-    speed = round(min(1.5, max(0.5, speed)), 2)
-    return {"exaggeration": exaggeration, "speed": speed}
+    exaggeration = round(min(0.85, max(0.20, exaggeration)), 2)
+    # Deliberately NO `speed`: speed_factor time-stretch = echo (see header note).
+    # `pace` is currently unmapped for chatterbox until the cfg_weight direction
+    # is confirmed by listening.
+    return {"exaggeration": exaggeration}
 
 
 # ── No-op engines ─────────────────────────────────────────────────────────────

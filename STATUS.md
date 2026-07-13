@@ -1,9 +1,31 @@
 # PROSECAST — STATUS
 
 **Status:** Active
-**Updated:** 2026-07-10
+**Updated:** 2026-07-13
 
 ## Where it's at
+**Phase A listen test DONE — Chatterbox quality PASSES** (2026-07-13, Tyler's ears).
+Findings from a controlled A/B session against the live server (base model was
+already loaded — YELLOW item 1 resolved):
+- **speed_factor = echo.** The server implements it as a post-process time-stretch
+  that smears audio into reverb. Only the speed≠1.0 renders echoed. `speed` is now
+  REMOVED from `_map_chatterbox` and a regression test guards it (`test_map_tags_never_emits_speed`).
+- **exaggeration 1.0 = trailing mouth-noise artifact.** Mapper now compresses
+  intensity into exaggeration [0.20, 0.85] (0.85 angry / 0.55 neutral / 0.35 calm).
+  Verified by ear: emotion clearly audible, no echo, no artifacts. Note: higher
+  exaggeration natively speeds delivery slightly (generation-time, acceptable).
+- **cfg_weight is a stability knob, not a pace knob.** Swept 0.25→0.9; the 0.5
+  default beat every deviation (both directions read as faster/more robotic).
+  Not emitted; `pace` is unmapped for chatterbox — text/punctuation carries pacing.
+- **Robert.wav reference is weak** (fast, monotone) — clone inherits the clip's
+  character. Gianna.wav renders sounded good. Voice quality = reference-clip
+  quality; the voice pool needs better clips before casting a book.
+- 13/13 chatterbox tests pass (updated for the new mapping).
+
+Prior context (2026-07-10): chatterbox backend wired in tts_engine.py; contract in
+docs/chatterbox-contract.md; PRD.md phases A→D unchanged.
+
+## Where it was (2026-07-10)
 **Chatterbox backend is wired** (CC brief 2026-07-10). The `chatterbox` engine now
 exists in `prosecast/tts_engine.py` — no longer just the tag_mapper half:
 - `_synthesize_chatterbox()` POSTs to the devnen server `/tts` in clone mode with a
@@ -29,19 +51,22 @@ multi-voice, on phone). Phases: A) Chatterbox backend + listen test (THE GATE) �
 review screen → C) resumable full-book render → D) listen-through.
 
 ## Next step
-**Two YELLOW items that need Tyler (his infra / server-state — CC was not allowed to do these):**
-1. **Switch the server to base `ResembleAI/chatterbox`** — the Turbo model ignores
-   exaggeration/cfg, so emotion tags are inert until this changes. (The connection check
-   warns loudly when Turbo is loaded.)
-2. **Upload VCTK voices:** `.venv/bin/python scripts/stage_vctk_voices.py --from-dir ./vctk_voices
-   --upload-to http://GIDEON_HOST:8101` (only Gianna.wav / Robert.wav exist as references now).
+Phase A gate is PASSED — two tracks, order TBD with Tyler:
+1. **Voice pool** — Robert.wav is a weak reference; source better clips (VCTK staging
+   via `scripts/stage_vctk_voices.py`, or hand-picked clean clips). No `vctk_voices/`
+   dir exists locally yet — clips need to be sourced first.
+2. **Phase B — cast review screen** (per PRD): rank characters by line count,
+   merge / demote-to-NARRATOR / cast with preview. Parade's 255 → ~10–15 cast.
 
-Then run **`.venv/bin/python scripts/chatterbox_smoke.py`** and **LISTEN** — that WAV is the
-Phase A gate. (CC did not run the render: the guardrail was GET-only against the server, and
-judging audio quality is Tyler's call.)
+**Shared-server heads-up (2026-07-13):** the Chatterbox instance on Gideon :8101 is
+also used by AnimaForge dev. Hazards: model swaps (base↔turbo) kill emotion tags
+mid-render; reference-clip deletions break voice maps; VRAM contention. Agreed
+mitigations (not yet built): pre-flight assertions in the render path (model type
+== original + all voice_map references still on server), local mirror of reference
+clips in-repo. Fold into Phase C hardening.
 
 ## Blocked on
-Nothing — awaiting Tyler's Phase A listen test (needs the two YELLOW items above first).
+Nothing.
 (Aside: LLM pass for Yumi/Frankenstein IR still needs Ollama reachable — llm_attributor
 defaults to localhost:11434.)
 

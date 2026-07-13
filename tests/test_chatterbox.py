@@ -44,25 +44,33 @@ class _FakeResp:
 
 def test_map_tags_neutral():
     out = map_tags({"intensity": 0.5, "pace": "measured", "emotion": "neutral"}, "chatterbox")
-    assert out == {"exaggeration": 0.5, "speed": 1.0}
+    assert out == {"exaggeration": 0.55}
 
 
 def test_map_tags_high_arousal_pushes_up():
     out = map_tags({"intensity": 0.9, "pace": "urgent", "emotion": "hot anger"}, "chatterbox")
-    assert out["exaggeration"] == 1.0            # clamped at ceiling
-    assert out["speed"] > 1.0
+    assert out["exaggeration"] == 0.85           # clamped at the artifact-free ceiling
 
 
 def test_map_tags_low_arousal_pulls_down():
     out = map_tags({"intensity": 0.3, "pace": "slow", "emotion": "calm reserve"}, "chatterbox")
-    assert out["exaggeration"] < 0.3
-    assert out["speed"] < 1.0
+    assert out["exaggeration"] < 0.55
 
 
 def test_map_tags_clamps_to_range():
     out = map_tags({"intensity": 1.0, "pace": "urgent", "emotion": "furious rage"}, "chatterbox")
-    assert 0.0 <= out["exaggeration"] <= 1.0
-    assert 0.5 <= out["speed"] <= 1.5
+    assert 0.20 <= out["exaggeration"] <= 0.85
+
+
+def test_map_tags_never_emits_speed():
+    """Echo regression guard (2026-07-13): speed_factor is a time-stretch post-
+    process on the server that smears audio into echo/reverb. The chatterbox
+    mapping must NEVER emit `speed`, whatever the pace tag says."""
+    for pace in ("slow", "measured", "brisk", "urgent"):
+        for emotion in ("neutral", "hot anger", "calm reserve"):
+            out = map_tags({"intensity": 0.7, "pace": pace, "emotion": emotion}, "chatterbox")
+            assert "speed" not in out, f"speed leaked for pace={pace}, emotion={emotion}"
+            assert "speed_factor" not in out
 
 
 def test_map_tags_empty_returns_empty():
