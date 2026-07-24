@@ -330,6 +330,54 @@
       padding: 4px 12px; border-radius: 5px; cursor: pointer; font-size: .78rem;
       flex-shrink: 0;
     }
+
+    /* ── Cast review panel ── */
+    #cast-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; width: 600px; max-width: 95vw;
+      background: #181818; border-left: 1px solid #2a2a2a;
+      display: flex; flex-direction: column;
+      z-index: 110; transform: translateX(100%);
+      transition: transform .25s ease;
+    }
+    #cast-panel.open { transform: translateX(0); }
+    .cast-toolbar {
+      padding: 10px 16px; border-bottom: 1px solid #242424;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0;
+      font-size: .78rem;
+    }
+    .cast-toolbar input[type=number] {
+      width: 54px; background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 3px 6px; border-radius: 5px; font-size: .78rem;
+    }
+    .cast-toolbar button {
+      background: #2a2a2a; border: 1px solid #3a3a3a; color: #ccc;
+      padding: 4px 10px; border-radius: 5px; cursor: pointer; font-size: .76rem;
+    }
+    .cast-toolbar button:hover { background: #333; }
+    .cast-toolbar button:disabled { opacity: .4; cursor: default; }
+    .cast-toolbar .danger { color: #e07070; border-color: #4a2a2a; }
+    .cast-toolbar input[type=text] {
+      width: 120px; background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 3px 6px; border-radius: 5px; font-size: .78rem;
+    }
+    #cast-rows { flex: 1; overflow-y: auto; padding: 10px 16px; display: flex; flex-direction: column; gap: 4px; }
+    .cast-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; background: #1e1e1e;
+      border: 1px solid #2a2a2a; border-radius: 6px;
+    }
+    .cast-row.narrator-row { border-color: #3a3a5a; }
+    .cast-row .cast-count {
+      width: 46px; text-align: right; color: #7c6dfa; font-size: .78rem;
+      font-variant-numeric: tabular-nums; flex-shrink: 0;
+    }
+    .cast-row .cast-name { width: 130px; flex-shrink: 0; font-size: .82rem;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .cast-row .cast-sample {
+      flex: 1; color: #666; font-size: .72rem; font-style: italic;
+      overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0;
+    }
+    .cast-status { padding: 6px 16px; font-size: .74rem; color: #50c8a8; min-height: 1.2em; flex-shrink: 0; }
     .voices-btn:hover { background: #26263e; }
 
     /* ── Add book button ── */
@@ -516,6 +564,34 @@
   </div>
 </div>
 
+<!-- ── Cast review panel ── -->
+<div id="cast-panel">
+  <div class="panel-header">
+    <div>
+      <h2>Cast Review</h2>
+      <small id="cast-panel-subtitle"></small>
+    </div>
+    <button id="panel-close" onclick="closeCastPanel()" style="background:none;border:none;color:#666;cursor:pointer;font-size:1.1rem;padding:4px 8px;border-radius:4px;">✕</button>
+  </div>
+  <div class="cast-toolbar">
+    <label><input type="checkbox" id="cast-select-all" onchange="castSelectAll(this.checked)"> all</label>
+    <button class="danger" id="cast-demote-btn" onclick="castDemoteSelected()">Demote selected → NARRATOR</button>
+    <span style="color:#333;">|</span>
+    <button class="danger" onclick="castDemoteThreshold()">Demote all ≤</button>
+    <input type="number" id="cast-threshold" value="5" min="1">
+    <span style="color:#555;">blocks</span>
+    <span style="color:#333;">|</span>
+    <button onclick="castMergeSelected()">Merge selected into</button>
+    <input type="text" id="cast-merge-target" placeholder="Character…" list="cast-merge-list">
+    <datalist id="cast-merge-list"></datalist>
+  </div>
+  <div id="cast-rows"></div>
+  <div class="cast-status" id="cast-status"></div>
+  <div class="voice-panel-footer">
+    <button id="cast-voices-save-btn" onclick="saveCastVoices()" style="flex:1;background:#7c6dfa;border:none;color:#fff;padding:8px 0;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500;">Save voice assignments</button>
+  </div>
+</div>
+
 <!-- ── Correction panel ── -->
 <div id="correction-panel">
   <div class="panel-header">
@@ -572,8 +648,8 @@ async function init() {
   if (books.length === 1) loadBook(books[0].slug);
 }
 
-async function fetchJSON(url) {
-  const r = await fetch(url);
+async function fetchJSON(url, opts) {
+  const r = await fetch(url, opts);
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return r.json();
 }
@@ -652,6 +728,7 @@ function renderChapterList(slug, title, chapters) {
       <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">↺ Regenerate all</button>
       <button class="voices-btn" id="export-m4b-btn" onclick="exportM4B('${slug}')" title="Export rendered chapters as a chapterized audiobook">⬇ Export M4B</button>
       <button class="voices-btn" onclick="openVoicePanel('${slug}')">🎤 Voices</button>
+      <button class="voices-btn" onclick="openCastPanel('${slug}')">🎭 Cast</button>
     </div>
     <div class="chapter-list">${rows}</div>`;
 }
@@ -1018,6 +1095,159 @@ async function saveVoiceMap() {
   } finally {
     btn.disabled = false;
   }
+}
+
+// ── Cast review panel ──────────────────────────────────────────────────────
+const castPanel    = document.getElementById('cast-panel');
+const castRowsEl   = document.getElementById('cast-rows');
+const castSubEl    = document.getElementById('cast-panel-subtitle');
+const castStatusEl = document.getElementById('cast-status');
+
+let castSlug = null;
+let castData = null;          // last /cast response
+let castVoicePicks = {};      // speaker → voice id (live edit state)
+
+async function openCastPanel(slug) {
+  castSlug = slug;
+  castRowsEl.innerHTML = '<p class="panel-empty">Loading…</p>';
+  castPanel.classList.add('open');
+  voicePanel.classList.remove('open');
+  correctionPanel.classList.remove('open');
+  await refreshCast();
+}
+
+function closeCastPanel() {
+  castPanel.classList.remove('open');
+  previewAudioEl.pause();
+  previewAudioEl.src = '';
+}
+
+async function refreshCast(statusMsg) {
+  try {
+    castData = await fetchJSON(`/ir/${castSlug}/cast`);
+  } catch (e) {
+    castRowsEl.innerHTML = `<p class="panel-empty" style="color:#e07070">Error: ${e.message}</p>`;
+    return;
+  }
+  castVoicePicks = { NARRATOR: castData.narrator_voice || '' };
+  const chars = castData.characters;
+  castSubEl.textContent =
+    `${chars.length} characters · ${castData.engine} · ${castData.voices.length} voices`;
+  castStatusEl.textContent = statusMsg || '';
+  document.getElementById('cast-select-all').checked = false;
+
+  // Merge-target datalist: top 30 names
+  document.getElementById('cast-merge-list').innerHTML =
+    chars.slice(0, 30).map(c => `<option value="${esc(c.name)}">`).join('');
+
+  const voiceOptions = (current) =>
+    ['<option value="">— auto —</option>']
+      .concat(castData.voices.map(v =>
+        `<option value="${esc(v.id)}"${v.id === current ? ' selected' : ''}>${esc(v.name)}</option>`))
+      .join('');
+
+  const narrRow = `
+    <div class="cast-row narrator-row">
+      <span style="width:16px;flex-shrink:0;"></span>
+      <span class="cast-count">${castData.narrator_dialogue_count}</span>
+      <span class="cast-name spk-narrator">NARRATOR</span>
+      <span class="cast-sample">narration + demoted lines</span>
+      <select class="voice-select" onchange="castVoicePicks['NARRATOR']=this.value">
+        ${voiceOptions(castData.narrator_voice)}
+      </select>
+      <button class="voice-preview-btn" onclick="castPreview('NARRATOR', this)" title="Preview">▶</button>
+    </div>`;
+
+  castRowsEl.innerHTML = narrRow + chars.map((c, i) => {
+    castVoicePicks[c.name] = c.voice || '';
+    return `
+    <div class="cast-row">
+      <input type="checkbox" class="cast-check" data-name="${esc(c.name)}" style="flex-shrink:0;">
+      <span class="cast-count">${c.dialogue_count}</span>
+      <span class="cast-name" style="color:${cssColorForChar(c.name)}">${esc(c.name)}</span>
+      <span class="cast-sample" title="${esc(c.sample_line || '')}">${esc(c.sample_line || '')}</span>
+      <select class="voice-select" style="min-width:130px;" data-vsel="${esc(c.name)}"
+              onchange="castVoicePicks[this.dataset.vsel]=this.value">
+        ${voiceOptions(c.voice)}
+      </select>
+      <button class="voice-preview-btn" onclick="castPreview('${esc(c.name)}', this)" title="Preview with this character's line">▶</button>
+    </div>`;
+  }).join('');
+}
+
+function castSelected() {
+  return [...castRowsEl.querySelectorAll('.cast-check:checked')].map(cb => cb.dataset.name);
+}
+
+function castSelectAll(on) {
+  castRowsEl.querySelectorAll('.cast-check').forEach(cb => { cb.checked = on; });
+}
+
+async function castDemoteSelected() {
+  const names = castSelected();
+  if (!names.length) { castStatusEl.textContent = 'Nothing selected.'; return; }
+  if (!confirm(`Demote ${names.length} character(s) to NARRATOR? Their lines become narration.`)) return;
+  const res = await fetchJSON(`/ir/${castSlug}/cast/demote`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ names }),
+  });
+  await refreshCast(`Demoted ${Object.keys(res.demoted).length} characters (${res.reassigned_total} blocks → NARRATOR).`);
+}
+
+async function castDemoteThreshold() {
+  const n = parseInt(document.getElementById('cast-threshold').value, 10);
+  if (!n || n < 1) return;
+  const hit = castData.characters.filter(c => c.dialogue_count <= n).length;
+  if (!confirm(`Demote all ${hit} characters with ≤${n} dialogue blocks to NARRATOR?`)) return;
+  const res = await fetchJSON(`/ir/${castSlug}/cast/demote`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ max_blocks: n }),
+  });
+  await refreshCast(`Demoted ${Object.keys(res.demoted).length} characters (${res.reassigned_total} blocks → NARRATOR).`);
+}
+
+async function castMergeSelected() {
+  const names = castSelected();
+  const into = document.getElementById('cast-merge-target').value.trim();
+  if (!names.length || !into) { castStatusEl.textContent = 'Select characters and a merge target.'; return; }
+  if (!confirm(`Merge ${names.filter(n => n !== into).join(', ')} into ${into}?`)) return;
+  const res = await fetchJSON(`/ir/${castSlug}/cast/merge`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ from_names: names, into }),
+  });
+  document.getElementById('cast-merge-target').value = '';
+  await refreshCast(`Merged ${Object.keys(res.merged).length} → ${res.into} (${res.reassigned_total} blocks).`);
+}
+
+async function castPreview(name, btn) {
+  const voiceId = castVoicePicks[name];
+  if (!voiceId) { castStatusEl.textContent = `${name}: pick a voice first.`; return; }
+  const c = (castData.characters || []).find(x => x.name === name);
+  const line = (c && c.sample_line) ? c.sample_line
+             : 'The rain had stopped by the time she reached the crossroads.';
+  btn.classList.add('playing'); btn.disabled = true;
+  previewAudioEl.pause();
+  previewAudioEl.src =
+    `/voice/preview/${encodeURIComponent(voiceId)}?text=${encodeURIComponent(line)}`;
+  try { await previewAudioEl.play(); } catch {}
+  const done = () => { btn.classList.remove('playing'); btn.disabled = false; };
+  previewAudioEl.onended = done;
+  setTimeout(done, 15000);
+}
+
+async function saveCastVoices() {
+  // Merge picks over the existing full voice map so uncast characters keep defaults.
+  const vm = await fetchJSON(`/voice_map/${castSlug}`);
+  const map = vm.map || {};
+  for (const [name, voice] of Object.entries(castVoicePicks)) {
+    if (voice) map[name] = voice;
+    else delete map[name];       // '' = auto → let round-robin handle it
+  }
+  await fetchJSON(`/voice_map/${castSlug}`, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ map }),
+  });
+  castStatusEl.textContent = 'Voice assignments saved.';
 }
 
 // ── Correction panel ───────────────────────────────────────────────────────

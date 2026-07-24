@@ -130,9 +130,43 @@ _active_engine: str | None = None
 def _get_active_engine() -> str:
     global _active_engine
     if _active_engine is None:
-        from prosecast.tts_engine import TTSEngine
-        _active_engine = TTSEngine()._detect()
+        # Explicit override first: PROSECAST_TTS_ENGINE=chatterbox uvicorn server:app
+        # Auto-detect prefers ElevenLabs whenever a key is in .env, which makes every
+        # UI preview cost credits — the override keeps dogfooding on the free tier.
+        override = os.environ.get("PROSECAST_TTS_ENGINE", "").strip().lower()
+        if override:
+            _active_engine = override
+        else:
+            from prosecast.tts_engine import TTSEngine
+            _active_engine = TTSEngine()._detect()
     return _active_engine
+
+
+_chatterbox_voice_cache: list[dict] | None = None
+
+
+def _chatterbox_voices() -> list[dict]:
+    """[{id, name}] for the chatterbox engine: predefined voices + clone references.
+
+    ids use the voice-map string format: 'predefined:<file>' for built-ins,
+    bare filename for clone references. Cached for the process lifetime.
+    """
+    global _chatterbox_voice_cache
+    if _chatterbox_voice_cache is None:
+        from prosecast.tts_engine import (
+            fetch_chatterbox_predefined, fetch_chatterbox_references,
+        )
+        voices = []
+        for v in fetch_chatterbox_predefined() or []:
+            fname = v.get("filename")
+            if not fname:
+                continue
+            name = v.get("display_name") or Path(fname).stem
+            voices.append({"id": f"predefined:{fname}", "name": name})
+        for ref in fetch_chatterbox_references() or []:
+            voices.append({"id": ref, "name": f"{Path(ref).stem} (clone)"})
+        _chatterbox_voice_cache = voices
+    return _chatterbox_voice_cache
 
 
 def _voice_pool(engine: str) -> list[str]:
@@ -146,6 +180,8 @@ def _voice_pool(engine: str) -> list[str]:
         return list(VoiceAssigner.PIPER_VOICES)
     elif engine == 'gtts':
         return [v['tld'] for v in VoiceAssigner.GTTS_VOICES]
+    elif engine == 'chatterbox':
+        return [v['id'] for v in _chatterbox_voices()]
     return []
 
 
@@ -158,6 +194,8 @@ def _voice_labels(engine: str) -> list[dict]:
     from prosecast.tts_engine import VoiceAssigner
     if engine == 'elevenlabs':
         return [{'id': v['id'], 'name': v['name']} for v in VoiceAssigner.ELEVENLABS_VOICES]
+    elif engine == 'chatterbox':
+        return _chatterbox_voices()
     ids = _voice_pool(engine)
     return [{'id': v, 'name': v} for v in ids]
 
@@ -633,6 +671,157 @@ def delete_character(book_slug: str, name: str):
     return {"name": name, "reassigned": reassigned}
 
 
+# ── Cast review (Phase B) ─────────────────────────────────────────────────────
+
+def _cast_counts(ir: dict) -> tuple[dict[str, int], dict[str, str]]:
+    """Dialogue-block counts and one representative sample line per speaker."""
+    counts: dict[str, int] = {}
+    samples: dict[str, str] = {}
+    for chapter in ir.get("chapters", []):
+        for block in chapter.get("blocks", []):
+            if block.get("type") != "dialogue":
+                continue
+            speaker = block.get("speaker")
+            if not speaker or block.get("unresolved"):
+                continue
+            counts[speaker] = counts.get(speaker, 0) + 1
+            if speaker not in samples:
+                text = block.get("text", "").strip().strip('"').strip()
+                if len(text) >= 30:
+                    samples[speaker] = text
+    return counts, samples
+
+
+def _reassign_speaker(ir: dict, from_name: str, to_name: str) -> tuple[int, list]:
+    """Reassign every block of from_name → to_name. Returns (dialogue_count, segment_ids)."""
+    count = 0
+    seg_ids = []
+    for chapter in ir.get("chapters", []):
+        for block in chapter.get("blocks", []):
+            if block.get("speaker") == from_name:
+                block["speaker"] = to_name
+                block["attribution_method"] = "manual"
+                block["confidence"] = 1.0
+                if block.get("type") == "dialogue":
+                    count += 1
+                    seg_ids.append(block.get("segmentId"))
+    ir["characters"] = [c for c in ir.get("characters", []) if c != from_name]
+    ir["user_characters"] = [c for c in ir.get("user_characters", []) if c != from_name]
+    return count, seg_ids
+
+
+@app.get("/ir/{book_slug}/cast")
+def get_cast(book_slug: str):
+    """Full ranked cast list for the cast review screen (no cap, unlike cast_candidates)."""
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+    counts, samples = _cast_counts(ir)
+
+    vm_path = lib.voice_map_path(book_slug)
+    voice_map = {}
+    if vm_path.exists():
+        with open(vm_path) as f:
+            voice_map = json.load(f).get("map", {})
+
+    ranked = sorted(
+        [(n, c) for n, c in counts.items() if n != "NARRATOR"],
+        key=lambda x: (-x[1], x[0]),
+    )
+    characters = [{
+        "name": name,
+        "dialogue_count": count,
+        "sample_line": samples.get(name),
+        "voice": voice_map.get(name, ""),
+    } for name, count in ranked]
+
+    engine = _get_active_engine()
+    return {
+        "narrator_voice": voice_map.get("NARRATOR", ""),
+        "narrator_dialogue_count": counts.get("NARRATOR", 0),
+        "characters": characters,
+        "voices": _voice_labels(engine),
+        "engine": engine,
+    }
+
+
+class DemoteBody(BaseModel):
+    names: list[str] = []
+    max_blocks: int | None = None   # demote every character with <= this many blocks
+
+
+@app.post("/ir/{book_slug}/cast/demote")
+def demote_characters(book_slug: str, body: DemoteBody):
+    """Bulk-reassign characters to NARRATOR. Explicit names, a max_blocks threshold, or both."""
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+    counts, _ = _cast_counts(ir)
+
+    targets = set(n for n in body.names if n and n != "NARRATOR")
+    if body.max_blocks is not None:
+        targets |= {n for n, c in counts.items()
+                    if n != "NARRATOR" and c <= body.max_blocks}
+    if not targets:
+        return {"demoted": {}, "reassigned_total": 0}
+
+    results = {}
+    total = 0
+    for name in sorted(targets):
+        count, seg_ids = _reassign_speaker(ir, name, "NARRATOR")
+        results[name] = count
+        total += count
+        _journal(book_slug, "character_demoted", {
+            "name": name, "reassigned_to": "NARRATOR",
+            "reassigned_count": count, "segment_ids": seg_ids,
+            "bulk": True, "max_blocks_threshold": body.max_blocks,
+        })
+
+    with open(ir_path, "w", encoding="utf-8") as f:
+        json.dump(ir, f, indent=2, ensure_ascii=False)
+    return {"demoted": results, "reassigned_total": total}
+
+
+class MergeBody(BaseModel):
+    from_names: list[str]
+    into: str
+
+
+@app.post("/ir/{book_slug}/cast/merge")
+def merge_characters(book_slug: str, body: MergeBody):
+    """Merge one or more characters into another (alias collapse, e.g. Kimberly→Kimberley).
+
+    Merge events are labeled alias data for the training flywheel.
+    """
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    if not body.into or not body.into.strip():
+        raise HTTPException(status_code=400, detail="Merge target 'into' is required")
+    into = body.into.strip()
+    sources = [n for n in body.from_names if n and n != into]
+    if not sources:
+        raise HTTPException(status_code=400, detail="No source characters to merge")
+
+    ir = _load_ir(ir_path)
+    results = {}
+    total = 0
+    for name in sources:
+        count, seg_ids = _reassign_speaker(ir, name, into)
+        results[name] = count
+        total += count
+        _journal(book_slug, "characters_merged", {
+            "from": name, "into": into,
+            "reassigned_count": count, "segment_ids": seg_ids,
+        })
+
+    with open(ir_path, "w", encoding="utf-8") as f:
+        json.dump(ir, f, indent=2, ensure_ascii=False)
+    return {"merged": results, "into": into, "reassigned_total": total}
+
+
 # ── /voices ──────────────────────────────────────────────────────────────────
 
 @app.get("/voices")
@@ -747,6 +936,15 @@ def preview_voice(
     )
     if engine_name == 'elevenlabs':
         ok = _synthesize_elevenlabs(text, {'voice_id': voice_name}, tmp_path)
+    elif engine_name == 'chatterbox':
+        from prosecast.tts_engine import _synthesize_chatterbox
+        if voice_name.startswith('predefined:'):
+            cfg = {'voice_mode': 'predefined',
+                   'predefined_voice_id': voice_name.split(':', 1)[1]}
+        else:
+            cfg = {'voice_mode': 'clone', 'reference_audio_filename': voice_name}
+        cfg['_tag_params'] = {'exaggeration': 0.55}
+        ok = _synthesize_chatterbox(text, cfg, tmp_path)
     elif engine_name == 'say':
         ok = _synthesize_say(text, {'voice': voice_name}, tmp_path)
     elif engine_name == 'piper':
