@@ -68,12 +68,18 @@ multi-voice, on phone). Phases: A) Chatterbox backend + listen test (THE GATE) �
 review screen → C) resumable full-book render → D) listen-through.
 
 ## Next step
-Phase A gate is PASSED — two tracks, order TBD with Tyler:
-1. **Voice pool** — Robert.wav is a weak reference; source better clips (VCTK staging
-   via `scripts/stage_vctk_voices.py`, or hand-picked clean clips). No `vctk_voices/`
-   dir exists locally yet — clips need to be sourced first.
-2. **Phase B — cast review screen** (per PRD): rank characters by line count,
-   merge / demote-to-NARRATOR / cast with preview. Parade's 255 → ~10–15 cast.
+**Phase B cast screen is BUILT (2026-07-22, commit 0bd6c23) — needs Tyler's first real
+workout on Parade.** Run the server with the free tier pinned:
+`PROSECAST_TTS_ENGINE=chatterbox .venv/bin/uvicorn server:app --reload`
+then open Parade → 🎭 Cast. Suggested flow: demote-all-≤5 (kills ~177 noise entries),
+merge obvious aliases, cast the top ~15 from the audition voices, save, render 2–3
+chapters. All demotes/merges journal to corrections.jsonl (flywheel data).
+
+Then: **multi-genre sampling pass** — 2–3 chapters each from Frankenstein, Moby Dick,
+Brigands, Carousel through the same cast-then-render flow.
+
+(Voice pool note: 33 usable predefined server voices now; clone refs still just
+Gianna/Robert. VCTK staging only if predefined set proves insufficient.)
 
 **Shared-server heads-up (2026-07-13):** the Chatterbox instance on Gideon :8101 is
 also used by AnimaForge dev. Hazards: model swaps (base↔turbo) kill emotion tags
