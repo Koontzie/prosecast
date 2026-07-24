@@ -1,7 +1,24 @@
 # PROSECAST — STATUS
 
 **Status:** Active
-**Updated:** 2026-07-13
+**Updated:** 2026-07-22
+
+## Session 2026-07-22
+- Gideon rebooted (Tyler shutdown); all 13 services verified back, Chatterbox base
+  model survived restart, no reload needed. Smoke render confirmed end-to-end.
+- **Phase A fully CLOSED:** Tyler approved the full sample-chapter listen
+  ("does the job"); Robert.wav retired as narrator material.
+- **Voice audition:** 33 predefined server voices rendered through
+  `scripts/audition_voices.py` → `output/audition/NN_*.wav` + manifest. Tyler's picks:
+  narrator=bright-light-1, cast=bright-toronto-1 / clear-jersey-1 / deep-sydney-1.
+- **Voice map now supports predefined voices:** `"predefined:<file>"` string prefix
+  or dict pass-through (tts_engine); sample_book/voice_map.json uses the new cast;
+  chapter re-rendered multi-voice. 15/15 tests pass.
+- **Parade cast-noise data** (grounds Phase B design): 256 speakers, top 15 carry
+  61% of 3,885 dialogue blocks; 177 speakers have ≤5 blocks (spaCy NER noise +
+  walk-ons). Bulk "demote under N blocks" collapses 256 → ~40 in one action.
+- **Agreed test scope:** 2–3 chapters per library book (not whole books) for the
+  multi-genre validation pass; whole-book render is Parade-only, Phase C/D.
 
 ## Where it's at
 **Phase A listen test DONE — Chatterbox quality PASSES** (2026-07-13, Tyler's ears).
