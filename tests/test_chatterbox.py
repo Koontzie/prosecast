@@ -97,6 +97,28 @@ def test_chatterbox_pool_assignment():
     assert c["reference_audio_filename"] == "A.wav"
 
 
+def test_voice_map_predefined_prefix():
+    """'predefined:<file>' voice-map entries select the server's built-in voices."""
+    va = tts_engine.VoiceAssigner(engine="stub")
+    va.engine = "chatterbox"
+    va.load_voice_map({"NARRATOR": "predefined:bright-light-1.wav", "Darcy": "Gianna.wav"})
+    assert va.get_voice("NARRATOR") == {"voice_mode": "predefined",
+                                       "predefined_voice_id": "bright-light-1.wav"}
+    # bare filename keeps the original clone behavior
+    assert va.get_voice("Darcy") == {"voice_mode": "clone",
+                                     "reference_audio_filename": "Gianna.wav"}
+
+
+def test_voice_map_dict_passthrough():
+    va = tts_engine.VoiceAssigner(engine="stub")
+    va.engine = "chatterbox"
+    cfg = {"voice_mode": "predefined", "predefined_voice_id": "smooth-noir-1.wav"}
+    va.load_voice_map({"Jane": cfg})
+    out = va.get_voice("Jane")
+    assert out == cfg
+    assert out is not cfg  # defensive copy, no shared mutation
+
+
 def test_chatterbox_pool_does_not_mutate_class():
     va = tts_engine.VoiceAssigner(engine="stub")
     va._chatterbox_pool.append("SHOULD_NOT_LEAK.wav")

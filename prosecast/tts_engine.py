@@ -98,7 +98,11 @@ class VoiceAssigner:
         elif self.engine == 'elevenlabs':
             return {'voice_id': voice_id}
         elif self.engine == 'chatterbox':
-            # voice_id is a reference-clip filename → clone mode
+            # "predefined:<file>" → built-in server voice; bare filename → clone
+            # mode with a reference clip (the original behavior).
+            if voice_id.startswith('predefined:'):
+                return {'voice_mode': 'predefined',
+                        'predefined_voice_id': voice_id.split(':', 1)[1]}
             return {'voice_mode': 'clone', 'reference_audio_filename': voice_id}
         return {}
 
@@ -106,9 +110,12 @@ class VoiceAssigner:
         if speaker in self._map:
             return self._map[speaker]
 
-        # Explicit override from voice_map.json takes priority over auto-assign
+        # Explicit override from voice_map.json takes priority over auto-assign.
+        # Dict entries are engine-specific configs and pass through untouched;
+        # string entries go through the per-engine voice_id translation.
         if speaker in self._voice_map:
-            cfg = self._voice_id_to_cfg(self._voice_map[speaker])
+            entry = self._voice_map[speaker]
+            cfg = dict(entry) if isinstance(entry, dict) else self._voice_id_to_cfg(entry)
             self._map[speaker] = cfg
             return cfg
 
