@@ -117,6 +117,28 @@ def test_merge_into_self_rejected(client):
     assert r.status_code == 400
 
 
+def test_character_lines_with_context(client):
+    r = client.get("/ir/cast_test/character/Alice/lines?limit=3")
+    assert r.status_code == 200
+    lines = r.json()["lines"]
+    assert len(lines) == 2
+    assert lines[0]["text"] == '"Hello there, my old friend."'
+    assert lines[0]["chapter"] == "Ch 1"
+    assert "context_before" in lines[0] and "context_after" in lines[0]
+
+
+def test_merge_into_narrator_allowed(client, tmp_path):
+    """POV books: the 'narrator' is sometimes a named character — merging a
+    character INTO NARRATOR must work (distinct journal event from demote)."""
+    r = client.post("/ir/cast_test/cast/merge",
+                    json={"from_names": ["Bobby"], "into": "NARRATOR"})
+    assert r.status_code == 200
+    assert r.json()["merged"] == {"Bobby": 1}
+    events = _journal_events(tmp_path)
+    assert events[0]["event"] == "characters_merged"
+    assert events[0]["into"] == "NARRATOR"
+
+
 def test_narrator_cannot_be_demoted(client):
     r = client.post("/ir/cast_test/cast/demote", json={"names": ["NARRATOR"]})
     assert r.status_code == 200

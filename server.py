@@ -746,6 +746,36 @@ def get_cast(book_slug: str):
     }
 
 
+@app.get("/ir/{book_slug}/character/{name}/lines")
+def character_lines(book_slug: str, name: str, limit: int = Query(default=3, le=10)):
+    """Up to `limit` dialogue blocks for a character, with surrounding context.
+
+    Powers the cast screen's expandable context view — lets the user judge who a
+    'character' actually is before demoting/merging.
+    """
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+
+    lines = []
+    for chapter in ir.get("chapters", []):
+        for block in chapter.get("blocks", []):
+            if (block.get("type") == "dialogue"
+                    and block.get("speaker") == name
+                    and not block.get("unresolved")):
+                lines.append({
+                    "chapter": chapter.get("title", ""),
+                    "segment_id": block.get("segmentId"),
+                    "context_before": (block.get("context_before") or "")[-300:],
+                    "text": block.get("text", ""),
+                    "context_after": (block.get("context_after") or "")[:300],
+                })
+                if len(lines) >= limit:
+                    return {"name": name, "lines": lines}
+    return {"name": name, "lines": lines}
+
+
 class DemoteBody(BaseModel):
     names: list[str] = []
     max_blocks: int | None = None   # demote every character with <= this many blocks

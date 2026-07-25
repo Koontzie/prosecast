@@ -378,6 +378,20 @@
       overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0;
     }
     .cast-status { padding: 6px 16px; font-size: .74rem; color: #50c8a8; min-height: 1.2em; flex-shrink: 0; }
+    .cast-expand-btn {
+      background: none; border: none; color: #666; cursor: pointer;
+      font-size: .8rem; padding: 2px 4px; flex-shrink: 0;
+    }
+    .cast-expand-btn:hover { color: #ccc; }
+    .cast-context {
+      flex-basis: 100%; margin-top: 6px; padding: 8px 10px;
+      background: #161616; border-radius: 5px; font-size: .74rem; line-height: 1.5;
+    }
+    .cast-ctx-block { margin-bottom: 8px; }
+    .cast-ctx-block:last-child { margin-bottom: 0; }
+    .cast-ctx-chapter { color: #555; font-size: .68rem; margin-bottom: 2px; }
+    .cast-ctx-dim { color: #666; }
+    .cast-ctx-line { color: #e8e8e8; background: #26224a; border-radius: 3px; padding: 0 3px; }
     .voices-btn:hover { background: #26263e; }
 
     /* ── Add book button ── */
@@ -1129,15 +1143,20 @@ async function refreshCast(statusMsg) {
     castRowsEl.innerHTML = `<p class="panel-empty" style="color:#e07070">Error: ${e.message}</p>`;
     return;
   }
-  castVoicePicks = { NARRATOR: castData.narrator_voice || '' };
+  // Preserve unsaved voice picks across refreshes (merges/demotes re-render the
+  // list — losing in-progress casting work here is a bug, not a feature).
+  const prevPicks = { ...castVoicePicks };
+  castVoicePicks = { NARRATOR: prevPicks.NARRATOR ?? (castData.narrator_voice || '') };
   const chars = castData.characters;
   castSubEl.textContent =
     `${chars.length} characters · ${castData.engine} · ${castData.voices.length} voices`;
   castStatusEl.textContent = statusMsg || '';
   document.getElementById('cast-select-all').checked = false;
 
-  // Merge-target datalist: top 30 names
+  // Merge-target datalist: NARRATOR first (POV books: narrator IS a character),
+  // then top 30 names
   document.getElementById('cast-merge-list').innerHTML =
+    '<option value="NARRATOR">' +
     chars.slice(0, 30).map(c => `<option value="${esc(c.name)}">`).join('');
 
   const voiceOptions = (current) =>
@@ -1159,20 +1178,55 @@ async function refreshCast(statusMsg) {
     </div>`;
 
   castRowsEl.innerHTML = narrRow + chars.map((c, i) => {
-    castVoicePicks[c.name] = c.voice || '';
+    // Unsaved pick wins over the saved voice map
+    const pick = prevPicks[c.name] !== undefined ? prevPicks[c.name] : (c.voice || '');
+    castVoicePicks[c.name] = pick;
     return `
-    <div class="cast-row">
+    <div class="cast-row" style="flex-wrap:wrap;">
       <input type="checkbox" class="cast-check" data-name="${esc(c.name)}" style="flex-shrink:0;">
+      <button class="cast-expand-btn" data-cname="${esc(c.name)}" data-cidx="${i}"
+              onclick="castToggleContext(this)" title="Show lines in context">▸</button>
       <span class="cast-count">${c.dialogue_count}</span>
       <span class="cast-name" style="color:${cssColorForChar(c.name)}">${esc(c.name)}</span>
       <span class="cast-sample" title="${esc(c.sample_line || '')}">${esc(c.sample_line || '')}</span>
       <select class="voice-select" style="min-width:130px;" data-vsel="${esc(c.name)}"
               onchange="castVoicePicks[this.dataset.vsel]=this.value">
-        ${voiceOptions(c.voice)}
+        ${voiceOptions(pick)}
       </select>
       <button class="voice-preview-btn" onclick="castPreview('${esc(c.name)}', this)" title="Preview with this character's line">▶</button>
+      <div class="cast-context" id="cast-ctx-${i}" style="display:none;"></div>
     </div>`;
   }).join('');
+}
+
+async function castToggleContext(btn) {
+  const name = btn.dataset.cname;
+  const box = document.getElementById(`cast-ctx-${btn.dataset.cidx}`);
+  if (!box) return;
+  if (box.style.display !== 'none') {          // collapse
+    box.style.display = 'none';
+    btn.textContent = '▸';
+    return;
+  }
+  btn.textContent = '▾';
+  box.style.display = 'block';
+  if (!box.dataset.loaded) {
+    box.innerHTML = '<span style="color:#555;font-size:.72rem;">Loading…</span>';
+    try {
+      const data = await fetchJSON(`/ir/${castSlug}/character/${encodeURIComponent(name)}/lines?limit=3`);
+      box.innerHTML = data.lines.length ? data.lines.map(l => `
+        <div class="cast-ctx-block">
+          <div class="cast-ctx-chapter">${esc(l.chapter)}</div>
+          <span class="cast-ctx-dim">${esc(l.context_before)}</span>
+          <span class="cast-ctx-line">${esc(l.text)}</span>
+          <span class="cast-ctx-dim">${esc(l.context_after)}</span>
+        </div>`).join('')
+        : '<span style="color:#555;font-size:.72rem;">No lines found.</span>';
+      box.dataset.loaded = '1';
+    } catch (e) {
+      box.innerHTML = `<span style="color:#e07070;font-size:.72rem;">Error: ${esc(e.message)}</span>`;
+    }
+  }
 }
 
 function castSelected() {
