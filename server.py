@@ -1016,10 +1016,14 @@ def _run_render_job(job_id: str, ir: dict, chapter_indices: list[int], book_slug
     """Background thread target: renders given chapters and updates _render_jobs."""
     try:
         from main import generate_audio as _gen_audio
+        # Pin the engine the UI is running with (PROSECAST_TTS_ENGINE override
+        # included). Without this, generate_audio auto-detects and silently
+        # renders whole chapters on ElevenLabs credits whenever a key is in .env.
+        engine = _get_active_engine()
         _render_jobs[job_id]["total"] = len(chapter_indices)
         for i, ch_idx in enumerate(chapter_indices):
             _render_jobs[job_id]["progress"] = i
-            _gen_audio(ir, ch_idx, book_slug, ir_path=ir_path)
+            _gen_audio(ir, ch_idx, book_slug, tts_override=engine, ir_path=ir_path)
         _render_jobs[job_id]["progress"] = len(chapter_indices)
         _render_jobs[job_id]["status"] = "done"
     except Exception as e:
