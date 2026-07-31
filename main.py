@@ -209,7 +209,7 @@ def main():
     parser.add_argument("--ir-only",  action="store_true", help="Generate IR only, skip audio")
     parser.add_argument("--tts",      choices=["elevenlabs", "chatterbox", "piper", "say", "gtts", "stub"], help="Override TTS engine")
     parser.add_argument("--narrator",   help="POV character name for first-person dialogue (e.g. 'Lucky')")
-    parser.add_argument("--use-existing-ir", action="store_true", help="Load IR from disk instead of rebuilding (skips parse/IR/LLM steps)")
+    parser.add_argument("--use-existing-ir", action="store_true", help="Load IR from disk instead of rebuilding (skips parse; combine with --llm to attribute remaining unresolved blocks)")
     parser.add_argument("--llm",        action="store_true", help="Run Ollama LLM pass on unresolved blocks after rule-based IR")
     parser.add_argument("--llm-model",  default="llama3.2",  help="Ollama model to use (default: llama3.2)")
     parser.add_argument("--llm-threshold", type=float, default=0.6, help="Min confidence to accept LLM attribution (default: 0.6)")
@@ -297,20 +297,23 @@ def main():
         with open(ir_path) as f:
             ir_data = json.load(f)
 
-        # ── LLM attribution pass (Phase 2) ───────────────────────────────────
-        if args.llm:
-            if check_ollama(args.llm_model):
-                print(f"\n[LLM] Running attribution pass with {args.llm_model}...")
-                ir_data = run_llm_pass(
-                    ir_data,
-                    model=args.llm_model,
-                    confidence_threshold=args.llm_threshold,
-                )
-                with open(ir_path, "w", encoding="utf-8") as f:
-                    json.dump(ir_data, f, indent=2, ensure_ascii=False)
-                print(f"[LLM] IR updated → {ir_path}")
-            else:
-                print(f"\n[LLM] Skipping LLM pass — model '{args.llm_model}' unavailable.")
+    # ── LLM attribution pass (Phase 2) ───────────────────────────────────────
+    # Runs on fresh AND existing IRs (--use-existing-ir --llm re-attributes the
+    # unresolved residue without rebuilding — manual corrections are preserved
+    # because only blocks still marked unresolved are touched).
+    if args.llm:
+        if check_ollama(args.llm_model):
+            print(f"\n[LLM] Running attribution pass with {args.llm_model}...")
+            ir_data = run_llm_pass(
+                ir_data,
+                model=args.llm_model,
+                confidence_threshold=args.llm_threshold,
+            )
+            with open(ir_path, "w", encoding="utf-8") as f:
+                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            print(f"[LLM] IR updated → {ir_path}")
+        else:
+            print(f"\n[LLM] Skipping LLM pass — model '{args.llm_model}' unavailable.")
 
     # ── Tagging pass (Phase 4) ───────────────────────────────────────────────
     if args.tag or args.retag:

@@ -4,19 +4,23 @@ LLM Attributor — ProseCast Phase 2
 Sends unresolved dialogue blocks to a local Ollama LLM for speaker attribution.
 Runs after the rule-based IR pass and resolves what the heuristics couldn't.
 
-Requires Ollama running locally:  https://ollama.com
-Recommended model:                llama3.2
+Requires an Ollama server:  https://ollama.com
+  Default:  http://localhost:11434  (Ollama on this machine — the typical setup)
+  Override: PROSECAST_OLLAMA_URL=http://<host>:11434  (e.g. a home server)
+Recommended model:  llama3.2 (3B — runs on most laptops); bigger models attribute better.
 """
 
 import json
+import os
 import re
 import urllib.request
 import urllib.error
 from typing import Optional
 
 
-OLLAMA_API = "http://localhost:11434/api/generate"
-OLLAMA_TAGS = "http://localhost:11434/api/tags"
+OLLAMA_BASE = os.environ.get("PROSECAST_OLLAMA_URL", "http://localhost:11434").rstrip("/")
+OLLAMA_API = f"{OLLAMA_BASE}/api/generate"
+OLLAMA_TAGS = f"{OLLAMA_BASE}/api/tags"
 
 PROMPT_TEMPLATE = """\
 You are an expert at identifying dialogue speakers in novels and audiobooks.
@@ -55,7 +59,8 @@ def check_ollama(model: str) -> bool:
             print(f"[LLM] Model '{model}' not found. Available: {available}")
         return match
     except Exception as e:
-        print(f"[LLM] Ollama not reachable at localhost:11434 — {e}")
+        print(f"[LLM] Ollama not reachable at {OLLAMA_BASE} — {e}")
+        print("      (set PROSECAST_OLLAMA_URL to point at a remote Ollama server)")
         return False
 
 

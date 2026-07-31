@@ -9,10 +9,13 @@ Runs after the attribution pipeline. Tags are stored in a new "tags" field
 on each block — additive, never touches existing attribution fields.
 TTS engines read tags via tag_mapper.py at render time.
 
-Requires Gideon/Ollama at http://GIDEON_HOST:11434
+Requires an Ollama server (same config as the attribution pass):
+  Default:  http://localhost:11434  (Ollama on this machine)
+  Override: PROSECAST_OLLAMA_URL=http://<host>:11434  (Tyler: Gideon at GIDEON_HOST)
 """
 
 import json
+import os
 import re
 import time
 import urllib.request
@@ -20,8 +23,9 @@ import urllib.error
 from typing import Optional
 
 
-OLLAMA_API = "http://GIDEON_HOST:11434/api/generate"
-OLLAMA_TAGS_URL = "http://GIDEON_HOST:11434/api/tags"
+OLLAMA_BASE = os.environ.get("PROSECAST_OLLAMA_URL", "http://localhost:11434").rstrip("/")
+OLLAMA_API = f"{OLLAMA_BASE}/api/generate"
+OLLAMA_TAGS_URL = f"{OLLAMA_BASE}/api/tags"
 DEFAULT_MODEL = "mistral:7b"
 TAG_METHOD = "gideon-mistral"
 
@@ -137,10 +141,11 @@ def check_gideon(model: str = DEFAULT_MODEL) -> bool:
             for m in available
         )
         if not match:
-            print(f"[TAG] Model '{model}' not found on Gideon. Available: {available}")
+            print(f"[TAG] Model '{model}' not found on the Ollama server. Available: {available}")
         return match
     except Exception as e:
-        print(f"[TAG] Gideon not reachable at {OLLAMA_TAGS_URL} — {e}")
+        print(f"[TAG] Ollama not reachable at {OLLAMA_TAGS_URL} — {e}")
+        print("      (set PROSECAST_OLLAMA_URL to point at a remote Ollama server)")
         return False
 
 
