@@ -1,0 +1,139 @@
+{
+  "_readme": "Voice metadata overlay — edit by hand. Key = voice display name (or clone filename stem). gender: 'f' or 'm' (leave '' if neutral/unsure) shows a ♀/♂ glyph in voice dropdowns and sorts matching voices first for profiled characters. notes = anything useful ('fast', 'gravelly', 'good narrator'). Server filenames on the Chatterbox box must NEVER be renamed (shared with AnimaForge; voice_maps reference them).",
+  "Robert": {
+    "gender": "",
+    "notes": ""
+  },
+  "ScarJo_Voice": {
+    "gender": "",
+    "notes": ""
+  },
+  "bright-indian-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "bright-light-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "bright-lively-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "bright-toronto-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "clear-american-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "clear-jersey-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "clear-northern-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "clear-scots-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "clear-warm-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "crisp-chicago-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "dark-velvet-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "deep-british-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "deep-sydney-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "easy-midwest-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "low-american-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "low-belfast-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "low-florida-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "low-joburg-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "low-precise-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "mellow-american-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "mellow-dublin-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "mellow-toronto-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "mid-american-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "mid-indian-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "resonant-mid-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "smooth-noir-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "soft-british-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "soft-warm-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "warm-capetown-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "warm-expressive-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "warm-narrator-1": {
+    "gender": "",
+    "notes": ""
+  },
+  "Gianna": {
+    "gender": "",
+    "notes": ""
+  }
+}

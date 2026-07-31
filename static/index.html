@@ -1233,11 +1233,20 @@ async function refreshCast(statusMsg) {
     '<option value="NARRATOR">' +
     chars.slice(0, 30).map(c => `<option value="${esc(c.name)}">`).join('');
 
-  const voiceOptions = (current) =>
-    ['<option value="">— auto —</option>']
-      .concat(castData.voices.map(v =>
+  // Gender-aware ordering: voices matching the character's profile first,
+  // unlabeled voices next, opposite-labeled last. No filtering — just sorting.
+  const voiceOptions = (current, gender) => {
+    let vs = castData.voices;
+    if (gender === 'feminine' || gender === 'masculine') {
+      const want = gender === 'feminine' ? 'f' : 'm';
+      const rank = v => (v.gender === want ? 0 : v.gender ? 2 : 1);
+      vs = [...vs].sort((a, b) => rank(a) - rank(b));
+    }
+    return ['<option value="">— auto —</option>']
+      .concat(vs.map(v =>
         `<option value="${esc(v.id)}"${v.id === current ? ' selected' : ''}>${esc(v.name)}</option>`))
       .join('');
+  };
 
   const narrRow = `
     <div class="cast-row narrator-row">
@@ -1265,7 +1274,7 @@ async function refreshCast(statusMsg) {
       <span class="cast-sample" title="${esc(c.sample_line || '')}">${esc(c.sample_line || '')}</span>
       <select class="voice-select" style="min-width:130px;" data-vsel="${esc(c.name)}"
               onchange="castVoicePicks[this.dataset.vsel]=this.value">
-        ${voiceOptions(pick)}
+        ${voiceOptions(pick, c.profile?.gender)}
       </select>
       <button class="voice-preview-btn" onclick="castPreview('${esc(c.name)}', this)" title="Preview with this character's line">▶</button>
       <div class="cast-context" id="cast-ctx-${i}" style="display:none;"></div>

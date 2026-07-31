@@ -185,19 +185,52 @@ def _voice_pool(engine: str) -> list[str]:
     return []
 
 
+VOICE_META_PATH = Path(__file__).parent / "voice_meta.json"
+
+
+def _voice_meta() -> dict:
+    """Hand-edited voice metadata overlay (gender labels, notes).
+
+    Read per request (not cached) so edits to voice_meta.json show up on the
+    next UI refresh without a server restart.
+    """
+    try:
+        with open(VOICE_META_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _apply_voice_meta(voices: list[dict]) -> list[dict]:
+    """Merge gender glyphs + gender field into [{id, name}] voice entries."""
+    meta = _voice_meta()
+    out = []
+    for v in voices:
+        stem = Path(str(v["id"]).split(":", 1)[-1]).stem
+        m = meta.get(v["name"]) or meta.get(stem) or {}
+        g = str(m.get("gender", "")).strip().lower()[:1]
+        g = g if g in ("f", "m") else ""
+        glyph = " ♀" if g == "f" else " ♂" if g == "m" else ""
+        out.append({"id": v["id"], "name": v["name"] + glyph, "gender": g})
+    return out
+
+
 def _voice_labels(engine: str) -> list[dict]:
-    """Return [{id, name}] pairs for the given engine.
+    """Return [{id, name, gender}] for the given engine.
 
     For engines where id == name (say, piper, gtts), both fields are the same string.
     For ElevenLabs, id is the opaque API identifier and name is the human-readable label.
+    gender comes from the hand-edited voice_meta.json overlay ('' when unlabeled).
     """
     from prosecast.tts_engine import VoiceAssigner
     if engine == 'elevenlabs':
-        return [{'id': v['id'], 'name': v['name']} for v in VoiceAssigner.ELEVENLABS_VOICES]
+        return _apply_voice_meta(
+            [{'id': v['id'], 'name': v['name']} for v in VoiceAssigner.ELEVENLABS_VOICES])
     elif engine == 'chatterbox':
-        return _chatterbox_voices()
+        return _apply_voice_meta(_chatterbox_voices())
     ids = _voice_pool(engine)
-    return [{'id': v, 'name': v} for v in ids]
+    return _apply_voice_meta([{'id': v, 'name': v} for v in ids])
 
 
 def _default_voice_map(characters: list[str], engine: str) -> dict[str, str]:
