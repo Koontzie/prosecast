@@ -783,11 +783,13 @@ def get_cast(book_slug: str):
         [(n, c) for n, c in counts.items() if n != "NARRATOR"],
         key=lambda x: (-x[1], x[0]),
     )
+    profiles = ir.get("character_profiles", {})
     characters = [{
         "name": name,
         "dialogue_count": count,
         "sample_line": samples.get(name),
         "voice": voice_map.get(name, ""),
+        "profile": profiles.get(name),
     } for name, count in ranked]
 
     engine = _get_active_engine()

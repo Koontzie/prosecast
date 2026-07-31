@@ -424,6 +424,16 @@
       border-radius: 5px; cursor: pointer; font-size: .74rem; flex-shrink: 0;
     }
     .sugg-no:hover { color: #ccc; border-color: #555; }
+
+    /* ── Cast profile chips ── */
+    .profile-chip {
+      flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+      width: 18px; height: 18px; border-radius: 50%; font-size: .72rem;
+      margin-left: 2px; cursor: default; user-select: none;
+    }
+    .profile-chip.prof-f { background: #3d2438; color: #e6a3c8; }
+    .profile-chip.prof-m { background: #1f2b40; color: #8fb8e8; }
+    .profile-chip.prof-q { background: #2a2a2a; color: #888; }
     .cast-row {
       display: flex; align-items: center; gap: 8px;
       padding: 6px 8px; background: #1e1e1e;
@@ -1251,7 +1261,7 @@ async function refreshCast(statusMsg) {
       <button class="cast-expand-btn" data-cname="${esc(c.name)}" data-cidx="${i}"
               onclick="castToggleContext(this)" title="Show lines in context">▸</button>
       <span class="cast-count">${c.dialogue_count}</span>
-      <span class="cast-name" style="color:${cssColorForChar(c.name)}">${esc(c.name)}</span>
+      <span class="cast-name" style="color:${cssColorForChar(c.name)}">${esc(c.name)}</span>${profileChip(c.profile)}
       <span class="cast-sample" title="${esc(c.sample_line || '')}">${esc(c.sample_line || '')}</span>
       <select class="voice-select" style="min-width:130px;" data-vsel="${esc(c.name)}"
               onchange="castVoicePicks[this.dataset.vsel]=this.value">
@@ -1263,6 +1273,18 @@ async function refreshCast(statusMsg) {
   }).join('');
 
   renderCastSuggestions();   // async; strip fills in when ready
+}
+
+// ── Cast profile chips (gender/age hints for blind casting) ───────────────
+function profileChip(p) {
+  if (!p) return '';
+  const sym = p.gender === 'feminine' ? '♀' : p.gender === 'masculine' ? '♂' : '?';
+  const cls = p.gender === 'feminine' ? 'prof-f' : p.gender === 'masculine' ? 'prof-m' : 'prof-q';
+  const bits = [p.gender];
+  if (p.age && p.age !== 'unknown') bits.push(p.age);
+  if (p.voice_hints) bits.push(p.voice_hints);
+  const tip = `${bits.join(' · ')}${p.evidence ? ` — “${p.evidence}”` : ''}`;
+  return `<span class="profile-chip ${cls}" title="${esc(tip)}">${sym}</span>`;
 }
 
 // ── Suggested merges: deterministic nominations, human click executes ─────

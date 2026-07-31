@@ -218,6 +218,8 @@ def main():
                              "Manual corrections and explicit said-tags are never overwritten in any scope.")
     parser.add_argument("--llm-model",  default="llama3.2",  help="Ollama model to use (default: llama3.2)")
     parser.add_argument("--llm-threshold", type=float, default=0.6, help="Min confidence to accept LLM attribution (default: 0.6)")
+    parser.add_argument("--profile-cast", action="store_true", help="Infer character gender/age/voice hints for blind casting (titles resolve free; LLM reads sample lines for the rest)")
+    parser.add_argument("--reprofile",  action="store_true", help="Re-run cast profiling even for characters that already have profiles")
     parser.add_argument("--tag",           action="store_true", help="Run emotion/tone tagging pass after attribution (uses Gideon/Ollama)")
     parser.add_argument("--retag",         action="store_true", help="Force re-tagging of blocks that already have tags")
     parser.add_argument("--tag-model",     default="mistral:7b", help="Ollama model to use for tagging (default: mistral:7b)")
@@ -337,6 +339,23 @@ def main():
             print(f"[SCENE] IR updated → {ir_path}")
         else:
             print(f"\n[SCENE] Skipping scene pass — model '{args.llm_model}' unavailable.")
+
+    # ── Cast profiling pass (blind-casting aid) ──────────────────────────────
+    if args.profile_cast or args.reprofile:
+        from prosecast.cast_profiler import run_profile_pass
+        if check_ollama(args.llm_model):
+            print(f"\n[PROFILE] Profiling cast with {args.llm_model}...")
+            ir_data = run_profile_pass(
+                ir_data,
+                model=args.llm_model,
+                reprofile=args.reprofile,
+                checkpoint_path=ir_path,
+            )
+            with open(ir_path, "w", encoding="utf-8") as f:
+                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            print(f"[PROFILE] IR updated → {ir_path}")
+        else:
+            print(f"\n[PROFILE] Skipping profile pass — model '{args.llm_model}' unavailable.")
 
     # ── Tagging pass (Phase 4) ───────────────────────────────────────────────
     if args.tag or args.retag:
