@@ -565,9 +565,12 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
     # Find the block by segmentId across all chapters
     found = False
     unresolved_total = 0
+    found_chapter_index = None       # chapter containing the corrected block
+    chapter_unresolved = 0           # unresolved remaining in THAT chapter only
     old_speaker = None
     old_method = None
-    for chapter in ir.get("chapters", []):
+    for ci, chapter in enumerate(ir.get("chapters", [])):
+        ch_unresolved = 0
         for block in chapter.get("blocks", []):
             if block.get("segmentId") == segment_id:
                 old_speaker = block.get("speaker")
@@ -577,8 +580,12 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
                 block["attribution_method"] = "manual"
                 block["confidence"] = 1.0
                 found = True
+                found_chapter_index = ci
             if block.get("unresolved"):
-                unresolved_total += 1
+                ch_unresolved += 1
+        unresolved_total += ch_unresolved
+        if found_chapter_index == ci:
+            chapter_unresolved = ch_unresolved
 
     if not found:
         raise HTTPException(status_code=404, detail=f"Block '{segment_id}' not found")
@@ -609,7 +616,9 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
     return {
         "segment_id": segment_id,
         "speaker": speaker,
-        "unresolved_count": unresolved_total,
+        "unresolved_count": unresolved_total,              # whole book
+        "chapter_index": found_chapter_index,
+        "chapter_unresolved_count": chapter_unresolved,    # this chapter only
         "characters": _speaking_characters(ir),
     }
 

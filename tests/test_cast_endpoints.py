@@ -174,6 +174,40 @@ def test_block_context_unknown_segment_404(client):
     assert r.status_code == 404
 
 
+def test_correction_returns_per_chapter_unresolved_count(client, tmp_path):
+    """Regression (2026-07-31): the PATCH response's unresolved_count is the
+    BOOK-WIDE total; the UI was painting it onto the chapter badge, so fixing
+    the last block in a chapter showed e.g. '121 unresolved' from other
+    chapters. The response must also carry the per-chapter count."""
+    def blk(seg, unresolved):
+        return {"segmentId": seg, "type": "dialogue", "text": f'"line {seg}"',
+                "speaker": "UNKNOWN" if unresolved else "Alice",
+                "confidence": 0.0 if unresolved else 0.9,
+                "unresolved": unresolved, "attribution_method": "unresolved"}
+    ir = {"title": "Two Ch", "characters": ["Alice"], "user_characters": [],
+          "chapters": [
+              {"title": "Prologue", "blocks": [blk("p1", True), blk("p2", True)]},
+              {"title": "Ch 1", "blocks": [blk("c1", True), blk("c2", True), blk("c3", True)]},
+          ]}
+    book = tmp_path / "two_ch"
+    book.mkdir()
+    (book / "ir.json").write_text(json.dumps(ir), encoding="utf-8")
+
+    # Fix one of the two Prologue blocks
+    r = client.patch("/ir/two_ch/block/p1", json={"speaker": "Alice"})
+    assert r.status_code == 200
+    data = r.json()
+    assert data["unresolved_count"] == 4            # book-wide: 1 left in Prologue + 3 in Ch 1
+    assert data["chapter_index"] == 0
+    assert data["chapter_unresolved_count"] == 1    # Prologue only
+
+    # Fix the last Prologue block → chapter count hits 0 while book count doesn't
+    r = client.patch("/ir/two_ch/block/p2", json={"speaker": "Alice"})
+    data = r.json()
+    assert data["chapter_unresolved_count"] == 0
+    assert data["unresolved_count"] == 3
+
+
 def test_block_context_radius_validation(client):
     assert client.get("/ir/cast_test/block/s3/context?radius=0").status_code == 422
     assert client.get("/ir/cast_test/block/s3/context?radius=99").status_code == 422

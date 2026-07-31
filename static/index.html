@@ -1466,16 +1466,19 @@ async function saveCorrection(segmentId) {
     document.getElementById(`cb-${segmentId}`)?.classList.add('resolved');
     btn.textContent = '✓';
 
-    // Update the badge count on the chapter row
+    // Update the badge count on the chapter row.
+    // NB: data.unresolved_count is the BOOK-WIDE total — the badge and
+    // subtitle must use the per-chapter count or they show inflated numbers.
+    const chUnres = data.chapter_unresolved_count ?? 0;
     const badge = document.getElementById(`unresbadge-${panelChapterIdx}`);
     if (badge) {
-      if (data.unresolved_count <= 0) {
+      if (chUnres <= 0) {
         badge.remove();
       } else {
-        badge.textContent = `⚠ ${data.unresolved_count} unresolved`;
+        badge.textContent = `⚠ ${chUnres} unresolved`;
       }
     }
-    panelSubtitle.textContent = `${data.unresolved_count} unresolved block${data.unresolved_count !== 1 ? 's' : ''}`;
+    panelSubtitle.textContent = `${chUnres} unresolved block${chUnres !== 1 ? 's' : ''}`;
   } catch (e) {
     btn.disabled = false;
     btn.textContent = 'Save';
