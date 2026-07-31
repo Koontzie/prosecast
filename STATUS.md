@@ -1,7 +1,33 @@
 # PROSECAST — STATUS
 
 **Status:** Active
-**Updated:** 2026-07-22 (see HANDOFF.md for the full session handoff + resume point)
+**Updated:** 2026-07-31 (see HANDOFF.md for the 07-22 session handoff)
+
+## Session 2026-07-31 (Cowork)
+- **Brigands dogfood fixes:** unresolved drawer got an in-drawer page view
+  (📖 → `GET /ir/{slug}/block/{seg}/context?radius=N`, full surrounding IR
+  blocks, "show more" widens to ±30). Fixed phantom badge counts (PATCH
+  returned book-wide unresolved_count; UI painted it on the chapter badge —
+  response now carries chapter_unresolved_count).
+- **Attribution reality-check (Brigands):** 2,149 dialogue / 119 unresolved
+  (5.5%); 647 blocks (30%) are `alternating` at conf 0.5 — the real
+  specificity risk. **The v1 --llm pass had never run** (it was also nested so
+  `--use-existing-ir --llm` silently skipped it — fixed).
+- **One Ollama endpoint config:** `PROSECAST_OLLAMA_URL` steers attribution
+  AND tag passes; default localhost:11434 (average-user setup), Tyler exports
+  `http://GIDEON_HOST:11434` for Gideon.
+- **Scene-batch attributor v2 built** (`prosecast/scene_attributor.py`,
+  `--llm-scene` + `--llm-scope unresolved|low-confidence|all`): one call per
+  scene chunk (≤15 targets), model sees whole conversations, tolerates qwen3
+  <think> output, per-scene IR checkpointing. Tiebreaker enforced in every
+  scope: manual + prefix/postfix tags + conf≥0.95 are never overwritten.
+  Research grounding: NAACL 2025 (Deezer) — LLMs are now SOTA for literary
+  quotation attribution. Model rec: gemma3:12b (already on Gideon, coexists
+  with Chatterbox; llama3.1:8b is two generations stale, don't pull it).
+- 49 tests pass (was 24); suite runs fully offline (Ollama mocked).
+- **NEXT:** Tyler runs `--llm-scene --llm-scope low-confidence --llm-model
+  gemma3:12b` on Brigands (backup ir.json first), spot-checks changed blocks
+  in the cast screen, then resumes cast grooming with far fewer unresolved.
 
 ## Session 2026-07-22
 - Gideon rebooted (Tyler shutdown); all 13 services verified back, Chatterbox base

@@ -210,7 +210,12 @@ def main():
     parser.add_argument("--tts",      choices=["elevenlabs", "chatterbox", "piper", "say", "gtts", "stub"], help="Override TTS engine")
     parser.add_argument("--narrator",   help="POV character name for first-person dialogue (e.g. 'Lucky')")
     parser.add_argument("--use-existing-ir", action="store_true", help="Load IR from disk instead of rebuilding (skips parse; combine with --llm to attribute remaining unresolved blocks)")
-    parser.add_argument("--llm",        action="store_true", help="Run Ollama LLM pass on unresolved blocks after rule-based IR")
+    parser.add_argument("--llm",        action="store_true", help="Run Ollama LLM pass on unresolved blocks after rule-based IR (v1: one call per block)")
+    parser.add_argument("--llm-scene",  action="store_true", help="Scene-batch LLM attribution (v2): one call per scene; sees whole conversations, far fewer calls")
+    parser.add_argument("--llm-scope",  choices=["unresolved", "low-confidence", "all"], default="low-confidence",
+                        help="Which blocks --llm-scene reviews: 'unresolved' (rule-cascade leftovers only, laptop-friendly), "
+                             "'low-confidence' (+ turn-taking guesses; default), 'all' (every non-protected dialogue block). "
+                             "Manual corrections and explicit said-tags are never overwritten in any scope.")
     parser.add_argument("--llm-model",  default="llama3.2",  help="Ollama model to use (default: llama3.2)")
     parser.add_argument("--llm-threshold", type=float, default=0.6, help="Min confidence to accept LLM attribution (default: 0.6)")
     parser.add_argument("--tag",           action="store_true", help="Run emotion/tone tagging pass after attribution (uses Gideon/Ollama)")
@@ -314,6 +319,24 @@ def main():
             print(f"[LLM] IR updated → {ir_path}")
         else:
             print(f"\n[LLM] Skipping LLM pass — model '{args.llm_model}' unavailable.")
+
+    # ── Scene-batch attribution pass (v2) ────────────────────────────────────
+    if args.llm_scene:
+        from prosecast.scene_attributor import run_scene_pass
+        if check_ollama(args.llm_model):
+            print(f"\n[SCENE] Running scene-batch attribution with {args.llm_model} (scope: {args.llm_scope})...")
+            ir_data = run_scene_pass(
+                ir_data,
+                model=args.llm_model,
+                scope=args.llm_scope,
+                confidence_threshold=args.llm_threshold,
+                checkpoint_path=ir_path,
+            )
+            with open(ir_path, "w", encoding="utf-8") as f:
+                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            print(f"[SCENE] IR updated → {ir_path}")
+        else:
+            print(f"\n[SCENE] Skipping scene pass — model '{args.llm_model}' unavailable.")
 
     # ── Tagging pass (Phase 4) ───────────────────────────────────────────────
     if args.tag or args.retag:
