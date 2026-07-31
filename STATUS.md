@@ -1,7 +1,7 @@
 # PROSECAST — STATUS
 
 **Status:** Active
-**Updated:** 2026-07-22
+**Updated:** 2026-07-22 (see HANDOFF.md for the full session handoff + resume point)
 
 ## Session 2026-07-22
 - Gideon rebooted (Tyler shutdown); all 13 services verified back, Chatterbox base
