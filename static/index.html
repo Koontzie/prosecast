@@ -144,6 +144,40 @@
       content: " ✓"; color: #50c8a8;
     }
 
+    /* ── In-drawer page view (block context) ── */
+    .ctx-btn {
+      background: #222; border: 1px solid #333; color: #999;
+      padding: 5px 9px; border-radius: 5px; cursor: pointer;
+      font-size: .8rem; flex-shrink: 0;
+    }
+    .ctx-btn:hover { color: #e8e8e8; border-color: #555; }
+    .ctx-btn.active { color: #7c6dfa; border-color: #7c6dfa; }
+    .block-context {
+      position: relative; margin-top: 10px; padding: 10px 12px;
+      background: #161616; border: 1px solid #2a2a2a; border-radius: 6px;
+      max-height: 280px; overflow-y: auto;
+    }
+    .bctx-chapter {
+      font-size: .68rem; color: #555; text-transform: uppercase;
+      letter-spacing: .05em; margin-bottom: 8px;
+    }
+    .bctx-para { font-size: .78rem; line-height: 1.5; margin-bottom: 8px; }
+    .bctx-narration { color: #888; }
+    .bctx-dialogue { color: #ccc; }
+    .bctx-speaker { color: #7c6dfa; font-weight: 600; font-size: .7rem; margin-right: 4px; }
+    .bctx-speaker.bctx-unres { color: #e07070; }
+    .bctx-target {
+      background: #26224a; border-left: 3px solid #7c6dfa;
+      padding: 6px 8px; border-radius: 4px; color: #eee;
+    }
+    .bctx-more {
+      display: block; margin: 4px auto 0; background: none;
+      border: 1px solid #333; color: #888; padding: 4px 10px;
+      border-radius: 5px; cursor: pointer; font-size: .72rem;
+    }
+    .bctx-more:hover { color: #ccc; border-color: #555; }
+    .bctx-loading { color: #555; font-size: .75rem; }
+
     .panel-empty { color: #555; font-size: .85rem; text-align: center; padding: 32px 0; }
 
     .play-btn {
@@ -1349,9 +1383,59 @@ async function openPanel(slug, chapterIdx) {
                onkeydown="if(event.key==='Enter') saveCorrection('${b.segment_id}')">
         <button class="save-btn" id="savebtn-${b.segment_id}"
                 onclick="saveCorrection('${b.segment_id}')">Save</button>
+        <button class="ctx-btn" id="ctxbtn-${b.segment_id}" title="Read the surrounding page"
+                onclick="toggleBlockContext('${b.segment_id}')">📖</button>
       </div>
+      <div class="block-context" id="bctx-${b.segment_id}" style="display:none;"></div>
     </div>
   `).join('');
+}
+
+// ── In-drawer page view: read the blocks around an unresolved line ────────
+async function toggleBlockContext(segmentId) {
+  const box = document.getElementById(`bctx-${segmentId}`);
+  const btn = document.getElementById(`ctxbtn-${segmentId}`);
+  if (!box) return;
+  if (box.style.display !== 'none') {            // collapse
+    box.style.display = 'none';
+    btn?.classList.remove('active');
+    return;
+  }
+  box.style.display = 'block';
+  btn?.classList.add('active');
+  if (!box.dataset.loaded) await loadBlockContext(segmentId, 6);
+}
+
+async function loadBlockContext(segmentId, radius) {
+  const box = document.getElementById(`bctx-${segmentId}`);
+  if (!box) return;
+  box.innerHTML = '<span class="bctx-loading">Loading…</span>';
+  try {
+    const data = await fetchJSON(`/ir/${panelSlug}/block/${segmentId}/context?radius=${radius}`);
+    box.dataset.loaded = '1';
+    const nextRadius = Math.min(radius + 8, 30);
+    const moreBtn = (data.has_more_before || data.has_more_after) && radius < 30
+      ? `<button class="bctx-more" onclick="loadBlockContext('${segmentId}', ${nextRadius})">Show more of the page</button>`
+      : '';
+    box.innerHTML = `
+      <div class="bctx-chapter">${esc(data.chapter_title || '')} — block ${data.block_index + 1} of ${data.total_blocks}</div>
+      ${data.blocks.map(bctxPara).join('')}
+      ${moreBtn}`;
+    // Center the highlighted target line within the excerpt box
+    const target = box.querySelector('.bctx-target');
+    if (target) box.scrollTop = target.offsetTop - box.clientHeight / 2 + target.clientHeight / 2;
+  } catch (e) {
+    box.innerHTML = `<span style="color:#e07070;font-size:.75rem;">Error: ${esc(e.message)}</span>`;
+  }
+}
+
+function bctxPara(p) {
+  const cls = 'bctx-para ' + (p.type === 'dialogue' ? 'bctx-dialogue' : 'bctx-narration')
+            + (p.is_target ? ' bctx-target' : '');
+  const label = p.type === 'dialogue'
+    ? `<span class="bctx-speaker${p.unresolved ? ' bctx-unres' : ''}">${p.unresolved ? '???' : esc(p.speaker)}</span>`
+    : '';
+  return `<div class="${cls}">${label}${esc(p.text)}</div>`;
 }
 
 function closePanel() {

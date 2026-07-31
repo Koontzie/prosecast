@@ -143,3 +143,37 @@ def test_narrator_cannot_be_demoted(client):
     r = client.post("/ir/cast_test/cast/demote", json={"names": ["NARRATOR"]})
     assert r.status_code == 200
     assert r.json()["demoted"] == {}
+
+
+# ── block context (the unresolved-panel 'page view') ─────────────────────────
+
+def test_block_context_returns_surrounding_blocks(client):
+    r = client.get("/ir/cast_test/block/s3/context?radius=1")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["chapter_title"] == "Ch 1"
+    assert data["block_index"] == 2 and data["total_blocks"] == 6
+    assert [b["segment_id"] for b in data["blocks"]] == ["s2", "s3", "s4"]
+    assert [b["is_target"] for b in data["blocks"]] == [False, True, False]
+    assert data["has_more_before"] is True and data["has_more_after"] is True
+
+
+def test_block_context_radius_clamps_at_chapter_edges(client):
+    r = client.get("/ir/cast_test/block/s1/context?radius=30")
+    assert r.status_code == 200
+    data = r.json()
+    assert len(data["blocks"]) == 6            # whole chapter, no out-of-range
+    assert data["blocks"][0]["is_target"] is True
+    assert data["has_more_before"] is False and data["has_more_after"] is False
+    # full text comes through, not a truncated snippet
+    assert data["blocks"][0]["text"] == "It was a dark night full of narrative."
+
+
+def test_block_context_unknown_segment_404(client):
+    r = client.get("/ir/cast_test/block/nope/context")
+    assert r.status_code == 404
+
+
+def test_block_context_radius_validation(client):
+    assert client.get("/ir/cast_test/block/s3/context?radius=0").status_code == 422
+    assert client.get("/ir/cast_test/block/s3/context?radius=99").status_code == 422

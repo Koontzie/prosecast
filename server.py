@@ -498,6 +498,51 @@ def get_unresolved(book_slug: str, chapter_index: int):
     }
 
 
+# ── /ir/{book_slug}/block/{segment_id}/context ───────────────────────────────
+
+@app.get("/ir/{book_slug}/block/{segment_id}/context")
+def block_context(book_slug: str, segment_id: str,
+                  radius: int = Query(default=6, ge=1, le=30)):
+    """A readable excerpt of the IR around one block — the 'open the page' view.
+
+    Returns up to `radius` whole blocks on each side of the target so the user
+    can read enough surrounding prose to identify an unresolved speaker. Unlike
+    the stored context_before/context_after snippets, these are full blocks.
+    """
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+
+    for ci, chapter in enumerate(ir.get("chapters", [])):
+        blocks = chapter.get("blocks", [])
+        for bi, block in enumerate(blocks):
+            if block.get("segmentId") == segment_id:
+                lo = max(0, bi - radius)
+                hi = min(len(blocks), bi + radius + 1)
+                return {
+                    "segment_id": segment_id,
+                    "chapter_index": ci,
+                    "chapter_title": chapter.get("title", f"Chapter {ci}"),
+                    "block_index": bi,
+                    "total_blocks": len(blocks),
+                    "has_more_before": lo > 0,
+                    "has_more_after": hi < len(blocks),
+                    "blocks": [
+                        {
+                            "segment_id": b.get("segmentId"),
+                            "type": b.get("type"),
+                            "speaker": b.get("speaker", "NARRATOR"),
+                            "unresolved": bool(b.get("unresolved")),
+                            "is_target": b.get("segmentId") == segment_id,
+                            "text": b.get("text", ""),
+                        }
+                        for b in blocks[lo:hi]
+                    ],
+                }
+    raise HTTPException(status_code=404, detail=f"Block '{segment_id}' not found")
+
+
 # ── PATCH /ir/{book_slug}/block/{segment_id} ─────────────────────────────────
 
 class SpeakerCorrection(BaseModel):
