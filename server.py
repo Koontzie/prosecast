@@ -830,6 +830,70 @@ def character_lines(book_slug: str, name: str, limit: int = Query(default=3, le=
     return {"name": name, "lines": lines}
 
 
+# ── Merge suggestions (deterministic, click-to-confirm) ─────────────────────
+
+def _journal_events(book_slug: str) -> list:
+    """Read the append-only corrections journal (empty list if none)."""
+    path = lib.journal_path(book_slug)
+    if not path.exists():
+        return []
+    events = []
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+    return events
+
+
+@app.get("/ir/{book_slug}/cast/suggestions")
+def cast_merge_suggestions(book_slug: str):
+    """Deterministic alias-merge suggestions, minus previously dismissed ones.
+
+    Pure nomination: nothing here mutates the IR. Accepting a suggestion goes
+    through the normal POST /cast/merge (journaled); dismissing journals a
+    merge_suggestion_dismissed event so the chip never comes back.
+    """
+    from prosecast.alias_suggester import suggest_merges
+
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+
+    dismissed = {
+        (e.get("from"), e.get("into"))
+        for e in _journal_events(book_slug)
+        if e.get("event") == "merge_suggestion_dismissed"
+    }
+    suggestions = [
+        s for s in suggest_merges(ir)
+        if (s["from_name"], s["into"]) not in dismissed
+    ]
+    return {"suggestions": suggestions}
+
+
+class DismissSuggestionBody(BaseModel):
+    from_name: str
+    into: str
+
+
+@app.post("/ir/{book_slug}/cast/suggestions/dismiss")
+def dismiss_merge_suggestion(book_slug: str, body: DismissSuggestionBody):
+    """Journal a dismissal so this suggestion pair stops appearing."""
+    if not lib.ir_path(book_slug).exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    _journal(book_slug, "merge_suggestion_dismissed", {
+        "from": body.from_name,
+        "into": body.into,
+    })
+    return {"dismissed": {"from": body.from_name, "into": body.into}}
+
+
 class DemoteBody(BaseModel):
     names: list[str] = []
     max_blocks: int | None = None   # demote every character with <= this many blocks
