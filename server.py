@@ -817,13 +817,25 @@ def get_cast(book_slug: str):
         key=lambda x: (-x[1], x[0]),
     )
     profiles = ir.get("character_profiles", {})
-    characters = [{
-        "name": name,
-        "dialogue_count": count,
-        "sample_line": samples.get(name),
-        "voice": voice_map.get(name, ""),
-        "profile": profiles.get(name),
-    } for name, count in ranked]
+    tier_overrides = ir.get("character_tiers", {})
+
+    def _tier(name: str, count: int) -> tuple[str, str]:
+        if name in tier_overrides:
+            return tier_overrides[name], "manual"
+        return ("main" if count >= MAIN_TIER_MIN_LINES else "supporting"), "auto"
+
+    characters = []
+    for name, count in ranked:
+        tier, tier_source = _tier(name, count)
+        characters.append({
+            "name": name,
+            "dialogue_count": count,
+            "sample_line": samples.get(name),
+            "voice": voice_map.get(name, ""),
+            "profile": profiles.get(name),
+            "tier": tier,
+            "tier_source": tier_source,
+        })
 
     engine = _get_active_engine()
     return {
@@ -863,6 +875,40 @@ def character_lines(book_slug: str, name: str, limit: int = Query(default=3, le=
                 if len(lines) >= limit:
                     return {"name": name, "lines": lines}
     return {"name": name, "lines": lines}
+
+
+# ── Character tiers (main vs supporting) ────────────────────────────────────
+
+MAIN_TIER_MIN_LINES = 25   # default: this many dialogue lines ⇒ main cast
+
+
+class TierBody(BaseModel):
+    name: str
+    tier: str   # "main" | "supporting" | "auto" (clear the manual override)
+
+
+@app.post("/ir/{book_slug}/cast/tier")
+def set_character_tier(book_slug: str, body: TierBody):
+    """Manually override a character's tier (or 'auto' to fall back to the
+    line-count heuristic). Tier steers casting UX only — grouping in the cast
+    screen and which characters Auto-cast fills — never attribution."""
+    if body.tier not in ("main", "supporting", "auto"):
+        raise HTTPException(status_code=400, detail="tier must be main|supporting|auto")
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+
+    tiers = ir.setdefault("character_tiers", {})
+    if body.tier == "auto":
+        tiers.pop(body.name, None)
+    else:
+        tiers[body.name] = body.tier
+
+    with open(ir_path, "w", encoding="utf-8") as f:
+        json.dump(ir, f, indent=2, ensure_ascii=False)
+    _journal(book_slug, "tier_set", {"name": body.name, "tier": body.tier})
+    return {"name": body.name, "tier": body.tier}
 
 
 # ── Merge suggestions (deterministic, click-to-confirm) ─────────────────────

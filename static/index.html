@@ -434,6 +434,20 @@
     .profile-chip.prof-f { background: #3d2438; color: #e6a3c8; }
     .profile-chip.prof-m { background: #1f2b40; color: #8fb8e8; }
     .profile-chip.prof-q { background: #2a2a2a; color: #888; }
+
+    /* ── Cast tiers ── */
+    .cast-section {
+      font-size: .68rem; color: #666; text-transform: uppercase;
+      letter-spacing: .06em; padding: 10px 4px 4px;
+      border-bottom: 1px solid #242424; margin-bottom: 4px;
+    }
+    .tier-btn {
+      background: none; border: none; cursor: pointer; flex-shrink: 0;
+      font-size: .85rem; color: #444; padding: 0 2px; line-height: 1;
+    }
+    .tier-btn:hover { color: #888; }
+    .tier-btn.tier-main { color: #d9a94a; }
+    .tier-btn.tier-main:hover { color: #f0c46a; }
     .cast-row {
       display: flex; align-items: center; gap: 8px;
       padding: 6px 8px; background: #1e1e1e;
@@ -676,6 +690,8 @@
   <div id="cast-rows"></div>
   <div class="cast-status" id="cast-status"></div>
   <div class="voice-panel-footer">
+    <button onclick="autoCastSupporting()" title="Give every un-cast supporting character a gender-matched predefined voice (review before saving)"
+            style="background:#222;border:1px solid #3a3a3a;color:#bbb;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:.8rem;">Auto-cast supporting</button>
     <button id="cast-voices-save-btn" onclick="saveCastVoices()" style="flex:1;background:#7c6dfa;border:none;color:#fff;padding:8px 0;border-radius:6px;cursor:pointer;font-size:.85rem;font-weight:500;">Save voice assignments</button>
   </div>
 </div>
@@ -1260,13 +1276,22 @@ async function refreshCast(statusMsg) {
       <button class="voice-preview-btn" onclick="castPreview('NARRATOR', this)" title="Preview">▶</button>
     </div>`;
 
-  castRowsEl.innerHTML = narrRow + chars.map((c, i) => {
+  // Main cast first, then supporting (ranked within each group)
+  const ordered = [...chars.filter(c => c.tier !== 'supporting'),
+                   ...chars.filter(c => c.tier === 'supporting')];
+  const mainCount = ordered.length - chars.filter(c => c.tier === 'supporting').length;
+
+  const rowFor = (c, i) => {
     // Unsaved pick wins over the saved voice map
     const pick = prevPicks[c.name] !== undefined ? prevPicks[c.name] : (c.voice || '');
     castVoicePicks[c.name] = pick;
+    const isMain = c.tier !== 'supporting';
     return `
     <div class="cast-row" style="flex-wrap:wrap;">
       <input type="checkbox" class="cast-check" data-name="${esc(c.name)}" style="flex-shrink:0;">
+      <button class="tier-btn${isMain ? ' tier-main' : ''}" data-name="${esc(c.name)}" data-tier="${c.tier}"
+              onclick="toggleTier(this)"
+              title="${isMain ? 'Main cast — click to mark supporting' : 'Supporting — click to promote to main cast'}">${isMain ? '★' : '☆'}</button>
       <button class="cast-expand-btn" data-cname="${esc(c.name)}" data-cidx="${i}"
               onclick="castToggleContext(this)" title="Show lines in context">▸</button>
       <span class="cast-count">${c.dialogue_count}</span>
@@ -1279,9 +1304,64 @@ async function refreshCast(statusMsg) {
       <button class="voice-preview-btn" onclick="castPreview('${esc(c.name)}', this)" title="Preview with this character's line">▶</button>
       <div class="cast-context" id="cast-ctx-${i}" style="display:none;"></div>
     </div>`;
-  }).join('');
+  };
+
+  const section = (label, n) => n ? `<div class="cast-section">${label} · ${n}</div>` : '';
+  castRowsEl.innerHTML = narrRow
+    + section('Main cast', mainCount)
+    + ordered.slice(0, mainCount).map(rowFor).join('')
+    + section('Supporting', ordered.length - mainCount)
+    + ordered.slice(mainCount).map((c, j) => rowFor(c, mainCount + j)).join('');
 
   renderCastSuggestions();   // async; strip fills in when ready
+}
+
+async function toggleTier(btn) {
+  const name = btn.dataset.name;
+  const next = btn.dataset.tier === 'supporting' ? 'main' : 'supporting';
+  try {
+    await fetchJSON(`/ir/${castSlug}/cast/tier`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name, tier: next }),
+    });
+    await refreshCast(`${name} → ${next}.`);
+  } catch (e) {
+    castStatusEl.textContent = `Tier change failed: ${e.message}`;
+  }
+}
+
+// ── Auto-cast supporting: gender-matched predefined voices, spread evenly ──
+function autoCastSupporting() {
+  const supporting = castData.characters.filter(c => c.tier === 'supporting');
+  const predef = castData.voices.filter(v => v.id.startsWith('predefined:'));
+  if (!predef.length) {
+    castStatusEl.textContent = 'No predefined voices available to auto-cast from.';
+    return;
+  }
+  // Spread picks: always choose the least-used voice in the preferred pool
+  const usage = {};
+  predef.forEach(v => { usage[v.id] = 0; });
+  Object.values(castVoicePicks).forEach(id => { if (id in usage) usage[id]++; });
+  const leastUsed = pool => pool.reduce((a, b) => (usage[b.id] < usage[a.id] ? b : a));
+
+  let n = 0;
+  for (const c of supporting) {
+    if (castVoicePicks[c.name]) continue;          // hand-picked → never touched
+    const g = c.profile?.gender;
+    const want = g === 'feminine' ? 'f' : g === 'masculine' ? 'm' : null;
+    let pool = want ? predef.filter(v => v.gender === want) : [];
+    if (!pool.length) pool = predef.filter(v => !v.gender);   // unlabeled next
+    if (!pool.length) pool = predef;
+    const v = leastUsed(pool);
+    usage[v.id]++;
+    castVoicePicks[c.name] = v.id;
+    const sel = castRowsEl.querySelector(`select[data-vsel="${CSS.escape(c.name)}"]`);
+    if (sel) sel.value = v.id;
+    n++;
+  }
+  castStatusEl.textContent = n
+    ? `${n} supporting character${n !== 1 ? 's' : ''} auto-cast (gender-matched) — review, then Save.`
+    : 'Nothing to auto-cast — all supporting characters already have voices.';
 }
 
 // ── Cast profile chips (gender/age hints for blind casting) ───────────────
