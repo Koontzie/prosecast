@@ -24,10 +24,30 @@
   Research grounding: NAACL 2025 (Deezer) — LLMs are now SOTA for literary
   quotation attribution. Model rec: gemma3:12b (already on Gideon, coexists
   with Chatterbox; llama3.1:8b is two generations stale, don't pull it).
-- 49 tests pass (was 24); suite runs fully offline (Ollama mocked).
-- **NEXT:** Tyler runs `--llm-scene --llm-scope low-confidence --llm-model
-  gemma3:12b` on Brigands (backup ir.json first), spot-checks changed blocks
-  in the cast screen, then resumes cast grooming with far fewer unresolved.
+- **Attribution campaign COMPLETE on Brigands (2026-08-01).** v1 per-block
+  pass: 117/119 unresolved resolved (gemma3:12b, median conf 0.95). Scene
+  pass (3 runs incl. one Tailscale-outage resume): `alternating` 647 → 10,
+  533 changed + 100 confirmed, 633 blocks now `llm_scene_gemma3`, book at
+  ZERO unresolved. Final methods: postfix 320 / spacy 769 / context 250 /
+  scene 633 / llm-v1 103 / manual 37 / prefix 27 / alternating 10.
+- **Also shipped this session:** merge-suggestion chips (deterministic
+  token-overlap nominations, click-to-confirm via journaled /cast/merge,
+  dismissals journaled); cast profiler (`--profile-cast`: gender/age/voice
+  hints, title layer free + LLM layer, → ir.character_profiles, ♀/♂ chips);
+  voice_meta.json (Tyler labeled all 34 voices f/m by ear; glyphs + per-
+  character gender-sorted dropdowns); main/supporting tiers (≥25 lines =
+  main, ★ toggle, journaled) + gender-matched "Auto-cast supporting";
+  click-to-stop voice previews (▶/■); circuit breaker on LLM passes (abort
+  after 3 consecutive connection failures — field lesson: Mac left the
+  tailnet mid-run and burned hours in 180s timeouts).
+- 82 tests pass (was 24); suite runs fully offline (Ollama mocked).
+- **NEXT:** (1) `--profile-cast` run on Brigands (NOT yet run — chips empty
+  until it is). (2) Cast drawer: cast mains by hand, Auto-cast supporting,
+  Save; fix 'Annoyed' (2 lines, ch38) + bulk-demote ≤5 junk. (3) Render 2-3
+  chapters, Tyler listens — ears are the final auditor on the ~10 remaining
+  coin-flips and the whole attribution push. (4) Parked ideas: provenance-
+  aware prompting before any scope=all run; shared voice_meta for
+  AnimaForge; label new server voices in the filename at upload time.
 
 ## Session 2026-07-22
 - Gideon rebooted (Tyler shutdown); all 13 services verified back, Chatterbox base
