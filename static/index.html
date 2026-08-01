@@ -521,6 +521,15 @@
     .regen-btn:disabled { opacity: .4; cursor: default; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
+    /* Labeled variant for chapters with no audio yet: an explicit Generate pill */
+    .regen-btn.gen-label {
+      width: auto; height: 26px; padding: 0 12px; border-radius: 13px;
+      font-size: .74rem; color: #a89bff; border-color: #4a3f8a;
+      white-space: nowrap;
+    }
+    .regen-btn.gen-label:hover { color: #fff; border-color: #7c6dfa; background: #26224a; }
+    .regen-btn.gen-label.rendering { animation: none; }   /* don't spin a labeled pill */
+
     /* ── Pre-casting modal ── */
     .modal-overlay {
       position: fixed; inset: 0;
@@ -812,8 +821,11 @@ function renderChapterList(slug, title, chapters) {
       ? `<button class="play-btn" id="playbtn-${ch.index}" onclick="playChapter('${slug}', ${ch.index})" title="Play">▶</button>`
       : `<button class="play-btn" id="playbtn-${ch.index}" disabled title="No audio rendered">▶</button>`;
     const noAudio = ch.has_audio ? '' : '<span class="no-audio">no audio</span>';
-    const regenBtn = `<button class="regen-btn" id="regenbtn-${ch.index}"
-      onclick="renderChapter('${slug}', ${ch.index})" title="Regenerate audio">↺</button>`;
+    const regenBtn = ch.has_audio
+      ? `<button class="regen-btn" id="regenbtn-${ch.index}"
+          onclick="renderChapter('${slug}', ${ch.index})" title="Re-render this chapter's audio">↺</button>`
+      : `<button class="regen-btn gen-label" id="regenbtn-${ch.index}"
+          onclick="renderChapter('${slug}', ${ch.index})" title="Render this chapter's audio">⚡ Generate</button>`;
     return `
       <div class="chapter-row" id="chrow-${ch.index}">
         <span class="chapter-index">${ch.index + 1}</span>
@@ -829,7 +841,7 @@ function renderChapterList(slug, title, chapters) {
   mainEl.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
       <div class="book-title" style="margin-bottom:0;flex:1;">${title}</div>
-      <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">↺ Regenerate all</button>
+      <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">↺ Render all</button>
       <button class="voices-btn" id="export-m4b-btn" onclick="exportM4B('${slug}')" title="Export rendered chapters as a chapterized audiobook">⬇ Export M4B</button>
       <button class="voices-btn" onclick="openVoicePanel('${slug}')">🎤 Voices</button>
       <button class="voices-btn" onclick="openCastPanel('${slug}')">🎭 Cast</button>
@@ -1888,10 +1900,12 @@ function pollRenderStatus(jobId) {
 async function renderChapter(slug, chIdx) {
   const btn = document.getElementById(`regenbtn-${chIdx}`);
   if (!btn || btn.classList.contains('rendering')) return;
+  const labeled = btn.classList.contains('gen-label');
 
   btn.classList.add('rendering');
   btn.disabled = true;
   btn.title = 'Rendering…';
+  if (labeled) btn.textContent = 'Rendering…';
 
   try {
     const r = await fetch(`/render/${slug}/${chIdx}`, {method: 'POST'});
@@ -1914,19 +1928,29 @@ async function renderChapter(slug, chIdx) {
     btn.classList.remove('rendering');
     btn.classList.add('done');
     btn.title = 'Rendered ✓';
+    if (labeled) btn.textContent = '✓ Rendered';
     setTimeout(() => {
       btn.classList.remove('done');
       btn.disabled = false;
-      btn.title = 'Regenerate audio';
+      if (labeled && ch?.has_audio) {
+        // Graduate to the compact re-render icon now that audio exists
+        btn.classList.remove('gen-label');
+        btn.textContent = '↺';
+        btn.title = "Re-render this chapter's audio";
+      } else {
+        btn.title = labeled ? "Render this chapter's audio" : "Re-render this chapter's audio";
+        if (labeled) btn.textContent = '⚡ Generate';
+      }
     }, 3000);
   } catch (e) {
     btn.classList.remove('rendering');
     btn.classList.add('error');
     btn.title = `Error: ${e.message}`;
     btn.disabled = false;
+    if (labeled) btn.textContent = '⚡ Retry';
     setTimeout(() => {
       btn.classList.remove('error');
-      btn.title = 'Regenerate audio';
+      if (labeled) btn.textContent = '⚡ Generate';
     }, 5000);
   }
 }
@@ -1953,7 +1977,7 @@ async function renderAll(slug) {
     if (btn) {
       btn.textContent = '↺ Error';
       btn.disabled = false;
-      setTimeout(() => { btn.textContent = '↺ Regenerate all'; }, 4000);
+      setTimeout(() => { btn.textContent = '↺ Render all'; }, 4000);
     }
   }
 }
