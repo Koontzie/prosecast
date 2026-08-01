@@ -1,139 +1,139 @@
 {
   "_readme": "Voice metadata overlay — edit by hand. Key = voice display name (or clone filename stem). gender: 'f' or 'm' (leave '' if neutral/unsure) shows a ♀/♂ glyph in voice dropdowns and sorts matching voices first for profiled characters. notes = anything useful ('fast', 'gravelly', 'good narrator'). Server filenames on the Chatterbox box must NEVER be renamed (shared with AnimaForge; voice_maps reference them).",
   "Robert": {
-    "gender": "",
-    "notes": ""
+    "gender": "m",
+    "notes": "doesnt work well"
   },
   "ScarJo_Voice": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "shouldnt be used"
   },
   "bright-indian-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "thick dialect"
   },
   "bright-light-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "fast paced"
   },
   "bright-lively-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "m",
+    "notes": "interesting american minisota ish"
   },
   "bright-toronto-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "doesnt sound canadian much"
   },
   "clear-american-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "karen"
   },
   "clear-jersey-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "m",
+    "notes": "not very clear as"
   },
   "clear-northern-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "northern britsouth"
   },
   "clear-scots-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "clear-warm-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "american"
   },
   "crisp-chicago-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "dark-velvet-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "deep-british-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "deep-sydney-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "easy-midwest-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "low-american-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "low-belfast-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "low-florida-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "low-joburg-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "low-precise-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "high brit"
   },
   "mellow-american-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "low not loving"
   },
   "mellow-dublin-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "good"
   },
   "mellow-toronto-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "mid-american-1": {
-    "gender": "",
-    "notes": ""
+    "gender": "f",
+    "notes": "good"
   },
   "mid-indian-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "resonant-mid-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "smooth-noir-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "soft-british-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "soft-warm-1": {
-    "gender": "",
+    "gender": "f",
     "notes": ""
   },
   "warm-capetown-1": {
-    "gender": "",
+    "gender": "f",
     "notes": ""
   },
   "warm-expressive-1": {
-    "gender": "",
+    "gender": "f",
     "notes": ""
   },
   "warm-narrator-1": {
-    "gender": "",
+    "gender": "m",
     "notes": ""
   },
   "Gianna": {
-    "gender": "",
+    "gender": "f",
     "notes": ""
   }
 }
