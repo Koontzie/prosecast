@@ -210,6 +210,7 @@ def run_profile_pass(
     print(f"[PROFILE] Targets: {len(targets)} characters (>= {MIN_LINES_TO_PROFILE} lines)")
 
     by_title = llm_done = ambiguous = errors = 0
+    consecutive_errors = 0
     for name in targets:
         titled = profile_from_name(name)
         if titled:
@@ -227,7 +228,13 @@ def run_profile_pass(
         )
         if raw is None:
             errors += 1
+            consecutive_errors += 1
+            if consecutive_errors >= 3:
+                print(f"\n[PROFILE] {consecutive_errors} connection failures in a row — "
+                      "aborting pass (profiles so far are saved; re-run to resume).")
+                break
             continue
+        consecutive_errors = 0
         prof = parse_profile_response(raw)
         if prof is None:
             errors += 1

@@ -206,3 +206,23 @@ def test_run_scene_pass_connection_error_leaves_ir_untouched(monkeypatch):
     bl = ir["chapters"][0]["blocks"]
     assert bl[2]["unresolved"] and bl[3]["unresolved"]
     assert bl[1]["attribution_method"] == "alternating"
+
+
+def test_run_scene_pass_circuit_breaker_aborts_fast(monkeypatch, tmp_path):
+    """Regression (2026-07-31): Tyler left; the Mac dropped off the tailnet and
+    the pass burned hours timing out on all remaining chunks. After 3
+    consecutive connection failures the pass must abort, keeping progress."""
+    # Enough scenes that a runaway loop would make many calls
+    ir = {"title": "T", "characters": ["A"], "user_characters": [],
+          "unresolved_count": 40, "chapters": [{
+              "title": f"Ch {i}",
+              "blocks": [blk(f"c{i}_{j}") for j in range(2)],
+          } for i in range(20)]}
+    calls = []
+    monkeypatch.setattr(sa, "_call_ollama", lambda *a, **k: calls.append(1) and None)
+    ckpt = tmp_path / "ir.json"
+    sa.run_scene_pass(ir, model="fake:1b", scope="unresolved",
+                      checkpoint_path=str(ckpt))
+    assert len(calls) == 3                       # stopped at the breaker, not 20
+    # nothing falsely resolved
+    assert all(b["unresolved"] for ch in ir["chapters"] for b in ch["blocks"])

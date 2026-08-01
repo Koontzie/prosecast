@@ -35,6 +35,7 @@ LOW_CONF_CEILING = 0.6            # 'low-confidence' scope: conf below this is r
 PROTECTED_METHODS = {"manual", "postfix_tag", "prefix_tag"}
 PROTECTED_CONFIDENCE = 0.95
 SCENE_GAP = 3                     # >= this many consecutive narration blocks ends a scene
+MAX_CONSECUTIVE_ERRORS = 3        # abort the pass after this many failed calls in a row
 MAX_SCENE_BLOCKS = 50             # hard cap per scene window (small-model context safety)
 TARGETS_PER_CALL = 15             # chunk targets so JSON output stays small + parseable
 BLOCK_TEXT_LIMIT = 220            # chars of each block shown in the prompt
@@ -270,8 +271,12 @@ def run_scene_pass(
     print(f"[SCENE] Accept:  confidence >= {confidence_threshold}")
 
     changed = confirmed = low_conf = errors = calls = 0
+    consecutive_errors = 0
+    aborted = False
 
     for ch_idx, chapter in enumerate(ir_data.get("chapters", [])):
+        if aborted:
+            break
         blocks = chapter.get("blocks", [])
         title = chapter.get("title", f"Chapter {ch_idx}")
         chapter_dirty = False
@@ -290,7 +295,17 @@ def run_scene_pass(
                 raw = _call_ollama(prompt, model, num_predict=48 * len(chunk) + 96)
                 if raw is None:
                     errors += 1
+                    consecutive_errors += 1
+                    if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+                        # Server unreachable (laptop off the tailnet, Ollama
+                        # down...). Everything accepted so far is checkpointed;
+                        # re-running the same command resumes exactly here.
+                        print(f"\n[SCENE] {consecutive_errors} connection failures in a row — "
+                              "aborting pass (progress is saved; re-run to resume).")
+                        aborted = True
+                        break
                     continue
+                consecutive_errors = 0
 
                 results = parse_scene_response(raw, cast)
                 for bi, line_no in target_ids.items():
@@ -319,6 +334,8 @@ def run_scene_pass(
                 _recount_unresolved(ir_data)
                 with open(checkpoint_path, "w", encoding="utf-8") as f:
                     json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            if aborted:
+                break
 
     _recount_unresolved(ir_data)
     print(f"\n[SCENE] {calls} calls: {changed} changed, {confirmed} confirmed, "
