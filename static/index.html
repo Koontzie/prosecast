@@ -1098,9 +1098,7 @@ async function openVoicePanel(slug) {
 
 function closeVoicePanel() {
   voicePanel.classList.remove('open');
-  // Stop any playing preview
-  previewAudioEl.pause();
-  previewAudioEl.src = '';
+  stopPreview();
 }
 
 function cssColorForChar(char) {
@@ -1112,35 +1110,50 @@ function cssColorForChar(char) {
   return map[cls] || '#ccc';
 }
 
+// ── Shared preview playback: click ▶ to play, click ■ to stop ─────────────
+// One preview at a time; starting a new one stops the old one. The button is
+// never disabled while playing — that's what makes stopping possible.
+let activePreviewBtn = null;
+
+function stopPreview() {
+  previewAudioEl.pause();
+  previewAudioEl.onended = null;
+  previewAudioEl.onerror = null;
+  previewAudioEl.removeAttribute('src');
+  if (activePreviewBtn) {
+    activePreviewBtn.classList.remove('playing');
+    activePreviewBtn.textContent = '▶';
+    activePreviewBtn = null;
+  }
+}
+
+async function playPreview(btn, url) {
+  if (activePreviewBtn === btn) {          // toggle: stop this one
+    stopPreview();
+    return;
+  }
+  stopPreview();                           // stop whatever else was playing
+  activePreviewBtn = btn;
+  btn.classList.add('playing');
+  btn.textContent = '■';
+  previewAudioEl.src = url;
+  previewAudioEl.onended = stopPreview;
+  previewAudioEl.onerror = stopPreview;
+  try {
+    await previewAudioEl.play();
+  } catch {
+    // Aborted by a newer preview, autoplay blocked, or fetch error.
+    // Only reset if WE are still the active preview (don't kill a newer one).
+    if (activePreviewBtn === btn) stopPreview();
+  }
+}
+
 async function previewVoice(char) {
   const sel = document.getElementById(`vsel-${char}`);
   const btn = document.getElementById(`vprev-${char}`);
   if (!sel || !btn) return;
-
-  const voiceId = sel.value;
-  btn.classList.add('playing');
-  btn.disabled = true;
-
-  // Stop any prior preview
-  previewAudioEl.pause();
-
-  const url = `/voice/preview/${encodeURIComponent(voiceId)}?character=${encodeURIComponent(char)}`;
-  previewAudioEl.src = url;
-  try {
-    await previewAudioEl.play();
-  } catch {
-    // autoplay blocked or fetch error — ignore
-  }
-
-  previewAudioEl.onended = () => {
-    btn.classList.remove('playing');
-    btn.disabled = false;
-  };
-  // Fallback: re-enable button after 8s in case onended doesn't fire
-  setTimeout(() => {
-    btn.classList.remove('playing');
-    btn.disabled = false;
-  }, 8000);
+  await playPreview(btn,
+    `/voice/preview/${encodeURIComponent(sel.value)}?character=${encodeURIComponent(char)}`);
 }
 
 async function deleteCharacter(char) {
@@ -1222,8 +1235,7 @@ async function openCastPanel(slug) {
 
 function closeCastPanel() {
   castPanel.classList.remove('open');
-  previewAudioEl.pause();
-  previewAudioEl.src = '';
+  stopPreview();
 }
 
 async function refreshCast(statusMsg) {
@@ -1513,14 +1525,8 @@ async function castPreview(name, btn) {
   const c = (castData.characters || []).find(x => x.name === name);
   const line = (c && c.sample_line) ? c.sample_line
              : 'The rain had stopped by the time she reached the crossroads.';
-  btn.classList.add('playing'); btn.disabled = true;
-  previewAudioEl.pause();
-  previewAudioEl.src =
-    `/voice/preview/${encodeURIComponent(voiceId)}?text=${encodeURIComponent(line)}`;
-  try { await previewAudioEl.play(); } catch {}
-  const done = () => { btn.classList.remove('playing'); btn.disabled = false; };
-  previewAudioEl.onended = done;
-  setTimeout(done, 15000);
+  await playPreview(btn,
+    `/voice/preview/${encodeURIComponent(voiceId)}?text=${encodeURIComponent(line)}`);
 }
 
 async function saveCastVoices() {
@@ -1815,8 +1821,7 @@ function showCastingModal(slug, candidates, chapData) {
 
 function closeCastingModal() {
   castingModalOverlay.classList.add('hidden');
-  previewAudioEl.pause();
-  previewAudioEl.src = '';
+  stopPreview();
 }
 
 async function saveCastAndContinue() {
@@ -1852,21 +1857,11 @@ async function previewCastingVoice(char) {
   const btn = document.getElementById(`cprev-${char}`);
   if (!sel || !btn) return;
 
-  const voiceId = sel.value;
   const charData = castingCtx.characters.find(c => c.name === char);
   const sampleText = charData?.sample_line?.slice(0, 150) ?? '';
-
-  btn.classList.add('playing');
-  btn.disabled = true;
-  previewAudioEl.pause();
-
-  let url = `/voice/preview/${encodeURIComponent(voiceId)}?character=${encodeURIComponent(char)}`;
+  let url = `/voice/preview/${encodeURIComponent(sel.value)}?character=${encodeURIComponent(char)}`;
   if (sampleText) url += `&text=${encodeURIComponent(sampleText)}`;
-  previewAudioEl.src = url;
-  try { await previewAudioEl.play(); } catch {}
-
-  previewAudioEl.onended = () => { btn.classList.remove('playing'); btn.disabled = false; };
-  setTimeout(() => { btn.classList.remove('playing'); btn.disabled = false; }, 14000);
+  await playPreview(btn, url);
 }
 
 // ── Regenerate ────────────────────────────────────────────────────────────
