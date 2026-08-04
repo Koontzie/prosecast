@@ -223,7 +223,32 @@
     }
     #block-text-display:hover { background: #1e1e1e; color: #aaa; }
     #block-text-display:empty { cursor: default; }
+    #block-text-display b.now { color: #e8e8e8; font-weight: 600; }
     #time-display { font-size: .8rem; color: #555; white-space: nowrap; flex-shrink: 0; }
+
+    /* ── Read-along popup ── */
+    #reader-popup {
+      position: absolute; left: 24px; right: 24px; bottom: calc(100% + 10px);
+      background: #1a1a1a; border: 1px solid #2e2e2e; border-radius: 10px;
+      box-shadow: 0 -8px 32px rgba(0,0,0,.55);
+      max-height: 46vh; overflow-y: auto; padding: 18px 22px; z-index: 40;
+    }
+    .reader-para {
+      font-size: .92rem; line-height: 1.65; color: #666; margin-bottom: 14px;
+    }
+    .reader-para .reader-speaker {
+      display: block; font-size: .68rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px;
+    }
+    .reader-para.current { color: #ccc; }
+    .reader-para.current b.now {
+      color: #fff; font-weight: 600; background: #3b3480;
+      border-radius: 3px; padding: 0 2px;
+    }
+    .reader-hint {
+      font-size: .68rem; color: #4a4a4a; text-align: center; margin-top: 4px;
+      font-style: italic;
+    }
 
     .player-controls {
       display: flex; align-items: center; gap: 12px;
@@ -626,12 +651,13 @@
 </div>
 
 <div id="player-bar" style="position:relative;">
+  <div id="reader-popup" style="display:none;"></div>
   <div class="player-top">
     <div id="speaker-wrap" title="Click to reassign speaker">
       <span id="speaker-display" class="spk-narrator">—</span>
       <span id="speaker-edit-icon">✎</span>
     </div>
-    <span id="block-text-display"></span>
+    <span id="block-text-display" onclick="toggleReaderPopup()" title="Click to read along"></span>
     <span id="time-display">0:00 / 0:00</span>
   </div>
   <div class="player-controls">
@@ -881,14 +907,66 @@ async function playChapter(slug, chapterIdx) {
 }
 
 // ── Timeline sync ──────────────────────────────────────────────────────────
-function currentBlock(currentTime) {
+function currentBlockIndex(currentTime) {
   const tl = state.timeline;
-  if (!tl.length) return null;
+  if (!tl.length) return -1;
   // Walk backwards to find the last block whose start <= currentTime
   for (let i = tl.length - 1; i >= 0; i--) {
-    if (tl[i].start <= currentTime) return tl[i];
+    if (tl[i].start <= currentTime) return i;
   }
-  return tl[0];
+  return 0;
+}
+
+function currentBlock(currentTime) {
+  const i = currentBlockIndex(currentTime);
+  return i < 0 ? null : state.timeline[i];
+}
+
+// ── Read-along position estimation ─────────────────────────────────────────
+// We know each block's start + duration, so interpolate a character position
+// within the block from playback time. Approximate (speech rate varies), but
+// tracks within a beat or two — true word timing needs a whisper alignment
+// pass (future upgrade; faster-whisper already runs on the home server).
+function estimateCharPos(block, t) {
+  const text = block.text || '';
+  if (!block.duration || !text.length) return 0;
+  let frac = (t - block.start) / block.duration;
+  frac = Math.max(0, Math.min(0.999, frac));
+  return Math.floor(frac * text.length);
+}
+
+// [start, end) of the ~`count` words containing charPos
+function wordWindow(text, charPos, count = 3) {
+  let s = text.lastIndexOf(' ', charPos);
+  s = s < 0 ? 0 : s + 1;
+  let e = s;
+  for (let n = 0; n < count; n++) {
+    const nx = text.indexOf(' ', e + 1);
+    if (nx < 0) { e = text.length; break; }
+    e = nx;
+  }
+  return [s, Math.max(e, s)];
+}
+
+// Sliding window for the one-line player display: text around the estimated
+// position, current words emphasized — so long blocks visibly progress.
+function renderPlayerText(block, t) {
+  const text = (block.text || '').replace(/^"|"$/g, '');
+  if (text.length <= 150) {
+    const pos = estimateCharPos({...block, text}, t);
+    const [s, e] = wordWindow(text, pos);
+    blockTextEl.innerHTML =
+      `${esc(text.slice(0, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e))}`;
+    return;
+  }
+  const pos = estimateCharPos({...block, text}, t);
+  const [s, e] = wordWindow(text, pos);
+  const winStart = Math.max(0, s - 60);
+  const winEnd = Math.min(text.length, e + 160);
+  blockTextEl.innerHTML =
+    (winStart > 0 ? '… ' : '') +
+    `${esc(text.slice(winStart, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e, winEnd))}` +
+    (winEnd < text.length ? ' …' : '');
 }
 
 audioEl.addEventListener('timeupdate', () => {
@@ -908,9 +986,73 @@ audioEl.addEventListener('timeupdate', () => {
     speakerEl.textContent = spk;
     speakerEl.className = speakerColor(spk);
     state.activeBlock = block;
-    blockTextEl.textContent = block.text.replace(/^"|"$/g, '');
+    renderPlayerText(block, t);
   }
+  updateReaderPopup(t);
 });
+
+// ── Read-along popup: prev/current/next paragraphs, current words marked ──
+const readerPopup = document.getElementById('reader-popup');
+let readerBlockIdx = -1;   // which block the popup is currently built around
+
+function toggleReaderPopup() {
+  if (readerPopup.style.display !== 'none') { closeReaderPopup(); return; }
+  if (!state.timeline.length) return;
+  readerPopup.style.display = 'block';
+  readerBlockIdx = -1;                       // force rebuild
+  updateReaderPopup(audioEl.currentTime);
+}
+
+function closeReaderPopup() {
+  readerPopup.style.display = 'none';
+  readerBlockIdx = -1;
+}
+
+function readerParaHTML(block, isCurrent, t) {
+  const spk = block.speaker || 'NARRATOR';
+  const label = `<span class="reader-speaker ${speakerColor(spk)}">${esc(spk)}</span>`;
+  let body;
+  if (isCurrent) {
+    const text = block.text || '';
+    const pos = estimateCharPos(block, t);
+    const [s, e] = wordWindow(text, pos);
+    body = `${esc(text.slice(0, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e))}`;
+  } else {
+    body = esc(block.text || '');
+  }
+  return `<div class="reader-para${isCurrent ? ' current' : ''}" id="rpara-${block.block_index}">${label}${body}</div>`;
+}
+
+function updateReaderPopup(t) {
+  if (readerPopup.style.display === 'none') return;
+  const i = currentBlockIndex(t);
+  if (i < 0) return;
+  const tl = state.timeline;
+
+  if (i !== readerBlockIdx) {
+    // Rebuild around the new block: one paragraph before, current, two after
+    readerBlockIdx = i;
+    const parts = [];
+    for (let j = Math.max(0, i - 1); j <= Math.min(tl.length - 1, i + 2); j++) {
+      parts.push(readerParaHTML(tl[j], j === i, t));
+    }
+    parts.push('<div class="reader-hint">word position is estimated · click the text bar to close</div>');
+    readerPopup.innerHTML = parts.join('');
+    document.getElementById(`rpara-${tl[i].block_index}`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  } else {
+    // Same block: just move the highlight within the current paragraph
+    const para = document.getElementById(`rpara-${tl[i].block_index}`);
+    if (para) {
+      const spk = tl[i].speaker || 'NARRATOR';
+      const label = `<span class="reader-speaker ${speakerColor(spk)}">${esc(spk)}</span>`;
+      const text = tl[i].text || '';
+      const pos = estimateCharPos(tl[i], t);
+      const [s, e] = wordWindow(text, pos);
+      para.innerHTML = `${label}${esc(text.slice(0, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e))}`;
+    }
+  }
+}
 
 audioEl.addEventListener('play',  () => { playPauseBtn.textContent = '⏸'; });
 audioEl.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; });
@@ -1711,7 +1853,7 @@ function esc(str) {
 
 // Close panels on Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closePanel(); closeVoicePanel(); closeCastingModal(); }
+  if (e.key === 'Escape') { closePanel(); closeVoicePanel(); closeCastingModal(); closeReaderPopup(); }
 });
 
 // ── EPUB upload ───────────────────────────────────────────────────────────

@@ -478,8 +478,10 @@ def get_timeline(book_slug: str, chapter_index: int):
             "start": round(cursor, 3),
             "duration": round(duration, 3),
             "type": block["type"],
-            "speaker": block.get("speaker", "NARRATOR"),
-            "text": block.get("text", "")[:120],
+            # Full text — the player needs it to keep the follow-along display
+            # moving through long blocks (was truncated to 120 chars, which
+            # froze the display on the first sentence of every long block).
+            "text": block.get("text", ""),
             "unresolved": block.get("unresolved", False),
         })
         cursor += duration
