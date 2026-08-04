@@ -1,7 +1,44 @@
 # PROSECAST — STATUS
 
-**Status:** Active
-**Updated:** 2026-07-31 (see HANDOFF.md for the 07-22 session handoff)
+**Status:** PAUSED (Tyler → ComfyUI work). Clean stopping point — nothing
+half-built, all committed on main, 89 tests green. Resume at "NEXT" below.
+**Updated:** 2026-08-01
+
+## Session 2026-08-01 (Cowork) — Brigands end-to-end + read-along
+- **Brigands is fully end-to-end:** attributed (0 unresolved, alternating
+  647→10), profiled, cast (mains by hand + gender-matched Auto-cast),
+  chapters 4/9/17 rendered + Tyler listen: PASSES. First book through the
+  whole flow.
+- **⚡ Generate buttons:** un-rendered chapters get an explicit labeled
+  render button (the old tiny ↺ was invisible-in-plain-sight). One render
+  at a time — GPU is the bottleneck; render queue is a Phase C item.
+- **Read-along built in three steps:** (1) /timeline un-truncated (120-char
+  cap froze display on long blocks); (2) sentence-level estimated highlight
+  + click-any-sentence-to-seek; (3) THE REAL FIX — word-accurate timings
+  via faster-whisper forced alignment (Gideon :8100, OpenAI-compatible
+  /v1/audio/transcriptions). scripts/align_words.py <slug> after rendering;
+  sidecar word_timings.json per chapter; staleness fingerprint; UI shows
+  exact 3-word karaoke when aligned, sentence estimate otherwise;
+  'follow: on/off' pill (persisted) disables highlighting entirely.
+  Whisper words are matched back to OUR text — mistranscription can only
+  cost timing, never corrupt text. PROSECAST_WHISPER_URL /
+  PROSECAST_WHISPER_MODEL config.
+- Sequence per book is now: render (Chatterbox) → align (whisper) → listen.
+- Suite at 89 tests, all offline.
+
+## NEXT (resume here)
+1. **Phase C** (~1 session): pre-flight assertions (Chatterbox model ==
+   'original' + every voice_map voice still on server — shared-server
+   insurance), local mirror of reference clips, book-level resume + render
+   queue. Done = Parade renders overnight unattended.
+2. **Parade run** (Phase D): scene+profile passes → cast via UI → overnight
+   render → align → M4B → phone listen-through. Closes the PRD.
+3. **Sampling pass:** Frankenstein / Moby Dick / Carousel, 2-3 chapters each.
+4. **Pipeline-in-UI:** upload → auto attribution/profile with progress bar;
+   Ollama/whisper URLs as settings; auto-align after render.
+5. Parked small items: highlight-window tuning (wait for a second listener),
+   corrections-replay eval harness, voice_meta → AnimaForge, provenance-aware
+   prompting before any scope=all pass, dropdown-order preference.
 
 ## Session 2026-07-31 (Cowork)
 - **Brigands dogfood fixes:** unresolved drawer got an in-drawer page view
