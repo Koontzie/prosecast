@@ -241,9 +241,11 @@
       text-transform: uppercase; letter-spacing: .06em; margin-bottom: 3px;
     }
     .reader-para.current { color: #ccc; }
-    .reader-para.current b.now {
-      color: #fff; font-weight: 600; background: #3b3480;
-      border-radius: 3px; padding: 0 2px;
+    .reader-para .rs { cursor: pointer; }
+    .reader-para .rs:hover { color: #e8e8e8; text-decoration: underline dotted #555; }
+    .reader-para.current .rs.now {
+      color: #fff; background: #34305e; border-radius: 3px;
+      padding: 0 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone;
     }
     .reader-hint {
       font-size: .68rem; color: #4a4a4a; text-align: center; margin-top: 4px;
@@ -935,37 +937,38 @@ function estimateCharPos(block, t) {
   return Math.floor(frac * text.length);
 }
 
-// [start, end) of the ~`count` words containing charPos
-function wordWindow(text, charPos, count = 3) {
-  let s = text.lastIndexOf(' ', charPos);
-  s = s < 0 ? 0 : s + 1;
-  let e = s;
-  for (let n = 0; n < count; n++) {
-    const nx = text.indexOf(' ', e + 1);
-    if (nx < 0) { e = text.length; break; }
-    e = nx;
+// Sentence segmentation — the honest granularity for estimated tracking:
+// block boundaries are exact, sentences within a block barely drift, and a
+// word-level highlight implied a precision the estimate doesn't have.
+function splitSentences(text) {
+  const out = [];
+  const re = /[^.!?…]+[.!?…]*[”"'’]?\s*/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    if (m[0].trim()) out.push({ s: m.index, e: m.index + m[0].length });
+    if (m.index === re.lastIndex) re.lastIndex++;   // safety on zero-width match
   }
-  return [s, Math.max(e, s)];
+  return out.length ? out : [{ s: 0, e: text.length }];
 }
 
-// Sliding window for the one-line player display: text around the estimated
-// position, current words emphasized — so long blocks visibly progress.
+function sentenceAt(text, charPos) {
+  const ss = splitSentences(text);
+  for (const x of ss) if (charPos < x.e) return x;
+  return ss[ss.length - 1];
+}
+
+// Sliding window for the one-line player display: the estimated current
+// SENTENCE is emphasized, with a little context either side.
 function renderPlayerText(block, t) {
   const text = (block.text || '').replace(/^"|"$/g, '');
-  if (text.length <= 150) {
-    const pos = estimateCharPos({...block, text}, t);
-    const [s, e] = wordWindow(text, pos);
-    blockTextEl.innerHTML =
-      `${esc(text.slice(0, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e))}`;
-    return;
-  }
+  if (!text.length) { blockTextEl.textContent = ''; return; }
   const pos = estimateCharPos({...block, text}, t);
-  const [s, e] = wordWindow(text, pos);
-  const winStart = Math.max(0, s - 60);
-  const winEnd = Math.min(text.length, e + 160);
+  const sent = sentenceAt(text, pos);
+  const winStart = Math.max(0, sent.s - 50);
+  const winEnd = Math.min(text.length, sent.e + 90);
   blockTextEl.innerHTML =
     (winStart > 0 ? '… ' : '') +
-    `${esc(text.slice(winStart, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e, winEnd))}` +
+    `${esc(text.slice(winStart, sent.s))}<b class="now">${esc(text.slice(sent.s, sent.e))}</b>${esc(text.slice(sent.e, winEnd))}` +
     (winEnd < text.length ? ' …' : '');
 }
 
@@ -1008,19 +1011,18 @@ function closeReaderPopup() {
   readerBlockIdx = -1;
 }
 
-function readerParaHTML(block, isCurrent, t) {
+function readerParaInner(block, isCurrent, t) {
   const spk = block.speaker || 'NARRATOR';
   const label = `<span class="reader-speaker ${speakerColor(spk)}">${esc(spk)}</span>`;
-  let body;
-  if (isCurrent) {
-    const text = block.text || '';
-    const pos = estimateCharPos(block, t);
-    const [s, e] = wordWindow(text, pos);
-    body = `${esc(text.slice(0, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e))}`;
-  } else {
-    body = esc(block.text || '');
-  }
-  return `<div class="reader-para${isCurrent ? ' current' : ''}" id="rpara-${block.block_index}">${label}${body}</div>`;
+  const text = block.text || '';
+  const cur = isCurrent ? sentenceAt(text, estimateCharPos(block, t)) : null;
+  // Every sentence is a clickable span: click = seek there (and the highlight
+  // snaps into agreement with the audio at that instant — self-correcting).
+  const body = splitSentences(text).map(x =>
+    `<span class="rs${cur && x.s === cur.s ? ' now' : ''}" data-b="${block.block_index}"` +
+    ` data-cs="${x.s}" data-len="${text.length}">${esc(text.slice(x.s, x.e))}</span>`
+  ).join('');
+  return label + body;
 }
 
 function updateReaderPopup(t) {
@@ -1034,25 +1036,32 @@ function updateReaderPopup(t) {
     readerBlockIdx = i;
     const parts = [];
     for (let j = Math.max(0, i - 1); j <= Math.min(tl.length - 1, i + 2); j++) {
-      parts.push(readerParaHTML(tl[j], j === i, t));
+      parts.push(`<div class="reader-para${j === i ? ' current' : ''}" id="rpara-${tl[j].block_index}">`
+        + readerParaInner(tl[j], j === i, t) + '</div>');
     }
-    parts.push('<div class="reader-hint">word position is estimated · click the text bar to close</div>');
+    parts.push('<div class="reader-hint">position is estimated — click any sentence to jump the audio there</div>');
     readerPopup.innerHTML = parts.join('');
     document.getElementById(`rpara-${tl[i].block_index}`)
       ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
   } else {
-    // Same block: just move the highlight within the current paragraph
+    // Same block: re-render just the current paragraph's sentence highlight
     const para = document.getElementById(`rpara-${tl[i].block_index}`);
-    if (para) {
-      const spk = tl[i].speaker || 'NARRATOR';
-      const label = `<span class="reader-speaker ${speakerColor(spk)}">${esc(spk)}</span>`;
-      const text = tl[i].text || '';
-      const pos = estimateCharPos(tl[i], t);
-      const [s, e] = wordWindow(text, pos);
-      para.innerHTML = `${label}${esc(text.slice(0, s))}<b class="now">${esc(text.slice(s, e))}</b>${esc(text.slice(e))}`;
-    }
+    if (para) para.innerHTML = readerParaInner(tl[i], true, t);
   }
 }
+
+// Click a sentence → seek the audio to its (estimated) start. Block starts
+// are exact, so clicking the first sentence of any paragraph is sample-true.
+readerPopup.addEventListener('click', e => {
+  const el = e.target.closest('.rs');
+  if (!el) return;
+  const entry = state.timeline.find(x => x.block_index === Number(el.dataset.b));
+  if (!entry) return;
+  const len = Number(el.dataset.len) || 1;
+  const frac = Math.max(0, Math.min(1, Number(el.dataset.cs) / len));
+  audioEl.currentTime = entry.start + frac * (entry.duration || 0);
+  if (audioEl.paused) audioEl.play();
+});
 
 audioEl.addEventListener('play',  () => { playPauseBtn.textContent = '⏸'; });
 audioEl.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; });
