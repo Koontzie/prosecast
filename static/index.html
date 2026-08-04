@@ -225,6 +225,13 @@
     #block-text-display:empty { cursor: default; }
     #block-text-display b.now { color: #e8e8e8; font-weight: 600; }
     #time-display { font-size: .8rem; color: #555; white-space: nowrap; flex-shrink: 0; }
+    #follow-btn {
+      background: none; border: 1px solid #2a2a2a; color: #555;
+      padding: 3px 9px; border-radius: 11px; cursor: pointer;
+      font-size: .68rem; flex-shrink: 0; white-space: nowrap;
+    }
+    #follow-btn:hover { color: #aaa; border-color: #555; }
+    #follow-btn.on { color: #a89bff; border-color: #4a3f8a; }
 
     /* ── Read-along popup ── */
     #reader-popup {
@@ -665,6 +672,7 @@
       <span id="speaker-edit-icon">✎</span>
     </div>
     <span id="block-text-display" onclick="toggleReaderPopup()" title="Click to read along"></span>
+    <button id="follow-btn" onclick="toggleFollowHighlight()" title="Toggle word-follow highlighting"></button>
     <span id="time-display">0:00 / 0:00</span>
   </div>
   <div class="player-controls">
@@ -1005,11 +1013,32 @@ function sentenceAt(text, charPos) {
   return ss[ss.length - 1];
 }
 
+// ── Word-follow toggle (persisted; some listeners find highlighting busy) ──
+let followHighlight = true;
+try { followHighlight = localStorage.getItem('pc_follow') !== '0'; } catch {}
+
+const followBtn = document.getElementById('follow-btn');
+function renderFollowBtn() {
+  followBtn.textContent = followHighlight ? 'follow: on' : 'follow: off';
+  followBtn.classList.toggle('on', followHighlight);
+}
+renderFollowBtn();
+
+function toggleFollowHighlight() {
+  followHighlight = !followHighlight;
+  try { localStorage.setItem('pc_follow', followHighlight ? '1' : '0'); } catch {}
+  renderFollowBtn();
+  readerBlockIdx = -1;                       // rebuild popup in the new mode
+  if (state.activeBlock) renderPlayerText(state.activeBlock, audioEl.currentTime);
+  updateReaderPopup(audioEl.currentTime);
+}
+
 // Sliding window for the one-line player display: exact 3-word window when
 // whisper timings exist, estimated current sentence otherwise.
 function renderPlayerText(block, t) {
   const text = block.text || '';
   if (!text.length) { blockTextEl.textContent = ''; return; }
+  if (!followHighlight) { blockTextEl.textContent = text; return; }
   const hl = highlightRange(block, t);
   const winStart = Math.max(0, hl.s - 50);
   const winEnd = Math.min(text.length, hl.e + 90);
@@ -1063,7 +1092,7 @@ function readerParaInner(block, isCurrent, t) {
   const label = `<span class="reader-speaker ${speakerColor(spk)}">${esc(spk)}</span>`;
   const text = block.text || '';
   let hl = null, curSentStart = -1;
-  if (isCurrent) {
+  if (isCurrent && followHighlight) {
     hl = highlightRange(block, t);
     curSentStart = sentenceAt(text, hl.s).s;
   }
