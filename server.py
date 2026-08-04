@@ -489,6 +489,31 @@ def get_timeline(book_slug: str, chapter_index: int):
     return {"chapter_index": chapter_index, "title": chapter.get("title"), "timeline": timeline}
 
 
+# ── /word_timings/{book_slug}/{chapter_index} ────────────────────────────────
+
+@app.get("/word_timings/{book_slug}/{chapter_index}")
+def get_word_timings(book_slug: str, chapter_index: int):
+    """Word-level timestamps for a rendered chapter (scripts/align_words.py).
+
+    Returns {"words": null} when absent or stale (blocks re-rendered since
+    alignment) — the player falls back to sentence estimation. Additive only.
+    """
+    from prosecast.word_aligner import (
+        STALE_TOLERANCE_SECS, chapter_blocks_fingerprint, timings_path,
+    )
+    tp = timings_path(book_slug, chapter_index)
+    if not tp.exists():
+        return {"words": None, "stale": False}
+    try:
+        doc = json.loads(tp.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {"words": None, "stale": False}
+    fingerprint = chapter_blocks_fingerprint(book_slug, chapter_index)
+    if abs(doc.get("total_duration", -1) - fingerprint) > STALE_TOLERANCE_SECS:
+        return {"words": None, "stale": True}
+    return {"words": doc.get("words", []), "stale": False}
+
+
 # ── /ir/{book_slug} ───────────────────────────────────────────────────────────
 
 @app.get("/ir/{book_slug}")

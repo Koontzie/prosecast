@@ -247,6 +247,11 @@
       color: #fff; background: #34305e; border-radius: 3px;
       padding: 0 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone;
     }
+    /* Word-accurate marker (whisper-aligned chapters) */
+    .reader-para.current b.now-w {
+      color: #fff; font-weight: 600; background: #5a4fd0;
+      border-radius: 3px; padding: 0 2px;
+    }
     .reader-hint {
       font-size: .68rem; color: #4a4a4a; text-align: center; margin-top: 4px;
       font-style: italic;
@@ -901,11 +906,54 @@ async function playChapter(slug, chapterIdx) {
     state.timeline = [];
   }
 
+  // Load word-accurate timings if the whisper alignment pass has run.
+  // Absent/stale → sentence-estimate mode, exactly as before.
+  state.wordsByBlock = null;
+  try {
+    const wt = await fetchJSON(`/word_timings/${slug}/${chapterIdx}`);
+    if (wt.words && wt.words.length) {
+      state.wordsByBlock = new Map();
+      for (const w of wt.words) {
+        if (!state.wordsByBlock.has(w.b)) state.wordsByBlock.set(w.b, []);
+        state.wordsByBlock.get(w.b).push(w);
+      }
+    }
+  } catch { /* estimation fallback */ }
+
   // Load audio
   audioEl.src = `/audio/${slug}/ch${chapterIdx}.wav`;
   audioEl.load();
   await audioEl.play();
   playPauseBtn.disabled = false;
+}
+
+function wordsForBlock(blockIndex) {
+  return state.wordsByBlock ? (state.wordsByBlock.get(blockIndex) || null) : null;
+}
+
+// Binary search: index of the last word starting at or before t
+function wordIdxAt(blockWords, t) {
+  let lo = 0, hi = blockWords.length - 1, ans = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (blockWords[mid].t <= t) { ans = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return ans;
+}
+
+// Highlight char range within a block at time t: exact 3-word window when
+// aligned timings exist, estimated sentence otherwise.
+function highlightRange(block, t) {
+  const text = block.text || '';
+  const bw = wordsForBlock(block.block_index);
+  if (bw && bw.length) {
+    const wi = wordIdxAt(bw, t);
+    const last = bw[Math.min(wi + 2, bw.length - 1)];
+    return { s: bw[wi].cs, e: Math.max(last.ce, bw[wi].ce), exact: true };
+  }
+  const sent = sentenceAt(text, estimateCharPos(block, t));
+  return { s: sent.s, e: sent.e, exact: false };
 }
 
 // ── Timeline sync ──────────────────────────────────────────────────────────
@@ -957,18 +1005,17 @@ function sentenceAt(text, charPos) {
   return ss[ss.length - 1];
 }
 
-// Sliding window for the one-line player display: the estimated current
-// SENTENCE is emphasized, with a little context either side.
+// Sliding window for the one-line player display: exact 3-word window when
+// whisper timings exist, estimated current sentence otherwise.
 function renderPlayerText(block, t) {
-  const text = (block.text || '').replace(/^"|"$/g, '');
+  const text = block.text || '';
   if (!text.length) { blockTextEl.textContent = ''; return; }
-  const pos = estimateCharPos({...block, text}, t);
-  const sent = sentenceAt(text, pos);
-  const winStart = Math.max(0, sent.s - 50);
-  const winEnd = Math.min(text.length, sent.e + 90);
+  const hl = highlightRange(block, t);
+  const winStart = Math.max(0, hl.s - 50);
+  const winEnd = Math.min(text.length, hl.e + 90);
   blockTextEl.innerHTML =
     (winStart > 0 ? '… ' : '') +
-    `${esc(text.slice(winStart, sent.s))}<b class="now">${esc(text.slice(sent.s, sent.e))}</b>${esc(text.slice(sent.e, winEnd))}` +
+    `${esc(text.slice(winStart, hl.s))}<b class="now">${esc(text.slice(hl.s, hl.e))}</b>${esc(text.slice(hl.e, winEnd))}` +
     (winEnd < text.length ? ' …' : '');
 }
 
@@ -1015,13 +1062,26 @@ function readerParaInner(block, isCurrent, t) {
   const spk = block.speaker || 'NARRATOR';
   const label = `<span class="reader-speaker ${speakerColor(spk)}">${esc(spk)}</span>`;
   const text = block.text || '';
-  const cur = isCurrent ? sentenceAt(text, estimateCharPos(block, t)) : null;
-  // Every sentence is a clickable span: click = seek there (and the highlight
-  // snaps into agreement with the audio at that instant — self-correcting).
-  const body = splitSentences(text).map(x =>
-    `<span class="rs${cur && x.s === cur.s ? ' now' : ''}" data-b="${block.block_index}"` +
-    ` data-cs="${x.s}" data-len="${text.length}">${esc(text.slice(x.s, x.e))}</span>`
-  ).join('');
+  let hl = null, curSentStart = -1;
+  if (isCurrent) {
+    hl = highlightRange(block, t);
+    curSentStart = sentenceAt(text, hl.s).s;
+  }
+  // Every sentence is a clickable span: click = seek there. With whisper
+  // timings the current ~3 WORDS are marked inside the current sentence;
+  // without them the whole sentence is the (estimated) marker.
+  const body = splitSentences(text).map(x => {
+    const isCur = x.s === curSentStart;
+    let inner;
+    if (isCur && hl && hl.exact) {
+      const s = Math.max(hl.s, x.s), e = Math.min(hl.e, x.e);
+      inner = `${esc(text.slice(x.s, s))}<b class="now-w">${esc(text.slice(s, e))}</b>${esc(text.slice(e, x.e))}`;
+    } else {
+      inner = esc(text.slice(x.s, x.e));
+    }
+    return `<span class="rs${isCur && !(hl && hl.exact) ? ' now' : ''}" data-b="${block.block_index}"` +
+           ` data-cs="${x.s}" data-len="${text.length}">${inner}</span>`;
+  }).join('');
   return label + body;
 }
 
@@ -1039,7 +1099,11 @@ function updateReaderPopup(t) {
       parts.push(`<div class="reader-para${j === i ? ' current' : ''}" id="rpara-${tl[j].block_index}">`
         + readerParaInner(tl[j], j === i, t) + '</div>');
     }
-    parts.push('<div class="reader-hint">position is estimated — click any sentence to jump the audio there</div>');
+    parts.push(`<div class="reader-hint">${
+      state.wordsByBlock && state.wordsByBlock.size
+        ? 'word-accurate timing — click any sentence to jump'
+        : 'position is estimated — click any sentence to jump the audio there'
+    }</div>`);
     readerPopup.innerHTML = parts.join('');
     document.getElementById(`rpara-${tl[i].block_index}`)
       ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -1050,16 +1114,24 @@ function updateReaderPopup(t) {
   }
 }
 
-// Click a sentence → seek the audio to its (estimated) start. Block starts
-// are exact, so clicking the first sentence of any paragraph is sample-true.
+// Click a sentence → seek the audio to its start. With whisper timings the
+// seek is word-exact; otherwise it's estimated (and self-corrects on click).
 readerPopup.addEventListener('click', e => {
   const el = e.target.closest('.rs');
   if (!el) return;
-  const entry = state.timeline.find(x => x.block_index === Number(el.dataset.b));
+  const bi = Number(el.dataset.b);
+  const entry = state.timeline.find(x => x.block_index === bi);
   if (!entry) return;
-  const len = Number(el.dataset.len) || 1;
-  const frac = Math.max(0, Math.min(1, Number(el.dataset.cs) / len));
-  audioEl.currentTime = entry.start + frac * (entry.duration || 0);
+  const cs = Number(el.dataset.cs);
+  const bw = wordsForBlock(bi);
+  if (bw && bw.length) {
+    const w = bw.find(x => x.cs >= cs) || bw[bw.length - 1];
+    audioEl.currentTime = w.t;
+  } else {
+    const len = Number(el.dataset.len) || 1;
+    const frac = Math.max(0, Math.min(1, cs / len));
+    audioEl.currentTime = entry.start + frac * (entry.duration || 0);
+  }
   if (audioEl.paused) audioEl.play();
 });
 
