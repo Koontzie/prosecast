@@ -84,6 +84,15 @@ Tests: `.venv/bin/pytest tests/ -v` (89; all offline, Ollama/whisper mocked).
    corrections-replay eval harness; voice_meta shared with AnimaForge;
    provenance-aware prompting REQUIRED before any `--llm-scope all` run;
    alphabetical-dropdown preference option.
+6. **Tag/delivery editor** (parked since Phase 4, still wanted): inline
+   editor in the read-along popup — intensity slider, pace dropdown,
+   action/emotion fields; edits journal to corrections.jsonl; re-render
+   just the block. TWO build notes: (a) block cacheKey is text+voice+engine
+   — tags are NOT in it, so a tag edit won't re-synthesize until the key
+   includes mapped tag params (or the block is force-invalidated); (b) for
+   chatterbox only INTENSITY (→ exaggeration [0.20,0.85]) audibly changes
+   delivery — pace is deliberately unmapped, action/emotion are labels for
+   humans + future engines. Set expectations accordingly.
 
 ## Key technical facts (hard-won this week — do not relearn)
 
