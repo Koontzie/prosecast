@@ -93,6 +93,13 @@ Tests: `.venv/bin/pytest tests/ -v` (89; all offline, Ollama/whisper mocked).
    chatterbox only INTENSITY (→ exaggeration [0.20,0.85]) audibly changes
    delivery — pace is deliberately unmapped, action/emotion are labels for
    humans + future engines. Set expectations accordingly.
+   *Direction (Tyler, 2026-08-01): consider prototyping the delivery-
+   direction system in ANIMAFORGE first — scenes give a seconds-long
+   feedback loop, delivery is that app's core concern, and the shared
+   Chatterbox server means every learned mapping transfers. Keep the tag
+   schema (action/emotion/intensity/pace) as a shared contract between the
+   two projects (third shared artifact after briefs + voice_meta) and keep
+   mappers engine-namespaced; then port-back is a copy, not a rewrite.*
 
 ## Key technical facts (hard-won this week — do not relearn)
 
