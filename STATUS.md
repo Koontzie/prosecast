@@ -1,8 +1,33 @@
 # PROSECAST — STATUS
 
-**Status:** PAUSED (Tyler → ComfyUI work). Clean stopping point — nothing
-half-built, all committed on main, 89 tests green. Resume at "NEXT" below.
-**Updated:** 2026-08-01
+**Status:** PAUSED. Clean stopping point. PDF ingestion (single-narrator
+mode) shipped 2026-08-26; core pipeline unchanged. Resume at "NEXT" below.
+**Updated:** 2026-08-26
+
+## Session 2026-08-26 (Cowork) — PDF -> audiobook (single-narrator mode)
+- **PDF ingestion path built** (rulebooks/nonfiction, one narrator, no
+  attribution needed): `scripts/pdf_to_txt.py` (pdftotext + cleanup: strips
+  watermark/page numbers/TOC leaders/running heads/divider-art garble,
+  reflows paragraphs, splits inline bullet runs, drops table/stat-block
+  paragraphs, neutralizes body lines that would false-trigger book_parser's
+  CHAPTER_RE) + per-book TOC json (`scripts/toc_carl_core.json`, 1-based
+  PDF page starts). Output is a normal ProseCast TXT with 'Chapter N: Title'
+  delimiters.
+- **`scripts/flatten_to_narrator.py`**: post-IR pass — forces every block to
+  NARRATOR, then merges consecutive blocks into ~900-char narration chunks
+  (rulebook scare-quotes otherwise shred narration into one-word dialogue
+  blocks -> choppy TTS). Backs up ir.json to ir.json.pre-flatten. --no-merge
+  to skip merging. Core pipeline untouched.
+- **First PDF book live:** Dungeon Crawler Carl RPG Core Rulebook (650 pp ->
+  1.97M chars, 11 chapters, ~2.5k table paragraphs dropped; books/ is
+  gitignored so the TXT stays local). Chapter 1 rendered on Chatterbox
+  (original model, restarted on Goldeye after 3 weeks down) and passed
+  Tyler's listen test. Remaining chapters render on demand; M4B export
+  already handles partial books.
+- Known rough edges (acceptable for v1): two-column stat-heavy pages
+  (chs 8-10 source pages) can interleave order; digit-ratio table filter is
+  heuristic. Revisit only if the listen suffers.
+
 
 ## Session 2026-08-01 (Cowork) — Brigands end-to-end + read-along
 - **Brigands is fully end-to-end:** attributed (0 unresolved, alternating
