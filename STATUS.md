@@ -1,8 +1,51 @@
 # PROSECAST — STATUS
 
-**Status:** PAUSED. Clean stopping point. PDF ingestion (single-narrator
-mode) shipped 2026-08-26; core pipeline unchanged. Resume at "NEXT" below.
+**Status:** ACTIVE — Phase C shipped 2026-08-26 (same day as PDF ingestion).
+Suite at 103 tests. Next: Tyler's smoke test, then overnight rulebook render;
+C4 voice-ref mirror and Phase D still open.
 **Updated:** 2026-08-26
+
+## Session 2026-08-26 pt2 (Cowork) — Phase C: safe whole-book render
+Built to docs/ROADMAP_PHASES_C_F.md spec. Core pipeline semantics untouched
+(ir.json, voice_map format, corrections.jsonl all unchanged).
+- **C0 `prosecast/preflight.py`** — `preflight(slug, engine)` loud-abort
+  checks before any batch render: server reachable (fast timeout), model is
+  base-not-turbo, voice_map exists, voice_map engine matches active engine
+  (the stale-EL-map landmine), every mapped voice resolvable on the live
+  server. Warn-only: unresolved count, already-rendered chapters. 8 mocked
+  tests (tests/test_preflight.py).
+- **C1 `prosecast/renderer.py`** — render_chapter_resumable.py's proven loop
+  extracted as the single render core: IR saved after every new block,
+  continue-on-block-failure, throughput report, merge-what-rendered.
+  `main.py generate_audio` is now a thin wrapper; the mid-chapter-crash
+  cache-loss gap on the server path is closed.
+- **C2 server queue** — thread-per-click replaced with one global FIFO worker
+  (GPU constraint enforced structurally). Enqueue returns job_id immediately;
+  preflight runs at dequeue per job; a failed/aborted job never kills the
+  jobs behind it. `/render_status` keeps its shape + `queue_position`; new
+  `GET /render_queue`; advisory `library/<slug>/render_state.json` snapshot.
+  A jobs-lock guards status serialization vs worker mutation (caught as a
+  real race by the test suite). UI: buttons show ⏳ Queued #N / Rendering…,
+  book header button becomes "⚡ Render remaining (N)" when partially
+  rendered, preflight aborts surface as ⛔ with the reason in the tooltip.
+- **C3 resume semantics** — chapter done = wav exists AND no block needs
+  re-synthesis under current engine+voice cacheKeys; done chapters skip,
+  `?force=true` (and `--force`) re-renders. 6 queue tests
+  (tests/test_render_queue.py): sequencing/no-overlap, skip, force,
+  preflight abort, engine mismatch, render_state.
+- **C5 CLI `scripts/render_book.py`** — preflight → loop → summary; defaults
+  to chatterbox (never auto-detect), KeyboardInterrupt-safe, re-run = resume.
+- **Not built:** C4 voice-ref mirror (needs the openapi.json download-route
+  checkpoint against the live server first — trailing item, unchanged).
+
+## NEXT (updated 2026-08-26)
+1. **Smoke test** (Tyler, ~10 min): restart uvicorn (no --reload) → break
+   voice_map on purpose → watch ⛔ preflight abort → restore → queue renders.
+2. **Rulebook overnight:** `caffeinate -i .venv/bin/python
+   scripts/render_book.py carl` (~30 h audio remaining ≈ 12-20 h GPU at
+   Brigands' measured rate — may take two nights; re-run = resume).
+3. **C4 mirror** then **Phase D (Parade)** per roadmap — D0 archive stale EL
+   map, D1 LLM passes, D2 cast, D3 overnight, D4 align+export, D5 listen.
 
 ## Session 2026-08-26 (Cowork) — PDF -> audiobook (single-narrator mode)
 - **PDF ingestion path built** (rulebooks/nonfiction, one narrator, no

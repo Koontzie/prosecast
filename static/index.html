@@ -879,10 +879,13 @@ function renderChapterList(slug, title, chapters) {
       </div>`;
   }).join('');
 
+  const remaining = chapters.filter(ch => !ch.has_audio).length;
+  const allLabel = remaining && remaining < chapters.length
+    ? `⚡ Render remaining (${remaining})` : '↺ Render all';
   mainEl.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
       <div class="book-title" style="margin-bottom:0;flex:1;">${title}</div>
-      <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">↺ Render all</button>
+      <button class="voices-btn" id="regen-all-btn" onclick="renderAll('${slug}')">${allLabel}</button>
       <button class="voices-btn" id="export-m4b-btn" onclick="exportM4B('${slug}')" title="Export rendered chapters as a chapterized audiobook">⬇ Export M4B</button>
       <button class="voices-btn" onclick="openVoicePanel('${slug}')">🎤 Voices</button>
       <button class="voices-btn" onclick="openCastPanel('${slug}')">🎭 Cast</button>
@@ -2130,18 +2133,15 @@ async function previewCastingVoice(char) {
 
 // ── Regenerate ────────────────────────────────────────────────────────────
 
-function pollRenderStatus(jobId) {
+function pollRenderStatus(jobId, onTick) {
   return new Promise((resolve, reject) => {
     const tick = async () => {
       try {
         const s = await fetchJSON(`/render_status/${jobId}`);
-        if (s.status === 'done') return resolve(s);
-        if (s.status === 'error') return reject(new Error(s.error || 'Render failed'));
-        // Update "Regenerate all" button text if total is known
-        const allBtn = document.getElementById('regen-all-btn');
-        if (allBtn && s.total > 1) {
-          allBtn.textContent = `↺ Chapter ${s.progress + 1}/${s.total}…`;
-        }
+        if (s.status === 'done' || s.status === 'done_with_errors') return resolve(s);
+        if (s.status === 'error' || s.status === 'aborted')
+          return reject(new Error(s.error || 'Render failed'));
+        if (onTick) onTick(s);
         setTimeout(tick, 1500);
       } catch (e) { reject(e); }
     };
@@ -2164,7 +2164,11 @@ async function renderChapter(slug, chIdx) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const {job_id} = await r.json();
 
-    await pollRenderStatus(job_id);
+    await pollRenderStatus(job_id, s => {
+      const waiting = s.status === 'queued';
+      btn.title = waiting ? `Queued (position ${s.queue_position + 1})` : 'Rendering…';
+      if (labeled) btn.textContent = waiting ? `⏳ Queued #${s.queue_position + 1}` : 'Rendering…';
+    });
 
     // Refresh chapter data to update has_audio and badges
     const chapData = await fetchJSON(`/chapters/${slug}`);
@@ -2219,7 +2223,11 @@ async function renderAll(slug) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const {job_id} = await r.json();
 
-    await pollRenderStatus(job_id);
+    await pollRenderStatus(job_id, s => {
+      btn.textContent = s.status === 'queued'
+        ? `⏳ Queued #${s.queue_position + 1}`
+        : `↺ Chapter ${s.progress + 1}/${s.total}…`;
+    });
 
     // Full chapter list refresh
     const chapData = await fetchJSON(`/chapters/${slug}`);
@@ -2227,9 +2235,11 @@ async function renderAll(slug) {
     renderChapterList(slug, chapData.book_title, chapData.chapters);
   } catch (e) {
     if (btn) {
-      btn.textContent = '↺ Error';
+      const preflight = /ABORT/.test(e.message || '');
+      btn.textContent = preflight ? '⛔ Preflight failed' : '↺ Error';
+      btn.title = e.message || 'Render failed';
       btn.disabled = false;
-      setTimeout(() => { btn.textContent = '↺ Render all'; }, 4000);
+      setTimeout(() => { btn.textContent = '↺ Render all'; }, 8000);
     }
   }
 }

@@ -87,54 +87,18 @@ def print_ir_report(ir_data: dict):
 # Audio generation pipeline
 # ---------------------------------------------------------------------------
 
-def generate_audio(ir_data: dict, chapter_index: int, book_slug: str, tts_override: str = None, ir_path: str = None):
-    engine = TTSEngine(engine=tts_override)
+def generate_audio(ir_data: dict, chapter_index: int, book_slug: str, tts_override: str = None, ir_path: str = None, force: bool = False):
+    """Render one chapter via the unified per-block-resumable core (Phase C1).
 
-    voice_map_path = lib.voice_map_path(book_slug)
-    if voice_map_path.exists():
-        with open(voice_map_path) as f:
-            engine.load_voice_map(json.load(f).get("map", {}))
-        print(f"[Audio] Loaded voice map → {voice_map_path}")
+    Kept as the stable entry point for the CLI; the real loop lives in
+    prosecast/renderer.py (also used by the server queue and render_book.py).
+    """
+    from prosecast.renderer import render_chapter
 
-    chapter = ir_data['chapters'][chapter_index]
-    blocks = chapter['blocks']
-
-    blocks_dir = lib.chapter_blocks_dir(book_slug, chapter_index)
-    blocks_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"\n[Audio] Generating {len(blocks)} blocks for '{chapter['title']}'...")
-    block_files = []
-
-    for i, block in enumerate(blocks):
-        if not block.get('text', '').strip():
-            continue
-
-        out_path = str(blocks_dir / f"block_{i:04d}.wav")
-        ok = engine.synthesize_segment(block, out_path)
-
-        if ok:
-            url = block.get('audioVariants', {}).get('standard', {}).get('url') or out_path
-            block_files.append({"path": url, "speaker": block.get('speaker', 'NARRATOR')})
-            sym = "🎙" if block['type'] == 'dialogue' else "📖"
-            cached_marker = " (cached)" if block.get('audioVariants', {}).get('standard', {}).get('cached') else ""
-            print(f"  {sym} [{block.get('speaker', 'NARRATOR'):<14}] block {i:04d}  ✓{cached_marker}")
-        else:
-            print(f"  ✗ block {i:04d} failed — skipping")
-
-    # Merge
-    final_path = str(lib.chapter_wav_path(book_slug, chapter_index))
-    merge_blocks(block_files, final_path)
-
-    print(f"\n[Done] Final audio → {final_path}")
-    print(f"       Voice map:  {engine.assigner.summary()}")
-
-    # Persist updated audioVariants / cacheKey back to the IR file
-    if ir_path:
-        with open(ir_path, "w", encoding="utf-8") as f:
-            json.dump(ir_data, f, indent=2, ensure_ascii=False)
-        print(f"[IR] Updated segment cache metadata → {ir_path}")
-
-    return final_path
+    report = render_chapter(book_slug, chapter_index, ir_data,
+                            ir_path=ir_path, engine_name=tts_override,
+                            force=force)
+    return report["wav_path"]
 
 
 # ---------------------------------------------------------------------------

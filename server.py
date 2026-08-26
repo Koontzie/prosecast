@@ -25,6 +25,7 @@ Endpoints:
   GET  /export/{book_slug}/file                 → download the m4b
 """
 
+import copy
 import json
 import os
 import tempfile
@@ -1236,81 +1237,185 @@ def stream_audio(book_slug: str, filename: str):
     )
 
 
-# ── Render endpoints ──────────────────────────────────────────────────────────
+# ── Render endpoints — single-worker FIFO queue (Phase C2) ────────────────────
+#
+# One GPU, one worker: all render jobs run strictly sequentially. Enqueue
+# returns a job_id immediately; preflight runs at DEQUEUE time per job (a
+# voice swapped mid-night aborts that job loudly, not silently), and a failed
+# job never kills the jobs behind it.
 
-def _run_render_job(job_id: str, ir: dict, chapter_indices: list[int], book_slug: str, ir_path: str):
-    """Background thread target: renders given chapters and updates _render_jobs."""
+import queue as _queue_mod
+
+_render_queue: "_queue_mod.Queue[str]" = _queue_mod.Queue()
+_queue_order: list = []          # job_ids in enqueue order (for queue_position)
+_queue_worker_started = False
+_queue_worker_lock = threading.Lock()
+_jobs_lock = threading.Lock()    # guards job-dict mutation vs status serialization
+
+
+def _render_state_path(book_slug: str) -> Path:
+    return lib.book_dir(book_slug) / "render_state.json"
+
+
+def _save_render_state(book_slug: str, job: dict) -> None:
+    """Advisory snapshot (disposable, like renders/) so a restarted server can
+    show what happened overnight. Real resume comes from cacheKeys."""
     try:
-        from main import generate_audio as _gen_audio
-        # Pin the engine the UI is running with (PROSECAST_TTS_ENGINE override
-        # included). Without this, generate_audio auto-detects and silently
-        # renders whole chapters on ElevenLabs credits whenever a key is in .env.
-        engine = _get_active_engine()
-        _render_jobs[job_id]["total"] = len(chapter_indices)
-        for i, ch_idx in enumerate(chapter_indices):
-            _render_jobs[job_id]["progress"] = i
-            _gen_audio(ir, ch_idx, book_slug, tts_override=engine, ir_path=ir_path)
-        _render_jobs[job_id]["progress"] = len(chapter_indices)
-        _render_jobs[job_id]["status"] = "done"
+        path = _render_state_path(book_slug)
+        state = {"jobs": []}
+        if path.exists():
+            try:
+                state = json.loads(path.read_text())
+            except Exception:
+                pass
+        state["jobs"] = [j for j in state.get("jobs", [])
+                         if j.get("job_id") != job["job_id"]][-19:] + [{
+            "job_id": job["job_id"],
+            "chapters": job["chapters"],
+            "status": job["status"],
+            "error": job.get("error"),
+            "chapter_results": job.get("chapter_results", []),
+        }]
+        path.write_text(json.dumps(state, indent=2))
+    except Exception:
+        pass  # advisory only — never let bookkeeping kill a render
+
+
+def _run_one_render_job(job_id: str) -> None:
+    job = _render_jobs[job_id]
+    book_slug = job["book_slug"]
+    job["status"] = "running"
+    try:
+        from prosecast.preflight import preflight
+        from prosecast.renderer import make_engine, render_chapter
+
+        engine_name = _get_active_engine()
+        rep = preflight(book_slug, engine_name)
+        job["preflight"] = {"ok": rep.ok, "aborts": rep.aborts,
+                            "warnings": rep.warnings}
+        if not rep.ok:
+            job["status"] = "aborted"
+            job["error"] = rep.summary()
+            print(f"[Queue] job {job_id} PREFLIGHT ABORT:\n{rep.summary()}")
+            return
+
+        ir_path = lib.ir_path(book_slug)
+        ir = _load_ir(ir_path)
+        engine = make_engine(book_slug, engine_name)
+        for i, ch_idx in enumerate(job["chapters"]):
+            job["progress"] = i
+            job["current_chapter"] = ch_idx
+            try:
+                r = render_chapter(book_slug, ch_idx, ir, ir_path=str(ir_path),
+                                   engine=engine, force=job.get("force", False))
+                with _jobs_lock:
+                    job["chapter_results"].append(
+                        {k: r[k] for k in ("chapter_index", "skipped", "rendered",
+                                           "cached", "failed", "audio_seconds")})
+            except Exception as e:
+                # continue-on-chapter-failure: a mid-night hiccup on chapter 3
+                # must not kill chapters 4-10
+                with _jobs_lock:
+                    job["chapter_results"].append(
+                        {"chapter_index": ch_idx, "error": str(e)})
+                print(f"[Queue] job {job_id} ch{ch_idx} failed: {e} — continuing")
+            _save_render_state(book_slug, job)
+        job["progress"] = len(job["chapters"])
+        errors = [c for c in job["chapter_results"] if c.get("error")]
+        job["status"] = "done" if not errors else "done_with_errors"
+        if errors:
+            job["error"] = f"{len(errors)} chapter(s) failed — see chapter_results"
     except Exception as e:
-        _render_jobs[job_id]["status"] = "error"
-        _render_jobs[job_id]["error"] = str(e)
+        job["status"] = "error"
+        job["error"] = str(e)
+    finally:
+        job.pop("current_chapter", None)
+        _save_render_state(book_slug, job)
+
+
+def _queue_worker() -> None:
+    while True:
+        job_id = _render_queue.get()
+        try:
+            _run_one_render_job(job_id)
+        except Exception as e:
+            _render_jobs.get(job_id, {}).update(status="error", error=str(e))
+        finally:
+            if job_id in _queue_order:
+                _queue_order.remove(job_id)
+            _render_queue.task_done()
+
+
+def _ensure_queue_worker() -> None:
+    global _queue_worker_started
+    with _queue_worker_lock:
+        if not _queue_worker_started:
+            threading.Thread(target=_queue_worker, daemon=True,
+                             name="render-queue-worker").start()
+            _queue_worker_started = True
+
+
+def _enqueue_render(book_slug: str, chapter_indices: list, force: bool) -> str:
+    job_id = uuid.uuid4().hex[:10]
+    _render_jobs[job_id] = {
+        "job_id": job_id, "kind": "render", "book_slug": book_slug,
+        "chapters": chapter_indices, "force": force,
+        "status": "queued", "progress": 0, "total": len(chapter_indices),
+        "error": None, "chapter_results": [],
+    }
+    _queue_order.append(job_id)
+    _render_queue.put(job_id)
+    _ensure_queue_worker()
+    return job_id
 
 
 @app.post("/render/{book_slug}/{chapter_index}")
-def render_chapter(book_slug: str, chapter_index: int):
-    """Trigger a background re-render of one chapter. Returns a job_id to poll."""
+def render_chapter_endpoint(book_slug: str, chapter_index: int,
+                            force: bool = Query(default=False)):
+    """Enqueue a render of one chapter. Returns a job_id to poll."""
     ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
-
-    ir = _load_ir(ir_path)
-    chapter_count = len(ir.get("chapters", []))
+    chapter_count = len(_load_ir(ir_path).get("chapters", []))
     if chapter_index >= chapter_count:
-        raise HTTPException(status_code=400, detail=f"Chapter {chapter_index} out of range (book has {chapter_count})")
-
-    job_id = uuid.uuid4().hex[:10]
-    _render_jobs[job_id] = {"status": "running", "progress": 0, "total": 1, "error": None}
-
-    t = threading.Thread(
-        target=_run_render_job,
-        args=(job_id, ir, [chapter_index], book_slug, str(ir_path)),
-        daemon=True,
-    )
-    t.start()
-    return {"job_id": job_id}
+        raise HTTPException(status_code=400,
+                            detail=f"Chapter {chapter_index} out of range (book has {chapter_count})")
+    return {"job_id": _enqueue_render(book_slug, [chapter_index], force)}
 
 
 @app.post("/render/{book_slug}")
-def render_book(book_slug: str):
-    """Trigger a background re-render of all chapters. Returns a job_id to poll."""
+def render_book(book_slug: str, force: bool = Query(default=False)):
+    """Enqueue a render of all chapters (done chapters skip unless force)."""
     ir_path = lib.ir_path(book_slug)
     if not ir_path.exists():
         raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
-
-    ir = _load_ir(ir_path)
-    chapter_count = len(ir.get("chapters", []))
+    chapter_count = len(_load_ir(ir_path).get("chapters", []))
     if not chapter_count:
         raise HTTPException(status_code=400, detail="Book has no chapters")
-
-    job_id = uuid.uuid4().hex[:10]
-    _render_jobs[job_id] = {"status": "running", "progress": 0, "total": chapter_count, "error": None}
-
-    t = threading.Thread(
-        target=_run_render_job,
-        args=(job_id, ir, list(range(chapter_count)), book_slug, str(ir_path)),
-        daemon=True,
-    )
-    t.start()
-    return {"job_id": job_id}
+    return {"job_id": _enqueue_render(book_slug, list(range(chapter_count)), force)}
 
 
 @app.get("/render_status/{job_id}")
 def get_render_status(job_id: str):
-    """Poll the status of a background render or export job."""
+    """Poll a render/export job. Same shape as before + queue_position."""
     if job_id not in _render_jobs:
         raise HTTPException(status_code=404, detail=f"No job '{job_id}'")
-    return _render_jobs[job_id]
+    with _jobs_lock:
+        job = copy.deepcopy(_render_jobs[job_id])
+    job["queue_position"] = (_queue_order.index(job_id)
+                             if job_id in _queue_order and job.get("status") == "queued"
+                             else 0)
+    return job
+
+
+@app.get("/render_queue")
+def get_render_queue():
+    """Everything the queue knows: queued / running / finished render jobs."""
+    with _jobs_lock:
+        jobs = [copy.deepcopy(j) for j in _render_jobs.values()
+                if j.get("kind") == "render"]
+    return {"queued": [j["job_id"] for j in jobs if j["status"] == "queued"],
+            "jobs": jobs}
 
 
 # ── M4B export endpoints ──────────────────────────────────────────────────────
