@@ -522,8 +522,13 @@ def _synthesize_chatterbox(text: str, voice_cfg: dict, out_path: str) -> bool:
         headers={"Content-Type": "application/json", "Accept": "audio/wav"},
         method="POST",
     )
+    # Timeout scales with text length: the server chunk-renders long text and a
+    # ~15k-char block legitimately takes several minutes on the 3090 Ti. A flat
+    # 120s made every block over ~4k chars fail deterministically, every run.
+    # Observed throughput is roughly 25-40 synthesized chars/sec end-to-end.
+    timeout_s = max(120, min(1800, len(text) // 10))
     try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
             audio_bytes = resp.read()
     except urllib.error.HTTPError as e:
         # Never swallow the error — surface the server body so failures are debuggable.

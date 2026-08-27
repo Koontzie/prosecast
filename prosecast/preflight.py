@@ -16,6 +16,7 @@ Checks (chatterbox engine; others get the static-pool subset):
 from __future__ import annotations
 
 import json
+import time
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -81,12 +82,22 @@ def preflight(book_slug: str, engine: str) -> PreflightReport:
 
     # -- 1 & 2: server reachable + base model (chatterbox only) ---------------
     if engine == "chatterbox":
-        info = _fetch_model_info()
+        # The shared server answers one request at a time; mid-synthesis it can
+        # be slow to respond without being down. Be patient before aborting.
+        info = None
+        for attempt in range(3):
+            info = _fetch_model_info(timeout=10.0)
+            if info is not None:
+                break
+            if attempt < 2:
+                time.sleep(2)
         if info is None:
             rep.abort(
-                f"Chatterbox server unreachable at {tts.CHATTERBOX_BASE_URL} "
-                "— is Tailscale up and the container running? "
-                "(sudo docker start chatterbox-tts on Goldeye)")
+                f"Chatterbox server not responding at {tts.CHATTERBOX_BASE_URL} "
+                "— either down (Tailscale? container? -> sudo docker start "
+                "chatterbox-tts on Goldeye) or busy grinding orphaned work "
+                "from a killed run (-> sudo docker restart chatterbox-tts, "
+                "or wait a few minutes and re-run).")
             return rep  # everything else depends on the server
         rep.details["model_info"] = info
         model_sig = (str(info.get("type", "")) + str(info.get("class_name", ""))).lower()

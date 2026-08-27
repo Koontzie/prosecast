@@ -3,7 +3,26 @@
 **Status:** ACTIVE — Phase C shipped 2026-08-26 (same day as PDF ingestion).
 Suite at 103 tests. Next: Tyler's smoke test, then overnight rulebook render;
 C4 voice-ref mirror and Phase D still open.
-**Updated:** 2026-08-26
+**Updated:** 2026-08-27
+
+## Session 2026-08-27 (Cowork) — "On Air" UI skin
+Direction chosen from lookbook + mockup round: golden-age radio ("On Air"),
+modern info presentation. static/index.html gains a pure CSS token layer —
+**zero JS/DOM logic changes**, all 103 tests unaffected, server.py untouched
+(no /static mount exists, so fonts are embedded as data URIs; file 93KB→190KB).
+- `<style id="theme-onair">` override block scoped to `html[data-theme="onair"]`:
+  bakelite/walnut grounds, brass accent (replaces purple), signal red = errors
+  + future RENDERING plaque, teal = done/connected, amber = needs-you.
+  Fonts: Jost (UI), Limelight (wordmark only), IBM Plex Mono (numeric/status).
+- Header toggle chip "skin: on air / classic", persisted in localStorage
+  (`prosecast-theme`, default onair); early head script prevents theme flash.
+- `.plaque` component (idle/queued/rendering) ships in the CSS, unused until
+  the emoji swap below.
+- Backup: `.backup/index_pre-onair_2026-08-27.html`; verified via headless
+  Chromium screenshots of both skins against mocked /books + /chapters.
+- **Follow-up (small):** swap the 5 emoji strings (⏳/⚡/⛔ in render buttons,
+  index.html JS ~lines 886-2285) for `.plaque` states — after rulebook render.
+- Design references: Claude artifacts "ProseCast Lookbook" + "ProseCast On Air".
 
 ## Session 2026-08-26 pt2 (Cowork) — Phase C: safe whole-book render
 Built to docs/ROADMAP_PHASES_C_F.md spec. Core pipeline semantics untouched

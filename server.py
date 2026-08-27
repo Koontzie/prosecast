@@ -1284,18 +1284,21 @@ def _save_render_state(book_slug: str, job: dict) -> None:
 def _run_one_render_job(job_id: str) -> None:
     job = _render_jobs[job_id]
     book_slug = job["book_slug"]
-    job["status"] = "running"
+    with _jobs_lock:
+        job["status"] = "running"
     try:
         from prosecast.preflight import preflight
         from prosecast.renderer import make_engine, render_chapter
 
         engine_name = _get_active_engine()
         rep = preflight(book_slug, engine_name)
-        job["preflight"] = {"ok": rep.ok, "aborts": rep.aborts,
-                            "warnings": rep.warnings}
+        with _jobs_lock:
+            job["preflight"] = {"ok": rep.ok, "aborts": rep.aborts,
+                                "warnings": rep.warnings}
+            if not rep.ok:
+                job["status"] = "aborted"
+                job["error"] = rep.summary()
         if not rep.ok:
-            job["status"] = "aborted"
-            job["error"] = rep.summary()
             print(f"[Queue] job {job_id} PREFLIGHT ABORT:\n{rep.summary()}")
             return
 
@@ -1303,11 +1306,17 @@ def _run_one_render_job(job_id: str) -> None:
         ir = _load_ir(ir_path)
         engine = make_engine(book_slug, engine_name)
         for i, ch_idx in enumerate(job["chapters"]):
-            job["progress"] = i
-            job["current_chapter"] = ch_idx
+            with _jobs_lock:
+                job["progress"] = i
+                job["current_chapter"] = ch_idx
             try:
+                def _block_cb(done, total, _job=job):
+                    with _jobs_lock:
+                        _job["block_progress"] = done
+                        _job["block_total"] = total
                 r = render_chapter(book_slug, ch_idx, ir, ir_path=str(ir_path),
-                                   engine=engine, force=job.get("force", False))
+                                   engine=engine, force=job.get("force", False),
+                                   progress_cb=_block_cb)
                 with _jobs_lock:
                     job["chapter_results"].append(
                         {k: r[k] for k in ("chapter_index", "skipped", "rendered",
@@ -1320,16 +1329,19 @@ def _run_one_render_job(job_id: str) -> None:
                         {"chapter_index": ch_idx, "error": str(e)})
                 print(f"[Queue] job {job_id} ch{ch_idx} failed: {e} — continuing")
             _save_render_state(book_slug, job)
-        job["progress"] = len(job["chapters"])
-        errors = [c for c in job["chapter_results"] if c.get("error")]
-        job["status"] = "done" if not errors else "done_with_errors"
-        if errors:
-            job["error"] = f"{len(errors)} chapter(s) failed — see chapter_results"
+        with _jobs_lock:
+            job["progress"] = len(job["chapters"])
+            errors = [c for c in job["chapter_results"] if c.get("error")]
+            job["status"] = "done" if not errors else "done_with_errors"
+            if errors:
+                job["error"] = f"{len(errors)} chapter(s) failed — see chapter_results"
     except Exception as e:
-        job["status"] = "error"
-        job["error"] = str(e)
+        with _jobs_lock:
+            job["status"] = "error"
+            job["error"] = str(e)
     finally:
-        job.pop("current_chapter", None)
+        with _jobs_lock:
+            job.pop("current_chapter", None)
         _save_render_state(book_slug, job)
 
 

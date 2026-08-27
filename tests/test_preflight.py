@@ -50,7 +50,7 @@ def test_server_unreachable(book, monkeypatch):
     monkeypatch.setattr(pf, "_fetch_model_info", lambda timeout=4.0: None)
     rep = pf.preflight(book, "chatterbox")
     assert not rep.ok
-    assert "unreachable" in rep.summary()
+    assert "not responding" in rep.summary()
 
 
 def test_turbo_model_aborts(book, monkeypatch):
