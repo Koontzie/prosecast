@@ -1237,6 +1237,68 @@ def stream_audio(book_slug: str, filename: str):
     )
 
 
+# ── Engine status ─────────────────────────────────────────────────────────────
+#
+# The active engine is decided ONCE at startup and cached for the process
+# lifetime. A probe that timed out (shared server mid-synthesis) silently
+# demoted rendering to macOS `say` with no visible sign — which is exactly the
+# failure this endpoint exists to make impossible to miss.
+
+@app.get("/engine_status")
+def engine_status():
+    """What engine/model this server is actually going to render with."""
+    engine = _get_active_engine()
+    override = os.environ.get("PROSECAST_TTS_ENGINE", "").strip().lower()
+    info = {
+        "engine": engine,
+        "source": "override" if override else "auto-detected",
+        "ok": True,
+        "model": None,
+        "device": None,
+        "detail": "",
+        "voice_count": 0,
+        "endpoint": None,
+    }
+    if engine == "chatterbox":
+        from prosecast import tts_engine as tts
+        info["endpoint"] = tts.CHATTERBOX_BASE_URL
+        from prosecast.preflight import _fetch_model_info
+        mi = _fetch_model_info(timeout=8.0)
+        if mi is None:
+            info["ok"] = False
+            info["detail"] = "server not responding"
+        else:
+            info["model"] = mi.get("class_name") or mi.get("type")
+            info["device"] = mi.get("device")
+            if "turbo" in (str(mi.get("type", "")) + str(mi.get("class_name", ""))).lower():
+                info["ok"] = False
+                info["detail"] = "TURBO model — emotion controls ignored"
+        info["voice_count"] = len(_chatterbox_voices())
+    elif engine == "elevenlabs":
+        info["model"] = "ElevenLabs (paid API)"
+        info["detail"] = "renders cost credits"
+        info["voice_count"] = len(_voice_pool(engine))
+    else:
+        info["model"] = {"say": "macOS system voices",
+                         "piper": "Piper (local)",
+                         "gtts": "Google TTS",
+                         "stub": "silent stub"}.get(engine, engine)
+        info["voice_count"] = len(_voice_pool(engine))
+        if engine == "say":
+            info["ok"] = False
+            info["detail"] = "fallback engine — Chatterbox was unreachable at startup"
+    return info
+
+
+@app.post("/engine_status/recheck")
+def engine_status_recheck():
+    """Drop the cached engine + voice list and probe again (no restart needed)."""
+    global _active_engine, _chatterbox_voice_cache
+    _active_engine = None
+    _chatterbox_voice_cache = None
+    return engine_status()
+
+
 # ── Render endpoints — single-worker FIFO queue (Phase C2) ────────────────────
 #
 # One GPU, one worker: all render jobs run strictly sequentially. Enqueue

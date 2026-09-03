@@ -1,0 +1,2257 @@
+[
+  {
+    "filename": "x-australian-arb.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent",
+    "reader": "arb",
+    "gender_guess": "f",
+    "f0_hz": 186.0,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.7,
+      "noise_floor_dbfs": -73.0,
+      "snr_db": 56.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 20.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        51.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_03arb.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_03arb.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-gwd.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent",
+    "reader": "GWD",
+    "gender_guess": "m",
+    "f0_hz": 117.6,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -17.0,
+      "noise_floor_dbfs": -99.8,
+      "snr_db": 82.8,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 20.0
+    },
+    "clip": {
+      "start_sec": 17.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.75,
+        59.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_15gwd.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_15gwd.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-ml.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent, metropolitan",
+    "reader": "ML",
+    "gender_guess": "f",
+    "f0_hz": 205.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -17.2,
+      "noise_floor_dbfs": -75.4,
+      "snr_db": 58.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 19.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        48.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_33ml.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_33ml.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-kem.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent",
+    "reader": "kem",
+    "gender_guess": "f",
+    "f0_hz": 190.5,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.5,
+      "noise_floor_dbfs": -84.6,
+      "snr_db": 64.1,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 19.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        45.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_kem.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_kem.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-austrian-jn.wav",
+    "region": "austrian",
+    "us": false,
+    "accent_label": "Austrian accent",
+    "reader": "jn",
+    "gender_guess": "f",
+    "f0_hz": 258.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.3,
+      "noise_floor_dbfs": -97.7,
+      "snr_db": 77.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 23.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        56.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_jn.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_jn.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-dutch-eep.wav",
+    "region": "dutch",
+    "us": false,
+    "accent_label": "Dutch accent",
+    "reader": "eep",
+    "gender_guess": "m",
+    "f0_hz": 131.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -19.7,
+      "noise_floor_dbfs": -77.8,
+      "snr_db": 58.1,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 28.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        61.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_eep.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_eep.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-england-mid-sl.wav",
+    "region": "england-mid",
+    "us": false,
+    "accent_label": "Mid-England British accent",
+    "reader": "sl",
+    "gender_guess": "m",
+    "f0_hz": 85.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -19.3,
+      "noise_floor_dbfs": -104.4,
+      "snr_db": 85.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 15.0
+    },
+    "clip": {
+      "start_sec": 25.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        56.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_sl.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_sl.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-english-rg.wav",
+    "region": "english",
+    "us": false,
+    "accent_label": "English accent, RP ('no regional accent')",
+    "reader": "rg",
+    "gender_guess": "m",
+    "f0_hz": 163.3,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.8,
+      "noise_floor_dbfs": -99.5,
+      "snr_db": 82.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 18.25,
+      "seconds": 15.0,
+      "body_sec": [
+        18.0,
+        64.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_04rg.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_04rg.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-english-eep.wav",
+    "region": "english",
+    "us": false,
+    "accent_label": "English accent, mother tongue Dutch",
+    "reader": "EEP",
+    "gender_guess": "m",
+    "f0_hz": 145.5,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.8,
+      "noise_floor_dbfs": -94.6,
+      "snr_db": 77.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 17.75,
+      "seconds": 15.0,
+      "body_sec": [
+        17.5,
+        58.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_16eep.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_16eep.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-english-sjb.wav",
+    "region": "english",
+    "us": false,
+    "accent_label": "English accent, neutral, southern",
+    "reader": "sjb",
+    "gender_guess": "m",
+    "f0_hz": 150.9,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.7,
+      "noise_floor_dbfs": -270.3,
+      "snr_db": 253.6,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 22.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        57.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_26sjb.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_26sjb.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-german-elli.wav",
+    "region": "german",
+    "us": false,
+    "accent_label": "Austrian accent (German)",
+    "reader": "Elli",
+    "gender_guess": "f",
+    "f0_hz": 275.9,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.9,
+      "noise_floor_dbfs": -95.2,
+      "snr_db": 78.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 27.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        48.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_05elli.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_05elli.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-german-cs.wav",
+    "region": "german",
+    "us": false,
+    "accent_label": "German accent",
+    "reader": "cs",
+    "gender_guess": "m",
+    "f0_hz": 163.3,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -18.5,
+      "noise_floor_dbfs": -75.0,
+      "snr_db": 56.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 1.7
+    },
+    "clip": {
+      "start_sec": 32.75,
+      "seconds": 15.0,
+      "body_sec": [
+        17.25,
+        78.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_cs.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_cs.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-german-rbp.wav",
+    "region": "german",
+    "us": false,
+    "accent_label": "German/mixed bag accent",
+    "reader": "rbp",
+    "gender_guess": "f",
+    "f0_hz": 186.0,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -19.1,
+      "noise_floor_dbfs": -95.0,
+      "snr_db": 75.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 6.7
+    },
+    "clip": {
+      "start_sec": 30.5,
+      "seconds": 15.0,
+      "body_sec": [
+        17.25,
+        64.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_rbp.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_rbp.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-greatlakes-mk.wav",
+    "region": "greatlakes",
+    "us": true,
+    "accent_label": "Great Lakes region accent",
+    "reader": "mk",
+    "gender_guess": "f",
+    "f0_hz": 216.2,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.5,
+      "noise_floor_dbfs": -90.5,
+      "snr_db": 69.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 28.75,
+      "seconds": 15.0,
+      "body_sec": [
+        17.25,
+        57.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_mk.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_mk.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-hungarian-dii.wav",
+    "region": "hungarian",
+    "us": false,
+    "accent_label": "Hungarian accent",
+    "reader": "DII",
+    "gender_guess": "f",
+    "f0_hz": 186.0,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.9,
+      "noise_floor_dbfs": -270.3,
+      "snr_db": 253.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 22.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        51.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_06dii.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_06dii.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-hungarian-dii2.wav",
+    "region": "hungarian",
+    "us": false,
+    "accent_label": "Hungarian accent",
+    "reader": "dii",
+    "gender_guess": "f",
+    "f0_hz": 200.0,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -19.9,
+      "noise_floor_dbfs": -86.6,
+      "snr_db": 66.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 24.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        57.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_dii.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_dii.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-ireland-northern-acc-db.wav",
+    "region": "ireland-northern-acc",
+    "us": false,
+    "accent_label": "Ireland Northern accent",
+    "reader": "db",
+    "gender_guess": "m",
+    "f0_hz": 153.8,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -17.0,
+      "noise_floor_dbfs": -110.2,
+      "snr_db": 93.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 20.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        55.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_31db.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_31db.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-irish-padraig.wav",
+    "region": "irish",
+    "us": false,
+    "accent_label": "Irish accent",
+    "reader": "Padraig",
+    "gender_guess": "m",
+    "f0_hz": 145.5,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -19.3,
+      "noise_floor_dbfs": -270.3,
+      "snr_db": 251.0,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 16.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        62.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_02poh.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_02poh.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-lancashire-jcm.wav",
+    "region": "lancashire",
+    "us": false,
+    "accent_label": "Lancashire accent",
+    "reader": "jcm",
+    "gender_guess": "m",
+    "f0_hz": 142.9,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -18.9,
+      "noise_floor_dbfs": -100.1,
+      "snr_db": 81.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 22.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        49.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_jcm.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_jcm.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-midwest-acj.wav",
+    "region": "midwest",
+    "us": true,
+    "accent_label": "American accent, Midwestern",
+    "reader": "acj",
+    "gender_guess": "",
+    "f0_hz": 177.8,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.4,
+      "noise_floor_dbfs": -270.3,
+      "snr_db": 249.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 27.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.25,
+        58.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_22acj.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_22acj.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-midwest-cmp.wav",
+    "region": "midwest",
+    "us": true,
+    "accent_label": "Midwestern US accent",
+    "reader": "cmp",
+    "gender_guess": "f",
+    "f0_hz": 228.6,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.0,
+      "noise_floor_dbfs": -95.4,
+      "snr_db": 75.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 33.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        70.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_cmp.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_cmp.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-newfoundland-smh.wav",
+    "region": "newfoundland",
+    "us": false,
+    "accent_label": "Canadian accent, Newfoundland",
+    "reader": "SMH",
+    "gender_guess": "m",
+    "f0_hz": 85.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -17.3,
+      "noise_floor_dbfs": -77.5,
+      "snr_db": 60.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 18.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        44.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_20smh.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_20smh.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-nyc-add.wav",
+    "region": "nyc",
+    "us": true,
+    "accent_label": "American accent, New York City",
+    "reader": "ADD",
+    "gender_guess": "m",
+    "f0_hz": 111.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.7,
+      "noise_floor_dbfs": -270.3,
+      "snr_db": 253.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 19.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        60.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_30add.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_30add.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-pennsylvania-se-gg.wav",
+    "region": "pennsylvania-se",
+    "us": true,
+    "accent_label": "Southeastern Pennsylvania accent",
+    "reader": "gg",
+    "gender_guess": "m",
+    "f0_hz": 123.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -21.5,
+      "noise_floor_dbfs": -100.5,
+      "snr_db": 79.1,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 15.0
+    },
+    "clip": {
+      "start_sec": 30.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.5,
+        65.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_gg.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_gg.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-rp-se.wav",
+    "region": "rp",
+    "us": false,
+    "accent_label": "English Public School (Received Pronunciation) accent",
+    "reader": "se",
+    "gender_guess": "m",
+    "f0_hz": 129.0,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.7,
+      "noise_floor_dbfs": -93.6,
+      "snr_db": 72.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 8.3
+    },
+    "clip": {
+      "start_sec": 26.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        57.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_se.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_se.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-singapore-mz.wav",
+    "region": "singapore",
+    "us": false,
+    "accent_label": "Chinese accent, Singaporean",
+    "reader": "mz",
+    "gender_guess": "f",
+    "f0_hz": 195.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -16.6,
+      "noise_floor_dbfs": -80.1,
+      "snr_db": 63.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 0.0
+    },
+    "clip": {
+      "start_sec": 21.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        56.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_18mz.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_18mz.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-taiwan-sn.wav",
+    "region": "taiwan",
+    "us": false,
+    "accent_label": "Chinese accent, Taiwan",
+    "reader": "sn",
+    "gender_guess": "",
+    "f0_hz": 177.8,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -17.1,
+      "noise_floor_dbfs": -270.3,
+      "snr_db": 253.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 31.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        61.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_10sn.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_10sn.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-texas-metro-bm.wav",
+    "region": "texas-metro",
+    "us": true,
+    "accent_label": "Metropolitan Texas accent",
+    "reader": "bm",
+    "gender_guess": "m",
+    "f0_hz": 131.1,
+    "quality_score": 100,
+    "quality": {
+      "speech_dbfs": -20.2,
+      "noise_floor_dbfs": -98.9,
+      "snr_db": 78.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 30.25,
+      "seconds": 15.0,
+      "body_sec": [
+        18.25,
+        69.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_bm.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_bm.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-lj.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent 2",
+    "reader": "lj",
+    "gender_guess": "f",
+    "f0_hz": 195.1,
+    "quality_score": 95,
+    "quality": {
+      "speech_dbfs": -19.4,
+      "noise_floor_dbfs": -73.1,
+      "snr_db": 53.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 8.3
+    },
+    "clip": {
+      "start_sec": 20.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        56.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_lj.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_lj.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-german-jes.wav",
+    "region": "german",
+    "us": false,
+    "accent_label": "German accent",
+    "reader": "JES",
+    "gender_guess": "f",
+    "f0_hz": 242.4,
+    "quality_score": 94,
+    "quality": {
+      "speech_dbfs": -16.3,
+      "noise_floor_dbfs": -71.2,
+      "snr_db": 54.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 15.0
+    },
+    "clip": {
+      "start_sec": 25.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        58.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_21jes.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_21jes.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-dutch-lz.wav",
+    "region": "dutch",
+    "us": false,
+    "accent_label": "Dutch accent",
+    "reader": "lz",
+    "gender_guess": "f",
+    "f0_hz": 186.0,
+    "quality_score": 86,
+    "quality": {
+      "speech_dbfs": -15.1,
+      "noise_floor_dbfs": -66.8,
+      "snr_db": 51.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 15.0
+    },
+    "clip": {
+      "start_sec": 19.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        49.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_07lz.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_07lz.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-pennsylvania-wc-jja.wav",
+    "region": "pennsylvania-wc",
+    "us": true,
+    "accent_label": "American accent, West Central Pennsylvania",
+    "reader": "jja",
+    "gender_guess": "m",
+    "f0_hz": 160.0,
+    "quality_score": 86,
+    "quality": {
+      "speech_dbfs": -15.3,
+      "noise_floor_dbfs": -65.2,
+      "snr_db": 49.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 8.3
+    },
+    "clip": {
+      "start_sec": 24.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.25,
+        56.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_23jja.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_23jja.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-lb.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent",
+    "reader": "lb",
+    "gender_guess": "m",
+    "f0_hz": 148.1,
+    "quality_score": 85,
+    "quality": {
+      "speech_dbfs": -15.1,
+      "noise_floor_dbfs": -66.5,
+      "snr_db": 51.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 15.0
+    },
+    "clip": {
+      "start_sec": 27.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        64.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_35lb.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_35lb.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-london-se-py.wav",
+    "region": "london-se",
+    "us": false,
+    "accent_label": "English accent, South-East London",
+    "reader": "py",
+    "gender_guess": "m",
+    "f0_hz": 87.9,
+    "quality_score": 83,
+    "quality": {
+      "speech_dbfs": -16.2,
+      "noise_floor_dbfs": -64.8,
+      "snr_db": 48.6,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 6.7
+    },
+    "clip": {
+      "start_sec": 19.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        47.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_09py.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_09py.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-kansas-rmb.wav",
+    "region": "kansas",
+    "us": true,
+    "accent_label": "Midwest USA/Kansas accent",
+    "reader": "rmb",
+    "gender_guess": "m",
+    "f0_hz": 140.4,
+    "quality_score": 81,
+    "quality": {
+      "speech_dbfs": -20.1,
+      "noise_floor_dbfs": -67.1,
+      "snr_db": 47.0,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 30.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        62.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_rmb.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_rmb.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-midwest-dm.wav",
+    "region": "midwest",
+    "us": true,
+    "accent_label": "Midwestern US accent 2",
+    "reader": "dm",
+    "gender_guess": "m",
+    "f0_hz": 84.2,
+    "quality_score": 81,
+    "quality": {
+      "speech_dbfs": -18.6,
+      "noise_floor_dbfs": -67.5,
+      "snr_db": 48.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 35.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        72.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_dm.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_dm.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-texas-north-seh.wav",
+    "region": "texas-north",
+    "us": true,
+    "accent_label": "North Texas US accent",
+    "reader": "seh",
+    "gender_guess": "f",
+    "f0_hz": 250.0,
+    "quality_score": 81,
+    "quality": {
+      "speech_dbfs": -19.4,
+      "noise_floor_dbfs": -70.5,
+      "snr_db": 51.0,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 20.0
+    },
+    "clip": {
+      "start_sec": 26.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        56.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_seh.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_seh.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-blackcountry-davidcole.wav",
+    "region": "blackcountry",
+    "us": false,
+    "accent_label": "English accent, 'honed-off' Black Country Accent",
+    "reader": "David Cole",
+    "gender_guess": "m",
+    "f0_hz": 156.9,
+    "quality_score": 80,
+    "quality": {
+      "speech_dbfs": -15.0,
+      "noise_floor_dbfs": -62.9,
+      "snr_db": 47.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 22.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        59.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_11djc1.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_11djc1.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-indiana-south-jle.wav",
+    "region": "indiana-south",
+    "us": true,
+    "accent_label": "American accent, Southern Indiana",
+    "reader": "jle",
+    "gender_guess": "f",
+    "f0_hz": 205.1,
+    "quality_score": 78,
+    "quality": {
+      "speech_dbfs": -16.9,
+      "noise_floor_dbfs": -63.5,
+      "snr_db": 46.6,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 8.3
+    },
+    "clip": {
+      "start_sec": 19.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        60.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_27jle.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_27jle.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-mvc.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent",
+    "reader": "mvc",
+    "gender_guess": "m",
+    "f0_hz": 160.0,
+    "quality_score": 76,
+    "quality": {
+      "speech_dbfs": -17.5,
+      "noise_floor_dbfs": -62.9,
+      "snr_db": 45.5,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 6.7
+    },
+    "clip": {
+      "start_sec": 18.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        47.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_25mvc.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_25mvc.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-french-ezwa.wav",
+    "region": "french",
+    "us": false,
+    "accent_label": "French accent",
+    "reader": "EZWA",
+    "gender_guess": "f",
+    "f0_hz": 200.0,
+    "quality_score": 76,
+    "quality": {
+      "speech_dbfs": -14.4,
+      "noise_floor_dbfs": -62.0,
+      "snr_db": 47.6,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 15.0
+    },
+    "clip": {
+      "start_sec": 22.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        64.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_32ezwa.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_32ezwa.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-newzealand-mch.wav",
+    "region": "newzealand",
+    "us": false,
+    "accent_label": "New Zealand accent, Central North Island",
+    "reader": "MCH",
+    "gender_guess": "f",
+    "f0_hz": 200.0,
+    "quality_score": 76,
+    "quality": {
+      "speech_dbfs": -16.1,
+      "noise_floor_dbfs": -61.2,
+      "snr_db": 45.1,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 21.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        58.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_13mch.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_13mch.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-texas-adf.wav",
+    "region": "texas",
+    "us": true,
+    "accent_label": "American accent, Texas",
+    "reader": "adf",
+    "gender_guess": "f",
+    "f0_hz": 258.1,
+    "quality_score": 74,
+    "quality": {
+      "speech_dbfs": -17.1,
+      "noise_floor_dbfs": -62.8,
+      "snr_db": 45.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 19.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        46.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_28adf.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_28adf.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-minnesota-tg.wav",
+    "region": "minnesota",
+    "us": true,
+    "accent_label": "American accent, Minnesota",
+    "reader": "TG",
+    "gender_guess": "",
+    "f0_hz": 181.8,
+    "quality_score": 73,
+    "quality": {
+      "speech_dbfs": -17.1,
+      "noise_floor_dbfs": -61.1,
+      "snr_db": 44.0,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 21.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        51.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_19tg.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_19tg.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-pacificnw-sd.wav",
+    "region": "pacificnw",
+    "us": true,
+    "accent_label": "Pacific Northwest accent",
+    "reader": "sd",
+    "gender_guess": "m",
+    "f0_hz": 137.9,
+    "quality_score": 72,
+    "quality": {
+      "speech_dbfs": -20.2,
+      "noise_floor_dbfs": -65.9,
+      "snr_db": 45.7,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 24.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        59.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_sd.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_sd.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-german-rt.wav",
+    "region": "german",
+    "us": false,
+    "accent_label": "German accent",
+    "reader": "rt",
+    "gender_guess": "f",
+    "f0_hz": 200.0,
+    "quality_score": 66,
+    "quality": {
+      "speech_dbfs": -16.8,
+      "noise_floor_dbfs": -60.1,
+      "snr_db": 43.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 13.3
+    },
+    "clip": {
+      "start_sec": 18.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        48.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_29rt.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_29rt.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-midatlantic-njb.wav",
+    "region": "midatlantic",
+    "us": false,
+    "accent_label": "Mid-Atlantic British accent",
+    "reader": "njb",
+    "gender_guess": "m",
+    "f0_hz": 140.4,
+    "quality_score": 66,
+    "quality": {
+      "speech_dbfs": -22.0,
+      "noise_floor_dbfs": -64.4,
+      "snr_db": 42.4,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 69.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        96.75
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_njb.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_njb.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-military-brat-bt.wav",
+    "region": "military-brat",
+    "us": true,
+    "accent_label": "American accent, 'Air Force Brat'",
+    "reader": "BT",
+    "gender_guess": "m",
+    "f0_hz": 123.1,
+    "quality_score": 62,
+    "quality": {
+      "speech_dbfs": -17.7,
+      "noise_floor_dbfs": -55.9,
+      "snr_db": 38.2,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 0.0
+    },
+    "clip": {
+      "start_sec": 19.0,
+      "seconds": 15.0,
+      "body_sec": [
+        18.5,
+        56.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_08bt.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_08bt.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-socal-kara.wav",
+    "region": "socal",
+    "us": true,
+    "accent_label": "American accent, Southern California",
+    "reader": "kara",
+    "gender_guess": "",
+    "f0_hz": 177.8,
+    "quality_score": 62,
+    "quality": {
+      "speech_dbfs": -16.8,
+      "noise_floor_dbfs": -55.9,
+      "snr_db": 39.1,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 5.0
+    },
+    "clip": {
+      "start_sec": 19.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        43.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_17kara.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_17kara.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-australian-tf.wav",
+    "region": "australian",
+    "us": false,
+    "accent_label": "Australian accent, cultivated",
+    "reader": "tf",
+    "gender_guess": "",
+    "f0_hz": 170.2,
+    "quality_score": 59,
+    "quality": {
+      "speech_dbfs": -15.1,
+      "noise_floor_dbfs": -54.1,
+      "snr_db": 39.0,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 8.3
+    },
+    "clip": {
+      "start_sec": 22.5,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        52.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_24tf.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_24tf.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-southcarolina-law.wav",
+    "region": "southcarolina",
+    "us": true,
+    "accent_label": "American accent, South Carolina",
+    "reader": "LAW",
+    "gender_guess": "f",
+    "f0_hz": 195.1,
+    "quality_score": 57,
+    "quality": {
+      "speech_dbfs": -17.2,
+      "noise_floor_dbfs": -55.8,
+      "snr_db": 38.6,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 10.0
+    },
+    "clip": {
+      "start_sec": 18.0,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        45.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_14law.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_14law.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-newyork-upstate-blg.wav",
+    "region": "newyork-upstate",
+    "us": true,
+    "accent_label": "American accent, Upstate New York",
+    "reader": "BLG",
+    "gender_guess": "f",
+    "f0_hz": 235.3,
+    "quality_score": 56,
+    "quality": {
+      "speech_dbfs": -19.5,
+      "noise_floor_dbfs": -58.0,
+      "snr_db": 38.5,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 30.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        46.0
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_12blg.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_12blg.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-west-bg.wav",
+    "region": "west",
+    "us": true,
+    "accent_label": "American accent, western",
+    "reader": "bg",
+    "gender_guess": "m",
+    "f0_hz": 95.2,
+    "quality_score": 44,
+    "quality": {
+      "speech_dbfs": -17.7,
+      "noise_floor_dbfs": -50.2,
+      "snr_db": 32.5,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 8.3
+    },
+    "clip": {
+      "start_sec": 16.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        40.5
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_34bg.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_34bg.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "us-louisiana-south-psc.wav",
+    "region": "louisiana-south",
+    "us": true,
+    "accent_label": "South Louisiana US accent",
+    "reader": "psc",
+    "gender_guess": "m",
+    "f0_hz": 160.0,
+    "quality_score": 40,
+    "quality": {
+      "speech_dbfs": -20.9,
+      "noise_floor_dbfs": -49.7,
+      "snr_db": 28.9,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 0.0
+    },
+    "clip": {
+      "start_sec": 28.75,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        69.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol2",
+      "item": "celebration_dialects_accents_vol2_1312_librivox",
+      "file": "dialectaccent_vol02_psc.mp3",
+      "url": "https://archive.org/download/celebration_dialects_accents_vol2_1312_librivox/dialectaccent_vol02_psc.mp3",
+      "page": "https://archive.org/details/celebration_dialects_accents_vol2_1312_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  },
+  {
+    "filename": "x-flemish-jvw.wav",
+    "region": "flemish",
+    "us": false,
+    "accent_label": "Flemish accent, slight",
+    "reader": "jvw",
+    "gender_guess": "f",
+    "f0_hz": 210.5,
+    "quality_score": 36,
+    "quality": {
+      "speech_dbfs": -22.0,
+      "noise_floor_dbfs": -52.2,
+      "snr_db": 30.3,
+      "clipping_pct": 0.0,
+      "dead_air_pct": 11.7
+    },
+    "clip": {
+      "start_sec": 23.25,
+      "seconds": 15.0,
+      "body_sec": [
+        16.0,
+        54.25
+      ],
+      "sample_rate": 44100,
+      "lufs": -20.0
+    },
+    "source": {
+      "collection": "vol1",
+      "item": "dialect_accent_0909_librivox",
+      "file": "dialectaccent_vol_01_01jvw.mp3",
+      "url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_01jvw.mp3",
+      "page": "https://archive.org/details/dialect_accent_0909_librivox"
+    },
+    "license": {
+      "spdx": "CC0-1.0",
+      "label": "Public domain (LibriVox)",
+      "distributable": true,
+      "attribution_required": false,
+      "note": "LibriVox recordings are dedicated to the public domain; the project's own policy states no credit is required. https://librivox.org/pages/public-domain/"
+    }
+  }
+]

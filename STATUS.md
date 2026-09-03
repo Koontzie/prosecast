@@ -1,9 +1,136 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — Phase C shipped 2026-08-26 (same day as PDF ingestion).
-Suite at 103 tests. Next: Tyler's smoke test, then overnight rulebook render;
-C4 voice-ref mirror and Phase D still open.
-**Updated:** 2026-08-27
+**Status:** ACTIVE — **Phase E (UI-first) opened 2026-09-03; E1 reader view shipped.**
+Core goal met (EPUB + PDF, novels + plays all narrate). Next: commit the tree,
+Tyler tests the reader, then E4 probes → E2 ingest wizard per
+`docs/ROADMAP_PHASE_E_UI.md`. Rulebook overnight render + C4 mirror still open.
+**Updated:** 2026-09-03
+
+## Session 2026-09-03 (Cowork) — Phase E kickoff: reader view + roadmap
+
+**Direction (Tyler):** the original goal is done; the next phase is making
+ProseCast usable by someone who isn't Tyler — everything through the UI
+(upload is EPUB-only; PDFs/plays/LLM passes/align are terminal) and a
+setup walkthrough for non-Python users. Install story decided: **public
+repo + great README + in-app Setup page** (not docker). Later-date ideas
+(character art from the text, AnimaForge-style expressive sprite-swap
+portraits in the player, eventual scene video) parked as Phase G "Stage"
+in the roadmap doc.
+
+- **E1 Reader view SHIPPED** (`static/index.html`, +~300 lines, zero server
+  changes, no test impact): playing a chapter opens a full-page reader in the
+  main area — whole chapter as paragraphs, dialogue labelled, narration
+  unlabelled, current paragraph lit + auto-centred, past dimmed, sentence
+  click-to-seek, "↓ back to the voice" pill when you scroll away (auto-follow
+  pauses 8 s), Prev/Next across *rendered* chapters, chapter end auto-plays
+  the next rendered chapter, A−/A+ (persisted), Space / ←→ 10 s / Esc.
+  `☰ Chapters` or Esc collapses to the list (playing row still highlighted);
+  `⤢ reader` in the player bar re-opens. Both skins.
+- **How it's built:** `<section id="reader-view">` is a *sibling* of `#main` in
+  the same grid cell; `body.reader-open` swaps `display`. The chapter-list DOM
+  (and the render-progress polling that writes into it) is untouched. Reuses
+  `readerParaInner()` + the popup's seek logic (now `seekToSentence(el)`).
+- **Verified** headless Chromium vs a mocked API in both skins: open/collapse/
+  re-open, sentence seek + past shading, scroll pill, nav enable state,
+  auto-advance, font steps, Esc, book-switch closes reader. No console errors.
+  Gotcha found on the way: Chromium can't seek a WAV unless the server sends
+  `Accept-Ranges` (FastAPI's FileResponse does; my mock didn't).
+  Backup: `.backup/index_pre-reader_2026-09-03.html`.
+- **`docs/ROADMAP_PHASE_E_UI.md`** (new): verified state + build-ready specs.
+  E1 reader (done) · E2 ingest wizard (any format + mode picker: novel /
+  single narrator / play; PDF chapter detection via outline → printed TOC →
+  heuristic, with a **review step** because `pdf_to_txt.py` needs a hand
+  TOC today and carries a Carl-specific regex; scan → tesseract) · E3
+  pipeline-in-UI (AI pass + auto-align as jobs on a second worker) · E4
+  config.json + `/setup/status` probes + Setup page (hardware ladder, EL
+  BYOK card from `docs/elevenlabs-setup.md`) · E5 README/install story.
+  Suggested order: commit → E4.1/E4.2 probes first (every other step
+  consumes them for honest disabled-button states) → E2 → E3 → E4.3 → E5.
+- **Not committed:** working tree still carries 08-30/08-31/09-02 changes +
+  today's index.html + the new doc. Commit before starting E2.
+
+## NEXT (updated 2026-09-03)
+1. **Tyler (~5 min):** `PROSECAST_TTS_ENGINE=chatterbox .venv/bin/uvicorn
+   server:app` → hard-refresh → Brigands ch 4 ▶ → poke the reader (list in
+   the roadmap E1 section). Report anything that feels off *while listening*.
+2. **Commit + push** the whole tree (engine strip, voices staging, GPU
+   preflight, reader view, roadmap).
+3. **E4.1/E4.2** config + `/setup/status` (smallest step: existing engine
+   probe + `which ffmpeg`, one test) → **E2** starting with `.txt` upload
+   as a job.
+4. Still open from before: rulebook overnight render, C4 voice-ref mirror,
+   Voices tab (`docs/CC_BRIEF_voices_tab.md`), audition + upload the 20
+   LibriVox US voices.
+
+
+## Session 2026-09-02 (Cowork) — Preflight GPU headroom check
+
+**The bug it exists to prevent:** every voice preview in every book failed with
+`500 {"detail":"TTS engine failed to synthesize audio for chunk 1."}` while
+`/api/model-info` reported `{"loaded": true, "device": "cuda"}` and `/system_stats`
+showed **0.0 GB of 25.3 GB free**. ComfyUI had been holding a Wan2.2 video model
+resident since its last job on 2026-08-06 — 27 days — because it never unloads on
+its own. `loaded` means "was loaded once", not "can allocate". Reproduced with a
+bare curl straight to `:8101/tts`, so it was never a ProseCast fault.
+`POST /free` on ComfyUI reclaimed 9.9 GB and synthesis went 500 -> 200 instantly.
+
+- **`preflight.py` check 6 — GPU headroom** (chatterbox only, runs after the
+  turbo check). Reads free VRAM from ComfyUI's `/system_stats` (device-level, so
+  it sees every process). Below `COMFY_RECLAIM_BELOW_GB` (4.0) it POSTs ComfyUI's
+  `/free` — **but only if `/queue` reports idle**, never out from under a running
+  job. Aborts below `MIN_FREE_VRAM_GB` (1.5) with the diagnosis in the message;
+  warns in the tight band. A failed probe warns and passes: a missing ComfyUI is
+  not a reason to block a Chatterbox render. `COMFYUI_URL` overrides the host.
+- **6 new tests** in `tests/test_preflight.py` (14 total, all passing): headroom
+  OK is silent, full card aborts, reclaim-from-idle-ComfyUI path, busy ComfyUI is
+  never freed, tight-but-usable warns only, unavailable stats warn only. The
+  `book` fixture now mocks the three GPU probes so the existing 8 stay offline.
+- ⚠️ **Open:** ~15.4 GB still held after the reclaim with ComfyUI torch at 0.0 and
+  Ollama reporting no resident models. Unattributed — run `nvidia-smi` on Goldeye.
+  A long-uptime Chatterbox leak is the leading theory. Restart the container
+  before the rulebook render if the number hasn't moved.
+
+## Session 2026-08-31 (Cowork) — American voice bank + Voices tab spec
+- **The gap it closes:** the voice bank is VCTK-derived and **VCTK has ~4 American speakers
+  out of 110** — which is why every US character kept landing on the same three voices.
+- **`scripts/stage_librivox_dialects.py`** (new): builds Chatterbox reference clips from the
+  LibriVox "Dialect and Accent" collections Vol 1 + Vol 2 — the only free corpus I found where
+  English speakers are **explicitly labelled by US region**, and it is **public domain** (safe
+  to ship in an open repo or a voice pack). ffmpeg + stdlib only, no numpy/soundfile, resumable.
+  Per track it finds the passage body (RMS segmentation past the spoken LibriVox intro), cuts
+  15 s, two-pass linear loudnorm to -20 LUFS, guesses gender from median F0, and scores
+  listen-first quality (SNR measured against the *source* track's noise floor, not the clip's).
+  On upload it seeds `voice_meta.json` from `MANIFEST.json` — and never overwrites a hand-set
+  value.
+- **`librivox_voices/` staged: 55 clips — 20 US-region + 35 international.** US coverage:
+  NYC, Upstate NY, SE + W-Central Pennsylvania, Great Lakes, Minnesota, Kansas, Midwestern x3,
+  Southern Indiana, South Carolina, South Louisiana, Texas / Metro Texas / North Texas, SoCal,
+  Pacific NW, "western", Air Force brat. WAVs are gitignored (disposable audition material);
+  `MANIFEST.json` + `SOURCES.md` are tracked — they are the provenance record.
+- **Verified:** transcribed all 20 US clips with faster-whisper `tiny.en` — every one contains
+  passage text, **zero** contain LibriVox boilerplate. That was the real risk in auto-cutting.
+- **`docs/voice-sources.md`** (new): vetted source list with SHIP / PRIVATE / NEVER licence
+  tiering, the Chatterbox reference-clip recipe (12-15 s, style-match the reference to the
+  target, `exaggeration` and `cfg_weight` are coupled, pin a seed per character), and the note
+  that CLAUDE.md's "Orpheus for sighs/laughs" tradeoff is stale — Turbo has inline
+  paralinguistic tags but ignores `exaggeration`, so it is one or the other, not both.
+- **`docs/CC_BRIEF_voices_tab.md`** (new): 8-step brief for the Voices view — notes/gender
+  editing, audition + A/B, tags/filter/retire, and a vetted-sources panel. Names the five traps
+  in the current code (glyph-suffixed display names, inconsistent overlay keys,
+  process-lifetime `_chatterbox_voice_cache`, the `_readme` string key, and `_voice_pool` doing
+  double duty for validation *and* auto-assignment — filtering hidden voices there would 400
+  every save of a book that already uses one).
+- **Nobody has published a Chatterbox voice pack.** Searched HF datasets/models/spaces and
+  GitHub — the ecosystem hole is real, and the 20 licence-audited US voices staged here are
+  most of a first release. Marketplace seed + launch story for the price of already-done work.
+- **NEXT (Tyler, YELLOW):** audition `librivox_voices/*.wav` (start with the top of
+  `MANIFEST.json` — sorted best-SNR-first), cull, **rename survivors before upload** (server
+  filenames are permanent — AnimaForge and every `voice_map.json` reference them), then
+  `python3 scripts/stage_librivox_dialects.py --from-dir librivox_voices --upload-to http://GIDEON_HOST:8101`
+  and hit the re-check button in the header.
+- Nothing committed to git this session — the working tree still carries the uncommitted
+  2026-08-30 changes (`server.py`, `static/index.html`, `prosecast/tts_engine.py`,
+  `tests/test_render_queue.py`). Read those before committing on top.
 
 ## Session 2026-08-27 (Cowork) — "On Air" UI skin
 Direction chosen from lookbook + mockup round: golden-age radio ("On Air"),
@@ -23,6 +150,52 @@ modern info presentation. static/index.html gains a pure CSS token layer —
 - **Follow-up (small):** swap the 5 emoji strings (⏳/⚡/⛔ in render buttons,
   index.html JS ~lines 886-2285) for `.plaque` states — after rulebook render.
 - Design references: Claude artifacts "ProseCast Lookbook" + "ProseCast On Air".
+
+## Session 2026-08-30 (Cowork) — Engine status strip + probe hardening
+- **The bug it exists for:** the active engine is resolved ONCE at startup and
+  cached for the process lifetime. `_chatterbox_reachable()` used a 2s one-shot
+  probe — landing mid-synthesis on the shared box it times out, auto-detect
+  falls through to macOS `say`, and the UI just quietly offers system voices
+  with no indication anything is wrong. Cost an hour to spot.
+- **Probe hardened:** 8s timeout, one retry (`prosecast/tts_engine.py`).
+- **`GET /engine_status`** — engine, source (override vs auto-detected), live
+  model/class + device, voice count, endpoint, and an `ok` flag that is FALSE
+  for the `say`/`stub` fallbacks and for a turbo model. **`POST
+  /engine_status/recheck`** drops the cached engine + voice list and re-probes
+  — no server restart needed.
+- **Status strip in the header** (first piece of the approved On Air redesign
+  pulled forward): plaque showing the engine, teal/amber/red by state, detail
+  line (`ChatterboxTTS · cuda · 3 voices`), and a ↻ re-check button that also
+  reloads the open book so the cast drawer picks up the real voice list.
+  Styled for both the classic and On Air skins.
+- 4 new tests (107 total): say-fallback flagged, chatterbox ok, turbo flagged,
+  recheck actually clears caches.
+- **Operational note:** always start the server as
+  `PROSECAST_TTS_ENGINE=chatterbox .venv/bin/uvicorn server:app` — it skips
+  detection entirely AND stops auto-detect from picking the ElevenLabs key
+  sitting in .env (paid credits) on any process that loads it.
+- **Overnight discipline addendum:** to keep a Mac awake around an ALREADY
+  running server, `caffeinate -i -w $(pgrep -f "uvicorn server:app" | head -1)`
+  in a second terminal — no restart, releases when the server exits.
+
+## Session 2026-08-28 (Cowork) — Play/script ingestion (multi-voice, zero LLM)
+- **`scripts/play_to_ir.py`**: stage/screenplay text -> ProseCast IR directly.
+  Acting-edition format (SPEAKER. dialogue / parenthesized stage directions /
+  Scene headings -> chapters). Attribution is deterministic: dialogue conf 1.0
+  method 'script_format'; directions -> NARRATOR (inline actor parentheticals
+  like "(Covering.)" dropped by default); OCR-mangled speaker variants folded
+  into the canonical cast by fuzzy match (GNES->AGNES etc.); front matter
+  dropped by default. Input = pdftotext output OR OCR text for scans.
+- **First play in the library:** She Kills Monsters (Young Adventurers
+  Edition) — the uploaded PDF was a pure scan (no text layer), OCR'd at
+  300dpi with tesseract in the Cowork container. 16 scenes, 1,435 blocks
+  (1,157 dialogue), full 12-character cast + NARRATOR, 0 unresolved,
+  ~76k chars (~1.5 h audio). `library/she_kills_monsters/ir.json` is ready
+  to cast in the UI; OCR text kept at books/she_kills_monsters_ocr.txt
+  (books/ stays gitignored).
+- Known v1 limits: dual-speaker labels ("CHUCK & TILLY.") assign to one of
+  the pair; OCR scans need the tesseract step outside ProseCast (Phase F
+  candidate: accept .pdf uploads, auto-OCR when no text layer).
 
 ## Session 2026-08-26 pt2 (Cowork) — Phase C: safe whole-book render
 Built to docs/ROADMAP_PHASES_C_F.md spec. Core pipeline semantics untouched

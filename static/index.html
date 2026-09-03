@@ -269,6 +269,74 @@
       font-style: italic;
     }
 
+    /* ── Reader view (expanded player) ──
+       Sibling of #main in the same grid cell. body.reader-open swaps them, so
+       the chapter list DOM (and the render-progress polling that writes into
+       it) stays intact underneath. */
+    #reader-view {
+      grid-area: main; display: none; flex-direction: column;
+      min-height: 0; position: relative; background: #0f0f0f;
+    }
+    body.reader-open #reader-view { display: flex; }
+    body.reader-open #main { display: none; }
+    body.reader-open #expand-btn { display: none; }
+
+    .rv-top {
+      display: flex; align-items: center; gap: 10px; flex-shrink: 0;
+      padding: 10px 20px; border-bottom: 1px solid #222; background: #131313;
+    }
+    .rv-btn {
+      background: none; border: 1px solid #2a2a2a; color: #888;
+      padding: 5px 11px; border-radius: 6px; cursor: pointer;
+      font-size: .78rem; white-space: nowrap; flex-shrink: 0;
+    }
+    .rv-btn:hover { color: #eee; border-color: #555; background: #1c1c1c; }
+    .rv-btn:disabled { color: #3a3a3a; border-color: #222; cursor: default; background: none; }
+    .rv-btn.icon { padding: 5px 9px; font-size: .85rem; }
+    .rv-title { flex: 1; min-width: 0; }
+    .rv-title .rv-book {
+      font-size: .66rem; color: #666; text-transform: uppercase; letter-spacing: .08em;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rv-title .rv-chapter {
+      font-size: .98rem; color: #fff; font-weight: 600;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rv-fs { display: flex; gap: 4px; }
+
+    .rv-scroll {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding: 40px 28px 50vh;                   /* bottom pad: last lines can reach centre */
+    }
+    .rv-page { max-width: 68ch; margin: 0 auto; font-size: var(--rv-fs, 1.08rem); }
+    .rv-para { font-size: 1em; line-height: 1.8; color: #5e5e5e; margin-bottom: 1.15em; }
+    .rv-para.past { color: #4a4a4a; }
+    .rv-para.current { color: #e8e8e8; }
+    .rv-para .reader-speaker { font-size: .62em; margin-bottom: 2px; letter-spacing: .08em; }
+    .rv-para:not(.dialogue) .reader-speaker { display: none; }   /* narration needs no label */
+    .rv-para.dialogue { padding-left: 14px; border-left: 2px solid #1f1f1f; }
+    .rv-para.dialogue.current { border-left-color: #7c6dfa; }
+    .rv-end {
+      text-align: center; color: #444; font-size: .8rem; padding: 36px 0 12px;
+      border-top: 1px solid #1c1c1c; margin-top: 28px;
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .rv-resume {
+      position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+      background: #1e1c33; border: 1px solid #4a3f8a; color: #c9c1ff;
+      padding: 7px 14px; border-radius: 16px; cursor: pointer; font-size: .76rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,.5); display: none; z-index: 5;
+    }
+    .rv-resume.show { display: block; }
+    .rv-resume:hover { background: #2a2748; }
+    #expand-btn {
+      background: none; border: 1px solid #2a2a2a; color: #555;
+      padding: 3px 9px; border-radius: 11px; cursor: pointer;
+      font-size: .68rem; flex-shrink: 0; white-space: nowrap;
+    }
+    #expand-btn:hover { color: #aaa; border-color: #555; }
+    #expand-btn:disabled { color: #333; border-color: #202020; cursor: default; }
+
     .player-controls {
       display: flex; align-items: center; gap: 12px;
     }
@@ -402,6 +470,36 @@
     #voice-save-btn:hover { background: #9585ff; }
     #voice-save-btn:disabled { background: #2a2a2a; color: #555; cursor: default; }
     #voice-save-status { font-size: .78rem; color: #555; align-self: center; }
+
+    /* ── Engine status strip (the render plaque, pulled forward) ── */
+    #engine-strip {
+      display: flex; align-items: center; gap: 8px; margin-left: auto;
+      font-size: .68rem; letter-spacing: .04em;
+    }
+    #engine-plaque {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 3px 10px; border-radius: 4px; font-weight: 600;
+      border: 1px solid #2a2a2a; background: #1a1a1a; color: #666;
+      text-transform: uppercase; white-space: nowrap;
+    }
+    #engine-plaque .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #666; flex-shrink: 0;
+    }
+    #engine-plaque.ok    { color: #7fd6bf; border-color: #24463d; background: #12201c; }
+    #engine-plaque.ok .dot    { background: #63b3a0; }
+    #engine-plaque.warn  { color: #e0b25c; border-color: #4a3a1a; background: #221a0c; }
+    #engine-plaque.warn .dot  { background: #e0b25c; }
+    #engine-plaque.bad   { color: #e07070; border-color: #4a2a2a; background: #241212; }
+    #engine-plaque.bad .dot   { background: #d8503a; }
+    #engine-detail {
+      color: #555; font-size: .66rem; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis; max-width: 34ch;
+    }
+    #engine-recheck {
+      background: none; border: 1px solid #2a2a2a; color: #666;
+      padding: 3px 8px; border-radius: 11px; cursor: pointer; font-size: .68rem;
+    }
+    #engine-recheck:hover { color: #a89bff; border-color: #4a3f8a; }
 
     .render-progress {
       display: none; margin: -6px 0 14px; padding: 8px 12px;
@@ -707,6 +805,24 @@ html[data-theme="onair"] {
 [data-theme="onair"] header h1 .wm-accent { color: var(--oa-gold); }
 [data-theme="onair"] header .tagline { font-family: var(--oa-mono); font-size: .72rem; color: var(--oa-mut); }
 [data-theme="onair"] #theme-toggle { border-color: var(--oa-line2) !important; color: var(--oa-mut) !important; font-family: var(--oa-mono); }
+[data-theme="onair"] #engine-strip { font-family: var(--oa-mono); }
+[data-theme="onair"] #engine-plaque {
+  border-radius: 2px; border-width: 1px; font-family: var(--oa-mono);
+  letter-spacing: .12em; box-shadow: inset 0 0 0 1px rgba(0,0,0,.4);
+  background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-mut);
+}
+[data-theme="onair"] #engine-plaque.ok  { color: var(--oa-teal); border-color: #2c4a41; background: #101c19; }
+[data-theme="onair"] #engine-plaque.ok .dot  { background: var(--oa-teal); }
+[data-theme="onair"] #engine-plaque.warn { color: var(--oa-amber); border-color: var(--oa-gold-dim); background: var(--oa-gold-bg); }
+[data-theme="onair"] #engine-plaque.warn .dot { background: var(--oa-amber); }
+[data-theme="onair"] #engine-plaque.bad {
+  color: #ffd9d0; border-color: var(--oa-red); background: var(--oa-red-bg);
+  text-shadow: 0 0 8px rgba(216,80,58,.75);
+}
+[data-theme="onair"] #engine-plaque.bad .dot { background: var(--oa-red); box-shadow: 0 0 6px var(--oa-red); }
+[data-theme="onair"] #engine-detail { color: var(--oa-dim); }
+[data-theme="onair"] #engine-recheck { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] #engine-recheck:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); }
 [data-theme="onair"] #theme-toggle:hover { color: var(--oa-gold) !important; border-color: var(--oa-gold-dim) !important; }
 
 /* ── sidebar ── */
@@ -780,6 +896,26 @@ html[data-theme="onair"] {
 [data-theme="onair"] .reader-para.current .rs.now { color: var(--oa-cream); background: var(--oa-hl); }
 [data-theme="onair"] .reader-para.current b.now-w { color: #241a11; background: var(--oa-gold); font-weight: 500; }
 [data-theme="onair"] .reader-hint { color: var(--oa-dim); font-family: var(--oa-mono); font-style: normal; font-size: .62rem; }
+
+/* ── reader view (expanded player) ── */
+[data-theme="onair"] #reader-view { background: var(--oa-bg); }
+[data-theme="onair"] .rv-top { background: linear-gradient(#1e1710, #181109); border-bottom-color: var(--oa-line); }
+[data-theme="onair"] .rv-btn { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); font-size: .72rem; border-radius: 3px; }
+[data-theme="onair"] .rv-btn:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); background: var(--oa-raised); }
+[data-theme="onair"] .rv-btn:disabled { color: var(--oa-line2); border-color: var(--oa-line); background: none; }
+[data-theme="onair"] .rv-title .rv-book { color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] .rv-title .rv-chapter { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .rv-scroll { background: radial-gradient(ellipse at 50% 0%, #1c1409 0%, var(--oa-bg) 60%); }
+[data-theme="onair"] .rv-para { color: var(--oa-dim); }
+[data-theme="onair"] .rv-para.past { color: #5a4d38; }
+[data-theme="onair"] .rv-para.current { color: var(--oa-cream); }
+[data-theme="onair"] .rv-para.dialogue { border-left-color: var(--oa-line); }
+[data-theme="onair"] .rv-para.dialogue.current { border-left-color: var(--oa-gold); }
+[data-theme="onair"] .rv-end { color: var(--oa-dim); border-top-color: var(--oa-line); font-family: var(--oa-mono); font-size: .72rem; }
+[data-theme="onair"] .rv-resume { background: var(--oa-gold-bg); border-color: var(--oa-gold-dim); color: var(--oa-gold-hi); font-family: var(--oa-mono); border-radius: 3px; }
+[data-theme="onair"] .rv-resume:hover { background: var(--oa-hl); }
+[data-theme="onair"] #expand-btn { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] #expand-btn:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); }
 
 /* ── speaker colors (warm troupe) ── */
 [data-theme="onair"] .spk-0 { color: var(--oa-gold); }
@@ -944,8 +1080,13 @@ html[data-theme="onair"] {
 <header>
   <h1><span class="mic">🎙 </span>Prose<span class="wm-accent">Cast</span></h1>
   <span class="tagline">multi-voice audiobook player</span>
+  <div id="engine-strip">
+    <span id="engine-plaque" title="Loading engine status…"><span class="dot"></span><span id="engine-name">CHECKING…</span></span>
+    <span id="engine-detail"></span>
+    <button id="engine-recheck" onclick="recheckEngine()" title="Re-probe the TTS server and refresh the voice list (no restart needed)">↻ re-check</button>
+  </div>
   <button id="theme-toggle" title="Switch between the On Air and classic skins"
-          style="margin-left:auto;background:none;border:1px solid #2a2a2a;color:#666;padding:3px 10px;border-radius:11px;cursor:pointer;font-size:.68rem;"></button>
+          style="background:none;border:1px solid #2a2a2a;color:#666;padding:3px 10px;border-radius:11px;cursor:pointer;font-size:.68rem;"></button>
 </header>
 
 <aside>
@@ -962,6 +1103,27 @@ html[data-theme="onair"] {
 <main id="main">
   <p class="idle-msg">Select a book to begin.</p>
 </main>
+
+<!-- Reader view: the expanded player. Shares #main's grid cell; body.reader-open swaps them. -->
+<section id="reader-view" aria-label="Reader">
+  <div class="rv-top">
+    <button class="rv-btn" onclick="closeReaderView()" title="Back to the chapter list (Esc)">☰ Chapters</button>
+    <div class="rv-title">
+      <div class="rv-book" id="rv-book"></div>
+      <div class="rv-chapter" id="rv-chapter"></div>
+    </div>
+    <div class="rv-fs">
+      <button class="rv-btn icon" onclick="readerFontStep(-1)" title="Smaller text">A−</button>
+      <button class="rv-btn icon" onclick="readerFontStep(1)" title="Larger text">A+</button>
+    </div>
+    <button class="rv-btn" id="rv-prev" onclick="readerGo(-1)" title="Previous rendered chapter">◀ Prev</button>
+    <button class="rv-btn" id="rv-next" onclick="readerGo(1)" title="Next rendered chapter">Next ▶</button>
+  </div>
+  <div class="rv-scroll" id="rv-scroll">
+    <div class="rv-page" id="rv-page"></div>
+  </div>
+  <button class="rv-resume" id="rv-resume" onclick="readerResumeFollow()">↓ back to the voice</button>
+</section>
 
 <!-- Inline correction popup (anchored above player bar) -->
 <div id="inline-correction">
@@ -985,6 +1147,7 @@ html[data-theme="onair"] {
     </div>
     <span id="block-text-display" onclick="toggleReaderPopup()" title="Click to read along"></span>
     <button id="follow-btn" onclick="toggleFollowHighlight()" title="Toggle word-follow highlighting"></button>
+    <button id="expand-btn" onclick="openReaderView()" title="Open the full-page reader" disabled>⤢ reader</button>
     <span id="time-display">0:00 / 0:00</span>
   </div>
   <div class="player-controls">
@@ -1107,7 +1270,49 @@ const playPauseBtn  = document.getElementById('play-pause-btn');
 const seekBar       = document.getElementById('seek-bar');
 
 // ── Boot ───────────────────────────────────────────────────────────────────
+function paintEngineStatus(st) {
+  const plaque = document.getElementById('engine-plaque');
+  const name = document.getElementById('engine-name');
+  const detail = document.getElementById('engine-detail');
+  if (!plaque) return;
+  const cls = st.ok ? 'ok' : (st.engine === 'say' || st.engine === 'stub' ? 'bad' : 'warn');
+  plaque.className = cls;
+  name.textContent = st.engine.toUpperCase();
+  const bits = [];
+  if (st.model) bits.push(st.model);
+  if (st.device) bits.push(st.device);
+  if (st.voice_count) bits.push(`${st.voice_count} voices`);
+  if (st.detail) bits.push(st.detail);
+  detail.textContent = bits.join(' · ');
+  plaque.title = `Engine: ${st.engine} (${st.source})`
+    + (st.endpoint ? `\n${st.endpoint}` : '')
+    + (st.detail ? `\n${st.detail}` : '');
+}
+
+async function loadEngineStatus() {
+  try { paintEngineStatus(await fetchJSON('/engine_status')); }
+  catch (e) {
+    const p = document.getElementById('engine-plaque');
+    if (p) { p.className = 'bad'; document.getElementById('engine-name').textContent = 'NO SERVER'; }
+  }
+}
+
+async function recheckEngine() {
+  const btn = document.getElementById('engine-recheck');
+  if (btn) { btn.disabled = true; btn.textContent = '↻ checking…'; }
+  try {
+    const st = await fetchJSON('/engine_status/recheck', {method: 'POST'});
+    paintEngineStatus(st);
+    if (state.currentBook) { try { await loadBook(state.currentBook); } catch (e) {} }
+  } catch (e) {
+    /* paint stays as-is */
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ re-check'; }
+  }
+}
+
 async function init() {
+  loadEngineStatus();
   const books = await fetchJSON('/books');
   state.books = books;
   renderBookList(books);
@@ -1143,6 +1348,7 @@ async function loadBook(slug) {
   state.speakerColors = {};
   state.colorIdx = 0;
   state.bookCharacters = [];
+  if (typeof closeReaderView === 'function') closeReaderView(true);   // switching books → chapter list
 
   mainEl.innerHTML = '<p class="idle-msg">Loading chapters…</p>';
   const [chapData, charData, candidates] = await Promise.all([
@@ -1252,6 +1458,10 @@ async function playChapter(slug, chapterIdx) {
   audioEl.load();
   await audioEl.play();
   playPauseBtn.disabled = false;
+  document.getElementById('expand-btn').disabled = !state.timeline.length;
+
+  // Playing = reading: open the full-page reader (☰ Chapters collapses it back)
+  openReaderView();
 }
 
 function wordsForBlock(blockIndex) {
@@ -1387,6 +1597,7 @@ audioEl.addEventListener('timeupdate', () => {
     renderPlayerText(block, t);
   }
   updateReaderPopup(t);
+  updateReaderView(t);
 });
 
 // ── Read-along popup: prev/current/next paragraphs, current words marked ──
@@ -1464,8 +1675,9 @@ function updateReaderPopup(t) {
 
 // Click a sentence → seek the audio to its start. With whisper timings the
 // seek is word-exact; otherwise it's estimated (and self-corrects on click).
-readerPopup.addEventListener('click', e => {
-  const el = e.target.closest('.rs');
+readerPopup.addEventListener('click', e => seekToSentence(e.target.closest('.rs')));
+
+function seekToSentence(el) {
   if (!el) return;
   const bi = Number(el.dataset.b);
   const entry = state.timeline.find(x => x.block_index === bi);
@@ -1481,11 +1693,188 @@ readerPopup.addEventListener('click', e => {
     audioEl.currentTime = entry.start + frac * (entry.duration || 0);
   }
   if (audioEl.paused) audioEl.play();
+}
+
+// ── Reader view (expanded player) ──────────────────────────────────────────
+// The whole chapter as a page: every block is a paragraph, the current one is
+// lit and kept centred, sentences are click-to-seek (same helper as the
+// popup). Opened by playChapter; ☰ Chapters / Esc collapses back to the list.
+const readerView  = document.getElementById('reader-view');
+const rvScrollEl  = document.getElementById('rv-scroll');
+const rvPageEl    = document.getElementById('rv-page');
+const rvResumeEl  = document.getElementById('rv-resume');
+let rvBuiltFor = null;        // "slug:chapter" the page was built for
+let rvCurIdx = -1;            // timeline index currently lit
+let rvUserScrollUntil = 0;    // while > now, the reader scrolled away — don't yank the page
+
+const RV_FONT_STEPS = [0.92, 1.0, 1.08, 1.18, 1.3, 1.45];
+let rvFontIdx = 2;
+try { const v = Number(localStorage.getItem('pc_reader_fs')); if (v >= 0 && v < RV_FONT_STEPS.length) rvFontIdx = v; } catch {}
+function applyReaderFont() { rvPageEl.style.setProperty('--rv-fs', `${RV_FONT_STEPS[rvFontIdx]}rem`); }
+function readerFontStep(d) {
+  rvFontIdx = Math.max(0, Math.min(RV_FONT_STEPS.length - 1, rvFontIdx + d));
+  try { localStorage.setItem('pc_reader_fs', String(rvFontIdx)); } catch {}
+  applyReaderFont();
+  readerResumeFollow();
+}
+applyReaderFont();
+
+function isReaderOpen() { return document.body.classList.contains('reader-open'); }
+
+function openReaderView() {
+  if (!state.timeline.length) return;
+  closeReaderPopup();
+  document.body.classList.add('reader-open');
+  buildReaderPage();
+  rvUserScrollUntil = 0;
+  updateReaderView(audioEl.currentTime, true);
+}
+
+// quiet=true: called from loadBook — no scroll-to-row side effects
+function closeReaderView(quiet) {
+  if (!isReaderOpen()) return;
+  document.body.classList.remove('reader-open');
+  rvResumeEl.classList.remove('show');
+  if (!quiet && state.playingChapterIdx != null) {
+    document.getElementById(`chrow-${state.playingChapterIdx}`)
+      ?.scrollIntoView({ block: 'center' });
+  }
+}
+
+function playableChapters() {
+  return state.chapters.filter(c => c.has_audio).map(c => c.index).sort((a, b) => a - b);
+}
+
+// Move to the previous/next rendered chapter. Returns true if one was started.
+function readerGo(delta) {
+  const idxs = playableChapters();
+  const pos = idxs.indexOf(state.playingChapterIdx);
+  const target = idxs[pos + delta];
+  if (pos < 0 || target === undefined) return false;
+  playChapter(state.currentBook, target);
+  return true;
+}
+
+function paintReaderNav() {
+  const idxs = playableChapters();
+  const pos = idxs.indexOf(state.playingChapterIdx);
+  document.getElementById('rv-prev').disabled = pos <= 0;
+  document.getElementById('rv-next').disabled = pos < 0 || pos >= idxs.length - 1;
+}
+
+function buildReaderPage() {
+  const key = `${state.currentBook}:${state.playingChapterIdx}`;
+  if (rvBuiltFor === key) { paintReaderNav(); return; }
+  rvBuiltFor = key;
+  rvCurIdx = -1;
+
+  const book = state.books.find(b => b.slug === state.currentBook);
+  const ch = state.chapters.find(c => c.index === state.playingChapterIdx);
+  document.getElementById('rv-book').textContent = book ? book.title : '';
+  document.getElementById('rv-chapter').textContent = ch ? `${ch.index + 1}. ${ch.title}` : '';
+
+  const tl = state.timeline;
+  const paras = tl.map((b, j) => {
+    const spk = b.speaker || 'NARRATOR';
+    return `<div class="reader-para rv-para${spk !== 'NARRATOR' ? ' dialogue' : ''}"` +
+           ` id="rvp-${b.block_index}" data-i="${j}">${readerParaInner(b, false, 0)}</div>`;
+  });
+
+  const idxs = playableChapters();
+  const nextIdx = idxs[idxs.indexOf(state.playingChapterIdx) + 1];
+  const nextCh = nextIdx !== undefined ? state.chapters.find(c => c.index === nextIdx) : null;
+  const aligned = state.wordsByBlock && state.wordsByBlock.size;
+  paras.push(`<div class="rv-end">
+    <span>end of chapter · ${aligned ? 'word-accurate timing' : 'position is estimated'} · click any sentence to jump there</span>
+    ${nextCh ? `<button class="rv-btn" onclick="readerGo(1)">Next: ${esc(nextCh.title)} ▶</button>`
+             : `<span>no further chapters rendered yet — ☰ Chapters to generate more</span>`}
+  </div>`);
+
+  rvPageEl.innerHTML = paras.join('');
+  rvScrollEl.scrollTop = 0;
+  paintReaderNav();
+}
+
+function updateReaderView(t, force) {
+  if (!isReaderOpen()) return;
+  const tl = state.timeline;
+  const i = currentBlockIndex(t);
+  if (i < 0) return;
+
+  if (i !== rvCurIdx || force) {
+    if (rvCurIdx >= 0 && tl[rvCurIdx]) {
+      const prev = document.getElementById(`rvp-${tl[rvCurIdx].block_index}`);
+      if (prev) { prev.classList.remove('current'); prev.innerHTML = readerParaInner(tl[rvCurIdx], false, t); }
+    }
+    rvCurIdx = i;
+    // "past" shading is recomputed on every block change so seeking backwards un-dims correctly
+    rvPageEl.querySelectorAll('.rv-para').forEach(el => el.classList.toggle('past', Number(el.dataset.i) < i));
+    const cur = document.getElementById(`rvp-${tl[i].block_index}`);
+    if (cur) {
+      cur.classList.add('current');
+      cur.innerHTML = readerParaInner(tl[i], true, t);
+      if (Date.now() > rvUserScrollUntil) {
+        rvResumeEl.classList.remove('show');
+        cur.scrollIntoView({ block: 'center', behavior: force ? 'auto' : 'smooth' });
+      }
+    }
+  } else if (followHighlight) {
+    const cur = document.getElementById(`rvp-${tl[i].block_index}`);
+    if (cur) cur.innerHTML = readerParaInner(tl[i], true, t);
+  }
+}
+
+// Manual scrolling pauses auto-follow for a while and offers a way back.
+// (wheel/touch only — programmatic scrollIntoView doesn't fire these)
+function noteUserScroll() {
+  if (!isReaderOpen()) return;
+  rvUserScrollUntil = Date.now() + 8000;
+  rvResumeEl.classList.add('show');
+}
+rvScrollEl.addEventListener('wheel', noteUserScroll, { passive: true });
+rvScrollEl.addEventListener('touchmove', noteUserScroll, { passive: true });
+
+function readerResumeFollow() {
+  rvUserScrollUntil = 0;
+  rvResumeEl.classList.remove('show');
+  const tl = state.timeline;
+  if (rvCurIdx >= 0 && tl[rvCurIdx]) {
+    document.getElementById(`rvp-${tl[rvCurIdx].block_index}`)
+      ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+}
+
+rvPageEl.addEventListener('click', e => {
+  const el = e.target.closest('.rs');
+  if (!el) return;
+  rvUserScrollUntil = 0;                    // a click is an explicit "follow from here"
+  rvResumeEl.classList.remove('show');
+  seekToSentence(el);
+});
+
+// Keyboard while reading: space play/pause, ←/→ skip 10 s, Esc back to chapters.
+document.addEventListener('keydown', e => {
+  if (!isReaderOpen()) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
+  if (e.key === ' ' || e.code === 'Space') {
+    e.preventDefault();
+    if (!audioEl.src) return;
+    if (audioEl.paused) audioEl.play(); else audioEl.pause();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault(); audioEl.currentTime = Math.max(0, audioEl.currentTime - 10);
+  } else if (e.key === 'ArrowRight') {
+    e.preventDefault(); audioEl.currentTime = Math.min(audioEl.duration || 0, audioEl.currentTime + 10);
+  } else if (e.key === 'Escape') {
+    closeReaderView();
+  }
 });
 
 audioEl.addEventListener('play',  () => { playPauseBtn.textContent = '⏸'; });
 audioEl.addEventListener('pause', () => { playPauseBtn.textContent = '▶'; });
 audioEl.addEventListener('ended', () => {
+  // In the reader, a chapter ending flows into the next rendered one.
+  if (isReaderOpen() && readerGo(1)) return;
   playPauseBtn.textContent = '▶';
   speakerEl.textContent = '—';
   speakerEl.className = 'spk-narrator';

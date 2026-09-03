@@ -397,14 +397,26 @@ CHATTERBOX_REFERENCE_FILES_URL = CHATTERBOX_BASE_URL + "/get_reference_files"
 CHATTERBOX_PREDEFINED_VOICES_URL = CHATTERBOX_BASE_URL + "/get_predefined_voices"
 
 
-def _chatterbox_reachable(timeout: int = 2) -> bool:
-    """Quiet, fast reachability probe used by engine auto-detect (no printing)."""
+def _chatterbox_reachable(timeout: int = 8) -> bool:
+    """Quiet reachability probe used by engine auto-detect (no printing).
+
+    Retries once: the shared server answers one request at a time, so a probe
+    landing mid-synthesis can time out on a perfectly healthy box. A 2s
+    one-shot probe silently demoted the engine to macOS `say` for the whole
+    process lifetime — the engine choice is cached at startup.
+    """
+    import time as _time
     import urllib.request
-    try:
-        with urllib.request.urlopen(CHATTERBOX_MODEL_INFO_URL, timeout=timeout) as resp:
-            return resp.status == 200
-    except Exception:
-        return False
+    for attempt in range(2):
+        try:
+            with urllib.request.urlopen(CHATTERBOX_MODEL_INFO_URL, timeout=timeout) as resp:
+                if resp.status == 200:
+                    return True
+        except Exception:
+            pass
+        if attempt == 0:
+            _time.sleep(1)
+    return False
 
 
 def fetch_chatterbox_references(timeout: int = 5):

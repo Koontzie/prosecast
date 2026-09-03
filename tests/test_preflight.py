@@ -37,6 +37,10 @@ def book(tmp_path, monkeypatch):
     monkeypatch.setattr(pf, "_fetch_model_info", lambda timeout=4.0: BASE_INFO)
     monkeypatch.setattr(tts, "fetch_chatterbox_predefined", lambda timeout=5: PREDEFINED)
     monkeypatch.setattr(tts, "fetch_chatterbox_references", lambda timeout=5: REFERENCES)
+    # GPU probes default to "plenty of room" so the existing matrix stays offline
+    monkeypatch.setattr(pf, "_free_vram_gb", lambda timeout=6.0: 12.0)
+    monkeypatch.setattr(pf, "_comfy_idle", lambda timeout=6.0: True)
+    monkeypatch.setattr(pf, "_comfy_free", lambda timeout=20.0: True)
     return slug
 
 
@@ -103,3 +107,81 @@ def test_no_ir_aborts(book, tmp_path):
     (tmp_path / book / "ir.json").unlink()
     rep = pf.preflight(book, "chatterbox")
     assert not rep.ok
+
+
+# ── GPU headroom (added 2026-09-02) ───────────────────────────────────────────
+# Regression cover for the day every chunk 500'd while /api/model-info said
+# loaded:true — ComfyUI had held a video model resident for 27 days.
+
+
+def test_gpu_headroom_ok_is_silent(book):
+    rep = pf.preflight(book, "chatterbox")
+    assert rep.ok, rep.summary()
+    assert not any("VRAM" in w for w in rep.warnings)
+    assert rep.details["vram_free_gb"] == 12.0
+
+
+def test_gpu_full_aborts(book, monkeypatch):
+    monkeypatch.setattr(pf, "_free_vram_gb", lambda timeout=6.0: 0.05)
+    monkeypatch.setattr(pf, "_comfy_idle", lambda timeout=6.0: False)
+    rep = pf.preflight(book, "chatterbox")
+    assert not rep.ok
+    assert "GB VRAM free" in rep.summary()
+
+
+def test_gpu_reclaims_from_idle_comfy(book, monkeypatch):
+    calls = {"freed": 0}
+    seq = iter([0.2, 10.4])          # before free, after free
+
+    def fake_free_vram(timeout=6.0):
+        try:
+            return next(seq)
+        except StopIteration:
+            return 10.4
+
+    def fake_comfy_free(timeout=20.0):
+        calls["freed"] += 1
+        return True
+
+    monkeypatch.setattr(pf, "_free_vram_gb", fake_free_vram)
+    monkeypatch.setattr(pf, "_comfy_idle", lambda timeout=6.0: True)
+    monkeypatch.setattr(pf, "_comfy_free", fake_comfy_free)
+    monkeypatch.setattr(pf.time, "sleep", lambda *_: None)
+
+    rep = pf.preflight(book, "chatterbox")
+    assert rep.ok, rep.summary()
+    assert calls["freed"] == 1
+    assert rep.details["vram_free_gb"] == 10.4
+    assert any("reclaimed VRAM" in w for w in rep.warnings)
+
+
+def test_gpu_busy_comfy_is_never_freed(book, monkeypatch):
+    calls = {"freed": 0}
+
+    def fake_comfy_free(timeout=20.0):
+        calls["freed"] += 1
+        return True
+
+    monkeypatch.setattr(pf, "_free_vram_gb", lambda timeout=6.0: 0.3)
+    monkeypatch.setattr(pf, "_comfy_idle", lambda timeout=6.0: False)
+    monkeypatch.setattr(pf, "_comfy_free", fake_comfy_free)
+
+    rep = pf.preflight(book, "chatterbox")
+    assert calls["freed"] == 0, "must not unload models out from under a running job"
+    assert not rep.ok
+    assert any("busy" in w for w in rep.warnings)
+
+
+def test_gpu_tight_but_usable_warns_only(book, monkeypatch):
+    monkeypatch.setattr(pf, "_free_vram_gb", lambda timeout=6.0: 2.5)
+    monkeypatch.setattr(pf, "_comfy_idle", lambda timeout=6.0: False)
+    rep = pf.preflight(book, "chatterbox")
+    assert rep.ok, rep.summary()
+    assert any("enough to start" in w for w in rep.warnings)
+
+
+def test_gpu_stats_unavailable_warns_but_does_not_block(book, monkeypatch):
+    monkeypatch.setattr(pf, "_free_vram_gb", lambda timeout=6.0: None)
+    rep = pf.preflight(book, "chatterbox")
+    assert rep.ok, rep.summary()
+    assert any("could not read GPU stats" in w for w in rep.warnings)

@@ -10,12 +10,16 @@ Checks (chatterbox engine; others get the static-pool subset):
   3. voice_map.json exists    (mapless batch render is never intended)
   4. voice_map engine matches the active engine (stale-EL-map landmine)
   5. Every mapped voice resolvable on the server / in the engine pool
-  6. Warn-only: unresolved blocks (render as narrator), chapters already
+  6. GPU has headroom — and reclaim it from an idle ComfyUI first. Chatterbox
+     reports loaded:true even when the card is full, then fails every chunk
+     with a 500, so this is invisible without an explicit check.
+  7. Warn-only: unresolved blocks (render as narrator), chapters already
      rendered (will be skipped)
 """
 from __future__ import annotations
 
 import json
+import os
 import time
 import urllib.request
 from dataclasses import dataclass, field
@@ -62,6 +66,110 @@ def _fetch_model_info(timeout: float = 4.0):
         return None
 
 
+# ── GPU headroom ──────────────────────────────────────────────────────────────
+#
+# 2026-09-02: every Chatterbox synthesis returned
+#   500 {"detail":"TTS engine failed to synthesize audio for chunk 1."}
+# while /api/model-info cheerfully reported {"loaded": true, "device": "cuda"}.
+# The card was simply full — ComfyUI had been holding a Wan2.2 video model
+# resident since its last job 27 days earlier (it never unloads on its own).
+# `loaded` means "was loaded once", NOT "can allocate for inference", so the
+# only reliable signal is free VRAM. ComfyUI's /system_stats reports
+# device-level free VRAM across ALL processes, which is what we want.
+
+COMFY_BASE_URL = os.environ.get("COMFYUI_URL", "http://GIDEON_HOST:8188").rstrip("/")
+
+MIN_FREE_VRAM_GB = 1.5        # below this, synthesis will fail — abort
+COMFY_RECLAIM_BELOW_GB = 4.0  # below this, try to reclaim from ComfyUI first
+
+
+def _get_json(url: str, timeout: float = 6.0):
+    """GET url -> parsed JSON, or None. Separate so tests can monkeypatch."""
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            if resp.status != 200:
+                return None
+            return json.loads(resp.read().decode())
+    except Exception:
+        return None
+
+
+def _free_vram_gb(timeout: float = 6.0):
+    """Free VRAM in GB across all processes, or None if unavailable."""
+    stats = _get_json(COMFY_BASE_URL + "/system_stats", timeout=timeout)
+    if not stats:
+        return None
+    for dev in stats.get("devices", []) or []:
+        if "vram_free" in dev:
+            return dev["vram_free"] / 1e9
+    return None
+
+
+def _comfy_idle(timeout: float = 6.0) -> bool:
+    """True only if ComfyUI is definitely idle. Unknown == not idle: never
+    free the card out from under someone else's running job."""
+    q = _get_json(COMFY_BASE_URL + "/queue", timeout=timeout)
+    if q is None:
+        return False
+    return not q.get("queue_running") and not q.get("queue_pending")
+
+
+def _comfy_free(timeout: float = 20.0) -> bool:
+    """Ask ComfyUI to unload its models and release VRAM."""
+    try:
+        req = urllib.request.Request(
+            COMFY_BASE_URL + "/free",
+            data=json.dumps({"unload_models": True, "free_memory": True}).encode(),
+            headers={"Content-Type": "application/json"},
+            method="POST")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+def _check_gpu_headroom(rep) -> None:
+    """Abort if the card has no room to synthesize; reclaim from idle ComfyUI
+    first. Never aborts on a failed probe — a missing ComfyUI is not a reason
+    to block a Chatterbox render."""
+    free = _free_vram_gb()
+    if free is None:
+        rep.warn("could not read GPU stats from ComfyUI "
+                 f"({COMFY_BASE_URL}/system_stats) — skipping the VRAM check.")
+        return
+
+    rep.details["vram_free_gb_before"] = round(free, 2)
+
+    if free < COMFY_RECLAIM_BELOW_GB:
+        if _comfy_idle():
+            if _comfy_free():
+                time.sleep(3)
+                reclaimed = _free_vram_gb()
+                if reclaimed is not None:
+                    rep.warn(f"reclaimed VRAM from idle ComfyUI: "
+                             f"{free:.1f} GB -> {reclaimed:.1f} GB free.")
+                    free = reclaimed
+            else:
+                rep.warn("ComfyUI /free call failed — could not reclaim VRAM.")
+        else:
+            rep.warn("ComfyUI is busy (or unreachable) — not touching its "
+                     "models; a running job would be killed.")
+
+    rep.details["vram_free_gb"] = round(free, 2)
+
+    if free < MIN_FREE_VRAM_GB:
+        rep.abort(
+            f"Only {free:.1f} GB VRAM free — Chatterbox will report "
+            "loaded:true and then fail every chunk with a 500. Free the card "
+            "before rendering: check `nvidia-smi` on Goldeye for what is "
+            "holding it, and remember ComfyUI keeps its last model resident "
+            "indefinitely (POST /free), while Ollama unloads on its own "
+            "timer.")
+    elif free < COMFY_RECLAIM_BELOW_GB:
+        rep.warn(f"only {free:.1f} GB VRAM free — enough to start, but "
+                 "anything else pulling a model mid-render will break it.")
+
+
 def _static_pool(engine: str) -> list:
     """Voice IDs for non-chatterbox engines (static pools)."""
     va = tts.VoiceAssigner
@@ -106,6 +214,9 @@ def preflight(book_slug: str, engine: str) -> PreflightReport:
                 "Chatterbox is running the TURBO model — exaggeration/cfg are "
                 "silently ignored and a whole overnight render comes out flat. "
                 "Switch the server to the base ResembleAI/chatterbox model first.")
+
+        # -- 6: the card must have room to actually run inference -------------
+        _check_gpu_headroom(rep)
 
     # -- 3: voice_map exists --------------------------------------------------
     vm_path = lib.voice_map_path(book_slug)
@@ -162,7 +273,7 @@ def preflight(book_slug: str, engine: str) -> PreflightReport:
             rep.abort(f"voice_map entries not in the {engine} pool: "
                       + "; ".join(missing[:8]))
 
-    # -- 6: warn-only informational checks ------------------------------------
+    # -- 7: warn-only informational checks ------------------------------------
     ir_path = lib.ir_path(book_slug)
     if ir_path.exists():
         try:

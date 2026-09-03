@@ -23,3 +23,9 @@ output/
 
 # Local Claude settings
 .claude/settings.local.json
+
+# Voice staging: the WAVs are disposable audition material (re-cut with
+# scripts/stage_librivox_dialects.py); the provenance files ARE tracked.
+librivox_voices/*.wav
+vctk_voices/
+.cache/

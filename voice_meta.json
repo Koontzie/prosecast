@@ -135,5 +135,14 @@
   "Gianna": {
     "gender": "f",
     "notes": ""
+  },
+  "x-irish-padraig": {
+    "gender": "m",
+    "notes": "Irish accent",
+    "region": "irish",
+    "accent_label": "Irish accent",
+    "license": "CC0-1.0",
+    "distributable": true,
+    "source_url": "https://archive.org/download/dialect_accent_0909_librivox/dialectaccent_vol_01_02poh.mp3"
   }
 }

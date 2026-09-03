@@ -136,3 +136,47 @@ def test_render_state_snapshot_written(client, tmp_path):
     state = json.loads((tmp_path / slug / "render_state.json").read_text())
     assert state["jobs"][-1]["status"] == "done"
     assert state["jobs"][-1]["chapter_results"]
+
+
+# ── Engine status strip (surfaces the silent-fallback bug class) ─────────────
+
+def test_engine_status_reports_engine_and_flags_say_fallback(client, monkeypatch):
+    monkeypatch.setattr(server, "_active_engine", "say")
+    st = client.get("/engine_status").json()
+    assert st["engine"] == "say"
+    assert st["ok"] is False, "macOS say must not read as a healthy choice"
+    assert "unreachable" in st["detail"] or "fallback" in st["detail"]
+
+
+def test_engine_status_chatterbox_ok(client, monkeypatch):
+    from prosecast import preflight as pf
+    monkeypatch.setattr(server, "_active_engine", "chatterbox")
+    monkeypatch.setattr(pf, "_fetch_model_info",
+                        lambda timeout=4.0: {"type": "original",
+                                             "class_name": "ChatterboxTTS",
+                                             "device": "cuda"})
+    monkeypatch.setattr(server, "_chatterbox_voice_cache", [{"id": "a", "name": "A"}])
+    st = client.get("/engine_status").json()
+    assert st["ok"] is True and st["engine"] == "chatterbox"
+    assert st["device"] == "cuda" and st["voice_count"] == 1
+
+
+def test_engine_status_flags_turbo(client, monkeypatch):
+    from prosecast import preflight as pf
+    monkeypatch.setattr(server, "_active_engine", "chatterbox")
+    monkeypatch.setattr(pf, "_fetch_model_info",
+                        lambda timeout=4.0: {"type": "turbo",
+                                             "class_name": "ChatterboxTurboTTS",
+                                             "device": "cuda"})
+    monkeypatch.setattr(server, "_chatterbox_voice_cache", [])
+    st = client.get("/engine_status").json()
+    assert st["ok"] is False and "TURBO" in st["detail"]
+
+
+def test_recheck_clears_caches(client, monkeypatch):
+    monkeypatch.setattr(server, "_active_engine", "say")
+    monkeypatch.setattr(server, "_chatterbox_voice_cache", [{"id": "stale", "name": "Stale"}])
+    monkeypatch.setenv("PROSECAST_TTS_ENGINE", "stub")
+    st = client.post("/engine_status/recheck").json()
+    assert st["engine"] == "stub", "recheck must re-resolve, not return the cached engine"
+    assert server._chatterbox_voice_cache is None
