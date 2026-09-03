@@ -37,7 +37,9 @@ def book(tmp_path, monkeypatch):
     monkeypatch.setattr(pf, "_fetch_model_info", lambda timeout=4.0: BASE_INFO)
     monkeypatch.setattr(tts, "fetch_chatterbox_predefined", lambda timeout=5: PREDEFINED)
     monkeypatch.setattr(tts, "fetch_chatterbox_references", lambda timeout=5: REFERENCES)
-    # GPU probes default to "plenty of room" so the existing matrix stays offline
+    # GPU probes default to "plenty of room" so the existing matrix stays offline.
+    # A ComfyUI URL must be configured or the headroom check skips entirely (E4.1).
+    monkeypatch.setattr(pf, "COMFY_BASE_URL", "http://comfy.test:8188")
     monkeypatch.setattr(pf, "_free_vram_gb", lambda timeout=6.0: 12.0)
     monkeypatch.setattr(pf, "_comfy_idle", lambda timeout=6.0: True)
     monkeypatch.setattr(pf, "_comfy_free", lambda timeout=20.0: True)

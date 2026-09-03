@@ -494,8 +494,8 @@ def migrate_ir(ir_data: dict) -> dict:
 
 
 def save_ir(ir, path):
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(asdict(ir), f, indent=2, ensure_ascii=False)
+    from prosecast.library import write_json_atomic
+    write_json_atomic(path, asdict(ir))
     print(f"[IR] Saved -> {path}")
 
 

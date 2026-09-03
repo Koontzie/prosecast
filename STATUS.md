@@ -1,9 +1,9 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E (UI-first) opened 2026-09-03; E1 reader view shipped.**
-Core goal met (EPUB + PDF, novels + plays all narrate). Next: commit the tree,
-Tyler tests the reader, then E4 probes → E2 ingest wizard per
-`docs/ROADMAP_PHASE_E_UI.md`. Rulebook overnight render + C4 mirror still open.
+**Status:** ACTIVE — **Phase E (UI-first): E1 reader view + E4.1/E4.2 config +
+Setup probes shipped 2026-09-03.** Core goal met (EPUB + PDF, novels + plays).
+Next: Tyler runs tests + `/setup/status`, commits; then E4.3 Setup page → E2
+ingest wizard per `docs/ROADMAP_PHASE_E_UI.md`. Rulebook render + C4 still open.
 **Updated:** 2026-09-03
 
 ## Session 2026-09-03 (Cowork) — Phase E kickoff: reader view + roadmap
@@ -49,15 +49,61 @@ in the roadmap doc.
 - **Not committed:** working tree still carries 08-30/08-31/09-02 changes +
   today's index.html + the new doc. Commit before starting E2.
 
+## Session 2026-09-03 pt2 (Cowork) — E4.1/E4.2: config.json + Setup probes
+
+- **`prosecast/config.py`** (new): one config layer, three tiers — defaults <
+  `config.json` (repo root, **gitignored**) < env vars. Same env names as
+  before (`PROSECAST_TTS_ENGINE`, `CHATTERBOX_URL`, `PROSECAST_OLLAMA_URL`,
+  `PROSECAST_WHISPER_URL/_MODEL`, `ELEVENLABS_API_KEY`, `COMFYUI_URL`,
+  `COMFY_RECLAIM_BELOW_GB`, new `PROSECAST_OLLAMA_MODEL`), so nothing anyone
+  runs today changes. `get/source/public/set_many/shadowed_by_env`; secrets
+  masked on read and a round-tripped mask never overwrites the real key;
+  `config.example.json` tracked.
+- **Wired:** `tts_engine.CHATTERBOX_BASE_URL`, EL key + auto-detect,
+  `preflight.COMFY_BASE_URL` + reclaim threshold, `llm_attributor`/
+  `tag_generator.OLLAMA_BASE`, `word_aligner.WHISPER_*`, and the server's
+  engine choice all read config. **Defaults are now localhost everywhere**
+  (the Gideon IPs that were hard-coded in tts_engine/preflight are gone) —
+  Tyler's `config.json` carries them instead (written this session,
+  chmod 600). No ComfyUI URL = VRAM check skipped silently, not warned.
+- **`PROSECAST_TTS_ENGINE=chatterbox` is no longer required** to start the
+  server — `config.json` pins `tts_engine: chatterbox`. Env var still wins
+  if set. `tts_engine: auto` is reported amber by the probes on purpose.
+- **`prosecast/setup_probe.py`** (new) + **`GET /setup/status`**: rows for
+  voice engine (per engine: chatterbox reachable/turbo/cpu, EL key valid +
+  credits left, say/piper present), Ollama (+ is the model pulled → `ollama
+  pull …` fix), whisper (optional), ffmpeg (required) / pdftotext /
+  tesseract with per-OS install lines, GPU headroom via ComfyUI. Each row =
+  `{ok, state: ok|warn|missing|off, detail, fix, optional}`; `ready` = all
+  required rows ok. Reads config at call time → save-then-reprobe works
+  without restart (render/LLM modules pick up new URLs on restart).
+- **`GET /config` / `PUT /config`**: PUT validates (engine names, http URLs),
+  merges into config.json, and drops the cached engine + voice list like
+  `/engine_status/recheck`.
+- **Tests:** `tests/test_setup.py`, 21 new (precedence, masking, every probe
+  branch, endpoint wiring + cache drop). `test_preflight.py` fixture now
+  sets a ComfyUI URL (headroom check is skipped without one). **134 pass /
+  1 skip** in the cloud container, with AND without the env var.
+- **Two bugs Tyler's Mac run surfaced (both fixed):** (1) the suite depended
+  on the developer's real `config.json` — `tests/conftest.py` (new) now
+  points every test at an empty tmp config (autouse), so the suite is
+  hermetic again; (2) `test_queue_position_reported` hit a torn read of
+  `ir.json` — the render worker rewrote it non-atomically while the second
+  POST read it. That was also a crash-mid-write data-loss hole on Tyler's
+  labor. **`lib.write_json_atomic()`** (tmp + `os.replace`) now backs every
+  ir.json write: renderer, `save_ir`, and all 7 sites in server.py.
+- **Not done yet (E4.3):** the Setup *page* in index.html. Backend is
+  complete; the UI reads `/setup/status` and PUTs `/config`.
+
 ## NEXT (updated 2026-09-03)
-1. **Tyler (~5 min):** `PROSECAST_TTS_ENGINE=chatterbox .venv/bin/uvicorn
-   server:app` → hard-refresh → Brigands ch 4 ▶ → poke the reader (list in
-   the roadmap E1 section). Report anything that feels off *while listening*.
-2. **Commit + push** the whole tree (engine strip, voices staging, GPU
-   preflight, reader view, roadmap).
-3. **E4.1/E4.2** config + `/setup/status` (smallest step: existing engine
-   probe + `which ffmpeg`, one test) → **E2** starting with `.txt` upload
-   as a job.
+1. **Tyler:** `.venv/bin/pytest tests/ -q` (expect 134 pass) → restart the
+   server *without* the env var → `curl localhost:8000/setup/status | python3
+   -m json.tool` — every Gideon row should be green from config.json alone.
+   Commit + push.
+2. **E4.3 Setup page** in index.html (reads `/setup/status`, PUTs `/config`,
+   engine picker + EL card from `docs/elevenlabs-setup.md`, amber header chip
+   until the engine row is green) → **E2** starting with `.txt` upload as a
+   job.
 4. Still open from before: rulebook overnight render, C4 voice-ref mirror,
    Voices tab (`docs/CC_BRIEF_voices_tab.md`), audition + upload the 20
    LibriVox US voices.

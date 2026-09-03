@@ -18,7 +18,9 @@ import urllib.error
 from typing import Optional
 
 
-OLLAMA_BASE = os.environ.get("PROSECAST_OLLAMA_URL", "http://localhost:11434").rstrip("/")
+from prosecast import config as _config
+
+OLLAMA_BASE = _config.get("ollama_url")   # config.json / PROSECAST_OLLAMA_URL env
 OLLAMA_API = f"{OLLAMA_BASE}/api/generate"
 OLLAMA_TAGS = f"{OLLAMA_BASE}/api/tags"
 

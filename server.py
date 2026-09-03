@@ -23,6 +23,9 @@ Endpoints:
   GET  /render_status/{job_id}                  → poll render/export job status
   POST /export/{book_slug}                      → background m4b export of rendered chapters
   GET  /export/{book_slug}/file                 → download the m4b
+  GET  /config                                  → resolved settings (secrets masked) + sources
+  PUT  /config                                  → merge settings into config.json
+  GET  /setup/status                            → live probes: engine, Ollama, whisper, tools, GPU
 """
 
 import copy
@@ -70,8 +73,7 @@ def _load_ir(ir_path: Path) -> dict:
     if needs_migration:
         from prosecast.ir_generator import migrate_ir
         ir = migrate_ir(ir)
-        with open(ir_path, "w", encoding="utf-8") as f:
-            json.dump(ir, f, indent=2, ensure_ascii=False)
+        lib.write_json_atomic(ir_path, ir)
 
     return ir
 
@@ -134,8 +136,9 @@ def _get_active_engine() -> str:
         # Explicit override first: PROSECAST_TTS_ENGINE=chatterbox uvicorn server:app
         # Auto-detect prefers ElevenLabs whenever a key is in .env, which makes every
         # UI preview cost credits — the override keeps dogfooding on the free tier.
-        override = os.environ.get("PROSECAST_TTS_ENGINE", "").strip().lower()
-        if override:
+        from prosecast import config as _cfg
+        override = _cfg.get("tts_engine")
+        if override and override != "auto":
             _active_engine = override
         else:
             from prosecast.tts_engine import TTSEngine
@@ -664,8 +667,7 @@ def correct_block(book_slug: str, segment_id: str, body: SpeakerCorrection):
                 ir["user_characters"].append(speaker)
                 ir["user_characters"].sort()
 
-    with open(ir_path, "w", encoding="utf-8") as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    lib.write_json_atomic(ir_path, ir)
 
     _journal(book_slug, "speaker_correction", {
         "segment_id": segment_id,
@@ -730,8 +732,7 @@ def merge_next(book_slug: str, segment_id: str):
     )
     ir["unresolved_count"] = unresolved_total
 
-    with open(ir_path, "w", encoding="utf-8") as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    lib.write_json_atomic(ir_path, ir)
 
     _journal(book_slug, "merge_next", {
         "segment_id": segment_id,
@@ -773,8 +774,7 @@ def delete_character(book_slug: str, name: str):
     ir["characters"] = [c for c in ir.get("characters", []) if c != name]
     ir["user_characters"] = [c for c in ir.get("user_characters", []) if c != name]
 
-    with open(ir_path, "w", encoding="utf-8") as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    lib.write_json_atomic(ir_path, ir)
 
     _journal(book_slug, "character_deleted", {
         "name": name,
@@ -933,8 +933,7 @@ def set_character_tier(book_slug: str, body: TierBody):
     else:
         tiers[body.name] = body.tier
 
-    with open(ir_path, "w", encoding="utf-8") as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    lib.write_json_atomic(ir_path, ir)
     _journal(book_slug, "tier_set", {"name": body.name, "tier": body.tier})
     return {"name": body.name, "tier": body.tier}
 
@@ -1036,8 +1035,7 @@ def demote_characters(book_slug: str, body: DemoteBody):
             "bulk": True, "max_blocks_threshold": body.max_blocks,
         })
 
-    with open(ir_path, "w", encoding="utf-8") as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    lib.write_json_atomic(ir_path, ir)
     return {"demoted": results, "reassigned_total": total}
 
 
@@ -1074,8 +1072,7 @@ def merge_characters(book_slug: str, body: MergeBody):
             "reassigned_count": count, "segment_ids": seg_ids,
         })
 
-    with open(ir_path, "w", encoding="utf-8") as f:
-        json.dump(ir, f, indent=2, ensure_ascii=False)
+    lib.write_json_atomic(ir_path, ir)
     return {"merged": results, "into": into, "reassigned_total": total}
 
 
@@ -1248,7 +1245,8 @@ def stream_audio(book_slug: str, filename: str):
 def engine_status():
     """What engine/model this server is actually going to render with."""
     engine = _get_active_engine()
-    override = os.environ.get("PROSECAST_TTS_ENGINE", "").strip().lower()
+    from prosecast import config as _cfg
+    override = _cfg.get("tts_engine") != "auto"
     info = {
         "engine": engine,
         "source": "override" if override else "auto-detected",
@@ -1297,6 +1295,47 @@ def engine_status_recheck():
     _active_engine = None
     _chatterbox_voice_cache = None
     return engine_status()
+
+
+# ── Config + Setup (Phase E4.1 / E4.2) ───────────────────────────────────────
+#
+# config.json (repo root, gitignored) is the source of truth for URLs, the
+# engine choice and the ElevenLabs key; env vars still override it. The Setup
+# page reads /setup/status, which probes everything live and says, per row,
+# what was found and what to do about it.
+
+from prosecast import config as _config
+from prosecast import setup_probe as _setup_probe
+
+
+class ConfigUpdate(BaseModel):
+    values: dict
+
+
+@app.get("/config")
+def get_config():
+    """Resolved settings (secrets masked) + which layer each one came from."""
+    return _config.public()
+
+
+@app.put("/config")
+def put_config(body: ConfigUpdate):
+    """Merge settings into config.json. Drops the cached engine + voice list so
+    the next /engine_status reflects the change without a restart."""
+    global _active_engine, _chatterbox_voice_cache
+    try:
+        result = _config.set_many(body.values)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    _active_engine = None
+    _chatterbox_voice_cache = None
+    return result
+
+
+@app.get("/setup/status")
+def setup_status():
+    """Probe every service/tool and report {ok, state, detail, fix} per row."""
+    return _setup_probe.status()
 
 
 # ── Render endpoints — single-worker FIFO queue (Phase C2) ────────────────────

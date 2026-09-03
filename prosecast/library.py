@@ -64,3 +64,16 @@ def list_book_slugs() -> list[str]:
     if not LIBRARY_DIR.exists():
         return []
     return sorted(p.parent.name for p in LIBRARY_DIR.glob("*/ir.json"))
+
+
+def write_json_atomic(path, data) -> None:
+    """Write JSON via a temp file + os.replace so a reader never sees a
+    half-written (or empty) file and a crash mid-write never destroys the
+    previous version. ir.json is Tyler's labor; the render worker rewrites it
+    after every block while the UI may be reading it."""
+    import json as _json
+    import os as _os
+    path = Path(path)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(_json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    _os.replace(tmp, path)

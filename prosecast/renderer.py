@@ -95,8 +95,7 @@ def render_chapter(book_slug: str, chapter_index: int, ir_data: dict,
     ir_path = Path(ir_path) if ir_path else lib.ir_path(book_slug)
 
     def save_ir():
-        ir_path.write_text(json.dumps(ir_data, indent=2, ensure_ascii=False),
-                           encoding="utf-8")
+        lib.write_json_atomic(ir_path, ir_data)   # atomic: readers never see a torn file
 
     blocks_dir = lib.chapter_blocks_dir(book_slug, chapter_index)
     blocks_dir.mkdir(parents=True, exist_ok=True)

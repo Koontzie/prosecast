@@ -77,10 +77,12 @@ def _fetch_model_info(timeout: float = 4.0):
 # only reliable signal is free VRAM. ComfyUI's /system_stats reports
 # device-level free VRAM across ALL processes, which is what we want.
 
-COMFY_BASE_URL = os.environ.get("COMFYUI_URL", "http://GIDEON_HOST:8188").rstrip("/")
+from prosecast import config as _config
+
+COMFY_BASE_URL = _config.get("comfyui_url")          # "" = no ComfyUI → VRAM check skipped
 
 MIN_FREE_VRAM_GB = 1.5        # below this, synthesis will fail — abort
-COMFY_RECLAIM_BELOW_GB = 4.0  # below this, try to reclaim from ComfyUI first
+COMFY_RECLAIM_BELOW_GB = float(_config.get("gpu_reclaim_below_gb"))  # reclaim from ComfyUI below this
 
 
 def _get_json(url: str, timeout: float = 6.0):
@@ -132,6 +134,8 @@ def _check_gpu_headroom(rep) -> None:
     """Abort if the card has no room to synthesize; reclaim from idle ComfyUI
     first. Never aborts on a failed probe — a missing ComfyUI is not a reason
     to block a Chatterbox render."""
+    if not COMFY_BASE_URL:
+        return                      # no ComfyUI configured: nothing to probe, nothing to warn about
     free = _free_vram_gb()
     if free is None:
         rep.warn("could not read GPU stats from ComfyUI "

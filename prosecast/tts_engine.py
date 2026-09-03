@@ -290,7 +290,8 @@ ELEVENLABS_USER_URL = "https://api.elevenlabs.io/v1/user"
 
 
 def _elevenlabs_api_key() -> str:
-    return os.environ.get("ELEVENLABS_API_KEY", "")
+    from prosecast import config as _cfg
+    return _cfg.get("elevenlabs_api_key")
 
 
 def test_elevenlabs_connection() -> bool:
@@ -390,7 +391,9 @@ def _synthesize_elevenlabs(text: str, voice_cfg: dict, out_path: str) -> bool:
 # the mapper emits {"exaggeration", "cfg_weight", "speed"}; the server's speed
 # field is named "speed_factor". We translate at the payload boundary below.
 
-CHATTERBOX_BASE_URL = os.environ.get("CHATTERBOX_URL", "http://GIDEON_HOST:8101").rstrip("/")
+from prosecast import config as _config
+
+CHATTERBOX_BASE_URL = _config.get("chatterbox_url")   # config.json / CHATTERBOX_URL env
 CHATTERBOX_TTS_URL = CHATTERBOX_BASE_URL + "/tts"
 CHATTERBOX_MODEL_INFO_URL = CHATTERBOX_BASE_URL + "/api/model-info"
 CHATTERBOX_REFERENCE_FILES_URL = CHATTERBOX_BASE_URL + "/get_reference_files"
@@ -587,7 +590,7 @@ class TTSEngine:
 
     def _detect(self) -> str:
         # ElevenLabs is highest priority — if API key is present, use it
-        if os.environ.get("ELEVENLABS_API_KEY", "").strip():
+        if _elevenlabs_api_key().strip():
             return 'elevenlabs'
         # Chatterbox is the preferred local default when the server answers.
         if _chatterbox_reachable():

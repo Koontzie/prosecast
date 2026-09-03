@@ -35,8 +35,10 @@ from typing import Optional
 
 from prosecast import library as lib
 
-WHISPER_BASE = os.environ.get("PROSECAST_WHISPER_URL", "http://localhost:8100").rstrip("/")
-WHISPER_MODEL = os.environ.get("PROSECAST_WHISPER_MODEL", "Systran/faster-whisper-small")
+from prosecast import config as _config
+
+WHISPER_BASE = _config.get("whisper_url")      # config.json / PROSECAST_WHISPER_URL env
+WHISPER_MODEL = _config.get("whisper_model")   # config.json / PROSECAST_WHISPER_MODEL env
 TRANSCRIBE_URL = f"{WHISPER_BASE}/v1/audio/transcriptions"
 
 MAX_CONSECUTIVE_ERRORS = 3

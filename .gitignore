@@ -5,6 +5,7 @@ __pycache__/
 
 # Secrets — never commit
 .env
+config.json
 
 # Books: copyrighted EPUBs stay local
 books/
