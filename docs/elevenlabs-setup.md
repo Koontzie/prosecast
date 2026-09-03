@@ -15,9 +15,11 @@ finish without paying anyone. You only need this guide if you want ElevenLabs' c
 certain characters or shorter pieces.
 
 **ElevenLabs is your account, not ours.** You sign up with ElevenLabs, you pay ElevenLabs
-directly for credits, and ProseCast never touches your money or marks anything up. If you sign
-up through our link we may get a small referral from ElevenLabs — it costs you nothing extra,
-and we'd rather say that out loud than bury it.
+directly for credits, and ProseCast never touches your money or marks anything up.
+
+**Disclosure:** ProseCast is an independent affiliate of ElevenLabs and may receive compensation
+for referrals. If you sign up through our affiliate link — [https://try.elevenlabs.io/dmylr2z8w3w9](https://try.elevenlabs.io/dmylr2z8w3w9) — ElevenLabs may
+pay us a referral. It costs you nothing extra, and we'd rather say that out loud than bury it.
 
 ---
 
@@ -45,7 +47,8 @@ short works. Don't point a 115-chapter batch render at ElevenLabs unless you mea
 ## Setup — step by step
 
 **1. Make an ElevenLabs account.**
-Go to [elevenlabs.io](https://elevenlabs.io), sign up (the free tier is enough to test), and
+Go to ElevenLabs — [https://try.elevenlabs.io/dmylr2z8w3w9](https://try.elevenlabs.io/dmylr2z8w3w9) *(affiliate link; see the disclosure above)* — sign up
+(the free tier is enough to test), and
 pick a paid plan only once you know you want the quality. Commercial-use rights start at the
 Starter plan.
 
@@ -94,3 +97,28 @@ terms under your own account. (See the project's general disclaimer for the full
 - Startup confirms it: `[ElevenLabs] Connection OK ✓`.
 - Full-book renders → use local. ElevenLabs → hero voices / short pieces.
 - Live pricing: [elevenlabs.io/pricing](https://elevenlabs.io/pricing).
+
+---
+
+## Affiliate program compliance (keep this in sync)
+
+Everything below is required by the [ElevenLabs Creator Affiliate Program Terms](https://elevenlabs.io/affiliates-terms)
+and must appear wherever ProseCast shows the ElevenLabs name or the link — this doc, the in-app
+Setup page (`EL_SIGNUP_URL` / `EL_ATTRIBUTION` in `static/index.html`), the README, and the
+launch video + its description:
+
+1. **Disclosure, next to every link, before the click:** "ProseCast is an independent affiliate of
+   ElevenLabs and may receive compensation for referrals." Plain language, not in a footer only.
+2. **Trademark attribution** on each surface that shows the name:
+
+   > ElevenLabs and the ElevenLabs logo are registered trademarks or trademarks of ElevenLabs, Inc. Used with permission. ProseCast is not sponsored by, endorsed by, or affiliated with ElevenLabs except as an independent participant in the ElevenLabs Creator Affiliate Program.
+
+3. **Never:** the ElevenLabs logo, the name in site navigation/headers, a domain or handle that
+   looks like theirs, derogatory statements, or any claim of partnership/endorsement.
+   Comparisons stay factual ("a full book is a real bill" is fine; "overpriced" is not).
+4. **No self-referrals** — Tyler's own ElevenLabs account must never be created or upgraded via the
+   link. Test it in a private window, don't sign in.
+5. Commission: 22% (Starter/Creator/Pro/Scale) or 11% (Business) on the referred user's first 12
+   months; link-click attribution only; paid via PartnerStack ~3 months after earned.
+
+ElevenLabs and the ElevenLabs logo are registered trademarks or trademarks of ElevenLabs, Inc. Used with permission. ProseCast is not sponsored by, endorsed by, or affiliated with ElevenLabs except as an independent participant in the ElevenLabs Creator Affiliate Program.

@@ -279,6 +279,13 @@ Target reader: someone who runs Ollama and has never opened this repo.
   the one prerequisite with real downside if skipped — do it before the repo
   goes public, not after.
 - Windows: `say` doesn't exist; `piper` is the no-GPU engine there. Say so.
+- **ElevenLabs affiliate compliance (required, not optional):** wherever the README
+  or the launch video/description mentions ElevenLabs or carries the link
+  (`https://try.elevenlabs.io/dmylr2z8w3w9`), it must sit next to the disclosure
+  ("ProseCast is an independent affiliate of ElevenLabs and may receive
+  compensation for referrals") and the page must carry the trademark attribution
+  sentence. Both are spelled out in `docs/elevenlabs-setup.md` → "Affiliate
+  program compliance". No logo, no "partner" wording, no self-referral.
 
 ---
 

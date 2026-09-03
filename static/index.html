@@ -337,6 +337,108 @@
     #expand-btn:hover { color: #aaa; border-color: #555; }
     #expand-btn:disabled { color: #333; border-color: #202020; cursor: default; }
 
+    /* ── Setup view (E4.3) ──
+       Third occupant of the main grid cell (with #main and #reader-view).
+       body.setup-open shows it; reads /setup/status, writes PUT /config. */
+    #setup-view {
+      grid-area: main; display: none; flex-direction: column; min-height: 0; background: #0f0f0f;
+    }
+    body.setup-open #setup-view { display: flex; }
+    body.setup-open #main, body.setup-open #reader-view { display: none; }
+    #setup-chip {
+      background: none; border: 1px solid #2a2a2a; color: #666; padding: 3px 10px;
+      border-radius: 11px; cursor: pointer; font-size: .68rem; white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    #setup-chip:hover { color: #ccc; border-color: #555; }
+    #setup-chip .dot { width: 6px; height: 6px; border-radius: 50%; background: #444; }
+    #setup-chip.warn { color: #e0b25c; border-color: #4a3a1a; }
+    #setup-chip.warn .dot { background: #e0b25c; box-shadow: 0 0 6px #e0b25c88; }
+    #setup-chip.ok .dot { background: #63b3a0; }
+
+    .su-top {
+      display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+      padding: 12px 24px; border-bottom: 1px solid #222; background: #131313;
+    }
+    .su-top h2 { font-size: 1rem; font-weight: 600; color: #fff; flex: 1; }
+    .su-top .su-ready { font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 4px; border: 1px solid #2a2a2a; color: #666; }
+    .su-top .su-ready.ok { color: #7fd6bf; border-color: #24463d; background: #12201c; }
+    .su-top .su-ready.warn { color: #e0b25c; border-color: #4a3a1a; background: #221a0c; }
+    .su-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 24px 28px 60px; }
+    .su-page { max-width: 760px; margin: 0 auto; }
+    .su-intro { color: #888; font-size: .88rem; line-height: 1.6; margin-bottom: 22px; }
+    .su-intro b { color: #ddd; }
+    .su-note { font-size: .74rem; color: #666; line-height: 1.5; margin: 6px 0 0; }
+    .su-warnenv { background: #221a0c; border: 1px solid #4a3a1a; color: #e0b25c; font-size: .78rem;
+      padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; line-height: 1.5; }
+
+    .su-section { background: #161616; border: 1px solid #242424; border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+    .su-section h3 { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #888; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 10px; }
+    .su-section h3 .opt { font-size: .64rem; color: #555; text-transform: none; letter-spacing: 0; font-weight: 400; }
+
+    .su-row { display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; }
+    .su-row + .su-row { border-top: 1px solid #1e1e1e; }
+    .su-plaque {
+      display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; min-width: 84px; justify-content: center;
+      padding: 3px 9px; border-radius: 4px; font-size: .66rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+      border: 1px solid #2a2a2a; background: #1a1a1a; color: #666; margin-top: 2px;
+    }
+    .su-plaque .dot { width: 6px; height: 6px; border-radius: 50%; background: #666; }
+    .su-plaque.ok { color: #7fd6bf; border-color: #24463d; background: #12201c; }
+    .su-plaque.ok .dot { background: #63b3a0; }
+    .su-plaque.warn { color: #e0b25c; border-color: #4a3a1a; background: #221a0c; }
+    .su-plaque.warn .dot { background: #e0b25c; }
+    .su-plaque.missing { color: #e07070; border-color: #4a2a2a; background: #241212; }
+    .su-plaque.missing .dot { background: #d8503a; }
+    .su-plaque.off { color: #555; border-color: #262626; background: #141414; }
+    .su-plaque.off .dot { background: #3a3a3a; }
+    .su-row .su-body { flex: 1; min-width: 0; }
+    .su-row .su-label { font-size: .88rem; color: #ddd; }
+    .su-row .su-detail { font-size: .78rem; color: #777; margin-top: 2px; word-break: break-word; }
+    .su-row .su-fix { font-size: .78rem; color: #c9b27a; margin-top: 5px; line-height: 1.5; }
+    .su-row .su-fix code { background: #1e1e1e; padding: 1px 5px; border-radius: 3px; font-size: .74rem; color: #ddd; }
+
+    .su-fields { display: grid; grid-template-columns: 150px 1fr; gap: 8px 12px; align-items: center; margin-top: 12px; }
+    .su-fields label { font-size: .76rem; color: #888; text-align: right; }
+    .su-fields input, .su-fields select {
+      background: #111; border: 1px solid #2a2a2a; color: #ddd; padding: 6px 9px; border-radius: 6px; font-size: .82rem; width: 100%;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    .su-fields input:focus, .su-fields select:focus { outline: none; border-color: #7c6dfa; }
+    .su-fields input.changed { border-color: #e0b25c; }
+    .su-fields .su-hint { grid-column: 2; font-size: .7rem; color: #555; margin-top: -4px; }
+
+    .su-engines { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 6px 0 4px; }
+    .su-engine {
+      background: #111; border: 1px solid #262626; border-radius: 8px; padding: 12px 12px 10px; cursor: pointer;
+      transition: border-color .15s, background .15s; text-align: left;
+    }
+    .su-engine:hover { border-color: #444; }
+    .su-engine.selected { border-color: #7c6dfa; background: #16152a; }
+    .su-engine .su-en-name { font-size: .88rem; color: #eee; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .su-engine .su-en-tag { font-size: .62rem; padding: 1px 6px; border-radius: 3px; background: #1f1f1f; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+    .su-engine .su-en-tag.free { color: #7fd6bf; background: #12201c; }
+    .su-engine .su-en-tag.paid { color: #e0b25c; background: #221a0c; }
+    .su-engine .su-en-desc { font-size: .74rem; color: #777; margin-top: 5px; line-height: 1.45; }
+    .su-el { background: #131313; border: 1px dashed #2e2e2e; border-radius: 8px; padding: 12px 14px; margin-top: 12px; font-size: .78rem; color: #999; line-height: 1.55; }
+    .su-el b { color: #ddd; }
+    .su-el a { color: #a89bff; }
+    .su-el table { border-collapse: collapse; margin: 8px 0 4px; font-size: .72rem; }
+    .su-el td { padding: 2px 10px 2px 0; color: #888; }
+    .su-el td:first-child { color: #ccc; }
+    .su-el .su-attr { margin-top: 10px; padding-top: 8px; border-top: 1px solid #262626; font-size: .66rem; color: #666; line-height: 1.5; }
+
+    .su-actions { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+    .su-btn { background: none; border: 1px solid #2a2a2a; color: #999; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: .8rem; }
+    .su-btn:hover { color: #eee; border-color: #555; }
+    .su-btn.primary { background: #7c6dfa; border-color: #7c6dfa; color: #fff; }
+    .su-btn.primary:hover { background: #9585ff; }
+    .su-btn:disabled { opacity: .5; cursor: default; }
+    .su-saved { font-size: .76rem; color: #7fd6bf; }
+    .su-err { font-size: .76rem; color: #e07070; }
+
     .player-controls {
       display: flex; align-items: center; gap: 12px;
     }
@@ -917,6 +1019,63 @@ html[data-theme="onair"] {
 [data-theme="onair"] #expand-btn { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); }
 [data-theme="onair"] #expand-btn:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); }
 
+/* ── setup view ── */
+[data-theme="onair"] #setup-view { background: var(--oa-bg); }
+[data-theme="onair"] #setup-chip { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] #setup-chip:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); }
+[data-theme="onair"] #setup-chip.warn { color: var(--oa-amber); border-color: var(--oa-gold-dim); }
+[data-theme="onair"] .su-top { background: linear-gradient(#1e1710, #181109); border-bottom-color: var(--oa-line); }
+[data-theme="onair"] .su-top h2 { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .su-top .su-ready { font-family: var(--oa-mono); border-radius: 2px; border-color: var(--oa-line2); color: var(--oa-mut); background: var(--oa-input); }
+[data-theme="onair"] .su-top .su-ready.ok { color: var(--oa-teal); border-color: #2c4a41; background: #101c19; }
+[data-theme="onair"] .su-top .su-ready.warn { color: var(--oa-amber); border-color: var(--oa-gold-dim); background: var(--oa-gold-bg); }
+[data-theme="onair"] .su-intro { color: var(--oa-cream2); }
+[data-theme="onair"] .su-intro b { color: var(--oa-cream); }
+[data-theme="onair"] .su-note { color: var(--oa-dim); }
+[data-theme="onair"] .su-warnenv { background: var(--oa-gold-bg); border-color: var(--oa-gold-dim); color: var(--oa-amber); }
+[data-theme="onair"] .su-section { background: var(--oa-panel); border-color: var(--oa-line2); border-radius: 4px; }
+[data-theme="onair"] .su-section h3 { color: var(--oa-mut); font-family: var(--oa-mono); font-weight: 500; }
+[data-theme="onair"] .su-section h3 .opt { color: var(--oa-dim); }
+[data-theme="onair"] .su-row + .su-row { border-top-color: var(--oa-line); }
+[data-theme="onair"] .su-plaque { font-family: var(--oa-mono); border-radius: 2px; background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-mut); box-shadow: inset 0 0 0 1px rgba(0,0,0,.4); }
+[data-theme="onair"] .su-plaque.ok { color: var(--oa-teal); border-color: #2c4a41; background: #101c19; }
+[data-theme="onair"] .su-plaque.ok .dot { background: var(--oa-teal); }
+[data-theme="onair"] .su-plaque.warn { color: var(--oa-amber); border-color: var(--oa-gold-dim); background: var(--oa-gold-bg); }
+[data-theme="onair"] .su-plaque.warn .dot { background: var(--oa-amber); }
+[data-theme="onair"] .su-plaque.missing { color: #ffd9d0; border-color: var(--oa-red); background: var(--oa-red-bg); text-shadow: 0 0 8px rgba(216,80,58,.6); }
+[data-theme="onair"] .su-plaque.missing .dot { background: var(--oa-red); box-shadow: 0 0 6px var(--oa-red); }
+[data-theme="onair"] .su-plaque.off { color: var(--oa-dim); border-color: var(--oa-line); background: var(--oa-bg); }
+[data-theme="onair"] .su-plaque.off .dot { background: var(--oa-line2); }
+[data-theme="onair"] .su-row .su-label { color: var(--oa-cream); }
+[data-theme="onair"] .su-row .su-detail { color: var(--oa-mut); font-family: var(--oa-mono); font-size: .72rem; }
+[data-theme="onair"] .su-row .su-fix { color: var(--oa-amber); }
+[data-theme="onair"] .su-row .su-fix code { background: var(--oa-input); color: var(--oa-cream2); }
+[data-theme="onair"] .su-fields label { color: var(--oa-mut); }
+[data-theme="onair"] .su-fields input, [data-theme="onair"] .su-fields select { background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-cream2); font-family: var(--oa-mono); border-radius: 3px; }
+[data-theme="onair"] .su-fields input:focus, [data-theme="onair"] .su-fields select:focus { border-color: var(--oa-gold); }
+[data-theme="onair"] .su-fields input.changed { border-color: var(--oa-amber); }
+[data-theme="onair"] .su-fields .su-hint { color: var(--oa-dim); }
+[data-theme="onair"] .su-engine { background: var(--oa-input); border-color: var(--oa-line2); border-radius: 4px; }
+[data-theme="onair"] .su-engine:hover { border-color: var(--oa-mut); }
+[data-theme="onair"] .su-engine.selected { border-color: var(--oa-gold); background: var(--oa-gold-bg); }
+[data-theme="onair"] .su-engine .su-en-name { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .su-engine .su-en-desc { color: var(--oa-mut); }
+[data-theme="onair"] .su-engine .su-en-tag { font-family: var(--oa-mono); background: var(--oa-raised); color: var(--oa-mut); }
+[data-theme="onair"] .su-engine .su-en-tag.free { color: var(--oa-teal); background: #101c19; }
+[data-theme="onair"] .su-engine .su-en-tag.paid { color: var(--oa-amber); background: var(--oa-gold-bg); }
+[data-theme="onair"] .su-el { background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-cream2); border-radius: 4px; }
+[data-theme="onair"] .su-el b { color: var(--oa-cream); }
+[data-theme="onair"] .su-el a { color: var(--oa-gold); }
+[data-theme="onair"] .su-el td { color: var(--oa-mut); }
+[data-theme="onair"] .su-el td:first-child { color: var(--oa-cream2); }
+[data-theme="onair"] .su-el .su-attr { border-top-color: var(--oa-line); color: var(--oa-dim); font-family: var(--oa-mono); font-size: .62rem; }
+[data-theme="onair"] .su-btn { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); border-radius: 3px; }
+[data-theme="onair"] .su-btn:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); }
+[data-theme="onair"] .su-btn.primary { background: var(--oa-gold); border-color: var(--oa-gold-hi); color: #241a11; }
+[data-theme="onair"] .su-btn.primary:hover { background: var(--oa-gold-hi); }
+[data-theme="onair"] .su-saved { color: var(--oa-teal); }
+[data-theme="onair"] .su-err { color: #ffb0a0; }
+
 /* ── speaker colors (warm troupe) ── */
 [data-theme="onair"] .spk-0 { color: var(--oa-gold); }
 [data-theme="onair"] .spk-1 { color: var(--oa-teal); }
@@ -1085,6 +1244,7 @@ html[data-theme="onair"] {
     <span id="engine-detail"></span>
     <button id="engine-recheck" onclick="recheckEngine()" title="Re-probe the TTS server and refresh the voice list (no restart needed)">↻ re-check</button>
   </div>
+  <button id="setup-chip" onclick="toggleSetupView()" title="Setup: what's connected, what's missing, and how to fix it"><span class="dot"></span>⚙ setup</button>
   <button id="theme-toggle" title="Switch between the On Air and classic skins"
           style="background:none;border:1px solid #2a2a2a;color:#666;padding:3px 10px;border-radius:11px;cursor:pointer;font-size:.68rem;"></button>
 </header>
@@ -1123,6 +1283,22 @@ html[data-theme="onair"] {
     <div class="rv-page" id="rv-page"></div>
   </div>
   <button class="rv-resume" id="rv-resume" onclick="readerResumeFollow()">↓ back to the voice</button>
+</section>
+
+<!-- Setup view (E4.3): probes from /setup/status, settings via /config. -->
+<section id="setup-view" aria-label="Setup">
+  <div class="su-top">
+    <button class="rv-btn" onclick="closeSetupView()" title="Back (Esc)">← Back</button>
+    <h2>Setup</h2>
+    <span class="su-ready" id="su-ready">checking…</span>
+    <button class="rv-btn" id="su-reprobe" onclick="loadSetup(true)" title="Probe every service again">↻ re-check</button>
+    <button class="su-btn primary" id="su-save-top" onclick="saveSetup()" disabled>Save &amp; re-check</button>
+  </div>
+  <div class="su-scroll">
+    <div class="su-page" id="su-page">
+      <p class="su-intro" id="su-intro">Checking what's connected…</p>
+    </div>
+  </div>
 </section>
 
 <!-- Inline correction popup (anchored above player bar) -->
@@ -1313,6 +1489,7 @@ async function recheckEngine() {
 
 async function init() {
   loadEngineStatus();
+  loadSetupChip();
   const books = await fetchJSON('/books');
   state.books = books;
   renderBookList(books);
@@ -1724,6 +1901,7 @@ function isReaderOpen() { return document.body.classList.contains('reader-open')
 function openReaderView() {
   if (!state.timeline.length) return;
   closeReaderPopup();
+  document.body.classList.remove('setup-open');
   document.body.classList.add('reader-open');
   buildReaderPage();
   rvUserScrollUntil = 0;
@@ -1868,6 +2046,273 @@ document.addEventListener('keydown', e => {
   } else if (e.key === 'Escape') {
     closeReaderView();
   }
+});
+
+// ── Setup view (E4.3) ──────────────────────────────────────────────────────
+// One screen that answers "is this machine ready?" in plain words. Rows come
+// from /setup/status (probed live, in parallel); fields write PUT /config and
+// re-probe. Opens itself on first run (no config.json yet).
+const SETUP_STATE_LABEL = { ok: 'ready', warn: 'check', missing: 'missing', off: 'off' };
+// ElevenLabs Creator Affiliate Program link (PartnerStack default). The disclosure and the
+// trademark attribution next to it are REQUIRED by the program terms — keep them together.
+const EL_SIGNUP_URL = 'https://try.elevenlabs.io/dmylr2z8w3w9';
+const EL_ATTRIBUTION = 'ElevenLabs and the ElevenLabs logo are registered trademarks or trademarks of ElevenLabs, Inc. Used with permission. ProseCast is not sponsored by, endorsed by, or affiliated with ElevenLabs except as an independent participant in the ElevenLabs Creator Affiliate Program.';
+let setupStatus = null;      // last /setup/status payload
+let setupConfig = null;      // last /config payload
+let setupDirty = {};         // key → new value, not yet saved
+
+function isSetupOpen() { return document.body.classList.contains('setup-open'); }
+
+function toggleSetupView() { isSetupOpen() ? closeSetupView() : openSetupView(); }
+
+function openSetupView() {
+  document.body.classList.remove('reader-open');
+  rvResumeEl.classList.remove('show');
+  document.body.classList.add('setup-open');
+  loadSetup(false);
+}
+
+function closeSetupView() {
+  if (!isSetupOpen()) return;
+  document.body.classList.remove('setup-open');
+  setupDirty = {};
+  // Came here mid-listen? Go back to the reader, not the chapter list.
+  if (!audioEl.paused && state.timeline.length) openReaderView();
+}
+
+function paintSetupChip(st) {
+  const chip = document.getElementById('setup-chip');
+  if (!chip || !st) return;
+  const engineRow = (st.rows || []).find(r => r.key === 'voice_engine');
+  const good = st.ready && engineRow && engineRow.state === 'ok';
+  chip.className = good ? 'ok' : 'warn';
+  chip.title = good ? 'Setup: everything required is connected'
+                    : 'Setup: something needs you — click to see what';
+}
+
+async function loadSetupChip() {
+  try {
+    const st = await fetchJSON('/setup/status');
+    setupStatus = st;
+    paintSetupChip(st);
+    if (!st.config_exists && !isSetupOpen()) openSetupView();   // first run → walk them through
+  } catch (e) { /* server may be starting; the engine plaque already shows NO SERVER */ }
+}
+
+async function loadSetup(reprobe) {
+  const readyEl = document.getElementById('su-ready');
+  const btn = document.getElementById('su-reprobe');
+  if (btn) { btn.disabled = true; btn.textContent = '↻ checking…'; }
+  readyEl.textContent = 'checking…'; readyEl.className = 'su-ready';
+  try {
+    const [st, cfg] = await Promise.all([
+      (reprobe || !setupStatus) ? fetchJSON('/setup/status') : Promise.resolve(setupStatus),
+      fetchJSON('/config'),
+    ]);
+    setupStatus = st; setupConfig = cfg;
+    paintSetupChip(st);
+    renderSetup();
+  } catch (e) {
+    document.getElementById('su-page').innerHTML =
+      `<p class="su-intro">Couldn't reach the ProseCast server (${esc(String(e.message || e))}). Is <code>uvicorn server:app</code> running?</p>`;
+    readyEl.textContent = 'no server'; readyEl.className = 'su-ready warn';
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '↻ re-check'; }
+  }
+}
+
+function suPlaque(row) {
+  return `<span class="su-plaque ${row.state}"><span class="dot"></span>${SETUP_STATE_LABEL[row.state] || row.state}</span>`;
+}
+
+function suRow(row, extraBody) {
+  if (!row) return '';
+  const fix = row.fix ? `<div class="su-fix">${esc(row.fix).replace(/`([^`]+)`/g, '<code>$1</code>')}</div>` : '';
+  return `<div class="su-row">${suPlaque(row)}<div class="su-body">
+    <div class="su-label">${esc(row.label)}</div>
+    <div class="su-detail">${esc(row.detail || '')}</div>${fix}${extraBody || ''}</div></div>`;
+}
+
+function suValue(key) {
+  return key in setupDirty ? setupDirty[key] : (setupConfig.values[key] ?? '');
+}
+
+function suField(key, label, hint, type) {
+  const v = suValue(key);
+  const src = setupConfig.sources[key];
+  const envNote = src === 'env' ? ` · overridden by env var` : '';
+  return `<label for="suf-${key}">${esc(label)}</label>
+    <input id="suf-${key}" data-key="${key}" type="${type || 'text'}" value="${esc(String(v))}"
+           class="${key in setupDirty ? 'changed' : ''}" ${src === 'env' ? 'disabled' : ''}
+           oninput="suEdit(this)" autocomplete="off" spellcheck="false">
+    ${hint || envNote ? `<div class="su-hint">${esc(hint || '')}${esc(envNote)}</div>` : ''}`;
+}
+
+function suEdit(input) {
+  const key = input.dataset.key;
+  const orig = String(setupConfig.values[key] ?? '');
+  if (input.value === orig) delete setupDirty[key]; else setupDirty[key] = input.value;
+  input.classList.toggle('changed', key in setupDirty);
+  paintSaveButtons();
+}
+
+function suPickEngine(engine) {
+  const orig = setupConfig.values.tts_engine;
+  if (engine === orig) delete setupDirty.tts_engine; else setupDirty.tts_engine = engine;
+  renderSetup();
+}
+
+function paintSaveButtons() {
+  const n = Object.keys(setupDirty).length;
+  for (const id of ['su-save-top', 'su-save-bottom']) {
+    const b = document.getElementById(id);
+    if (b) { b.disabled = !n; b.textContent = n ? `Save & re-check (${n})` : 'Save & re-check'; }
+  }
+}
+
+function renderSetup() {
+  const st = setupStatus, cfg = setupConfig;
+  const rows = Object.fromEntries((st.rows || []).map(r => [r.key, r]));
+  const readyEl = document.getElementById('su-ready');
+  readyEl.textContent = st.ready ? 'ready' : 'needs you';
+  readyEl.className = 'su-ready ' + (st.ready ? 'ok' : 'warn');
+
+  const engine = suValue('tts_engine');
+  const isMac = st.os === 'Darwin';
+  const sysEngine = isMac ? 'say' : 'piper';
+  const engineCard = (id, name, tag, tagCls, desc) =>
+    `<button class="su-engine ${engine === id ? 'selected' : ''}" onclick="suPickEngine('${id}')">
+       <div class="su-en-name">${esc(name)} <span class="su-en-tag ${tagCls}">${tag}</span></div>
+       <div class="su-en-desc">${desc}</div></button>`;
+
+  const intro = cfg.exists
+    ? `Everything ProseCast talks to, probed just now. <b>Green means connected.</b> Amber and red rows say what to do.
+       Settings save to <code>${esc(cfg.path)}</code>; environment variables, if set, still win.`
+    : `<b>First run.</b> ProseCast narrates books with voices that run on <b>your</b> machine — nothing leaves it.
+       Pick a voice engine below, save, and the rows will tell you what (if anything) is still missing.
+       You can come back here any time from the <b>⚙ setup</b> chip in the header.`;
+
+  const shadow = (st.shadowed_by_env || []).length
+    ? `<div class="su-warnenv">Heads up: <b>${st.shadowed_by_env.map(esc).join(', ')}</b> ${st.shadowed_by_env.length > 1 ? 'are' : 'is'} set by
+       environment variables right now, so the value in config.json is ignored until you unset ${st.shadowed_by_env.length > 1 ? 'them' : 'it'}.</div>` : '';
+
+  const elCard = engine === 'elevenlabs' ? `<div class="su-el">
+      <b>The honest part.</b> ElevenLabs is <b>your</b> account: you sign up with them, you pay them directly for credits,
+      and ProseCast never marks anything up. <b>Disclosure:</b> ProseCast is an independent affiliate of ElevenLabs and may
+      receive compensation for referrals — if you sign up through
+      <a href="${EL_SIGNUP_URL}" target="_blank" rel="noopener">our affiliate link</a>, ElevenLabs may pay us a referral.
+      It costs you nothing extra, and we'd rather say that out loud than bury it.<br><br>
+      <b>A full book is a real bill.</b> Roughly 1 character = 1 credit. A 100,000-word novel is ~550,000 characters:
+      <table><tr><td>Free</td><td>10,000 credits</td><td>testing only</td></tr>
+             <tr><td>Starter · $6/mo</td><td>30,000</td><td>a short story</td></tr>
+             <tr><td>Creator · $22/mo</td><td>121,000</td><td>~a quarter of a novel</td></tr>
+             <tr><td>Pro · $99/mo</td><td>600,000</td><td>~one full novel</td></tr></table>
+      <span style="opacity:.7">(prices as of 2026-07 — check <a href="https://elevenlabs.io/pricing" target="_blank" rel="noopener">elevenlabs.io/pricing</a>)</span><br><br>
+      <b>The sane pattern:</b> render the whole book on local Chatterbox for free and reserve ElevenLabs for a few hero characters.
+      Your key: ElevenLabs → profile → <b>API Keys</b> → create → paste below. Treat it like a password.
+      <div class="su-attr">${esc(EL_ATTRIBUTION)}</div>
+    </div>` : '';
+
+  const engineFields = {
+    chatterbox: suField('chatterbox_url', 'Chatterbox URL', 'The Chatterbox TTS server — this machine, or another one you can reach (e.g. http://192.168.1.50:8101).'),
+    elevenlabs: suField('elevenlabs_api_key', 'ElevenLabs API key', cfg.values.elevenlabs_api_key_set ? 'A key is saved. Paste a new one to replace it.' : 'Paste your key; it is stored in config.json (chmod 600), never sent anywhere but ElevenLabs.', 'password'),
+  }[engine] || '';
+
+  const html = `
+    <p class="su-intro">${intro}</p>
+    ${shadow}
+
+    <div class="su-section">
+      <h3>1 · Voices</h3>
+      <div class="su-engines">
+        ${engineCard(sysEngine, isMac ? 'System voices' : 'Piper', 'free', 'free',
+          isMac ? 'macOS built-in voices. No setup, no GPU. Robotic for a whole book, perfect for checking everything works.'
+                : 'Local, CPU-only, any OS. Needs the piper binary and one voice model.')}
+        ${engineCard('chatterbox', 'Chatterbox', 'free · local', 'free',
+          'Expressive multi-voice narration on your own GPU (or a machine you run). The engine ProseCast is built around.')}
+        ${engineCard('elevenlabs', 'ElevenLabs', 'your account', 'paid',
+          'Cloud voices, best quality, pay-per-character on your own ElevenLabs plan.')}
+      </div>
+      ${engine === 'auto' ? `<p class="su-note">Currently on <b>auto-detect</b> — pick one so ProseCast never guesses (auto picks ElevenLabs whenever a key exists, which makes every preview cost credits).</p>` : ''}
+      ${elCard}
+      ${engineFields ? `<div class="su-fields">${engineFields}</div>` : ''}
+      ${suRow(rows.voice_engine)}
+    </div>
+
+    <div class="su-section">
+      <h3>2 · Who's speaking <span class="opt">optional · local AI for the hard 5% of lines</span></h3>
+      ${suRow(rows.ollama)}
+      <div class="su-fields">
+        ${suField('ollama_url', 'Ollama URL', 'Rules attribute ~95% of dialogue on their own; Ollama reads whole scenes for the rest.')}
+        ${suField('ollama_model', 'Model', 'gemma3:12b is the tested default. Run `ollama pull <model>` on that machine first.')}
+      </div>
+    </div>
+
+    <div class="su-section">
+      <h3>3 · Read-along timing <span class="opt">optional · word-accurate highlighting</span></h3>
+      ${suRow(rows.whisper)}
+      <div class="su-fields">
+        ${suField('whisper_url', 'Whisper URL', 'An OpenAI-compatible faster-whisper server. Without it, highlighting is by sentence (estimated).')}
+        ${suField('whisper_model', 'Model')}
+      </div>
+    </div>
+
+    <div class="su-section">
+      <h3>4 · Tools on this machine</h3>
+      ${suRow(rows.tool_ffmpeg)}${suRow(rows.tool_pdftotext)}${suRow(rows.tool_tesseract)}
+    </div>
+
+    <div class="su-section">
+      <h3>5 · GPU headroom <span class="opt">optional · only if ComfyUI shares the card</span></h3>
+      ${suRow(rows.gpu)}
+      <div class="su-fields">
+        ${suField('comfyui_url', 'ComfyUI URL', 'Leave blank if you don’t run ComfyUI. If set, free VRAM is checked (and reclaimed from an idle ComfyUI) before each render.')}
+        ${suField('gpu_reclaim_below_gb', 'Reclaim below (GB)', '', 'number')}
+      </div>
+    </div>
+
+    <div class="su-actions">
+      <button class="su-btn primary" id="su-save-bottom" onclick="saveSetup()" disabled>Save &amp; re-check</button>
+      <span id="su-msg"></span>
+    </div>
+    <p class="su-note">Saved URLs are probed immediately. Renders and AI passes pick up a changed URL on the next server start; the voice engine switches right away.</p>`;
+
+  document.getElementById('su-page').innerHTML = html;
+  paintSaveButtons();
+}
+
+async function saveSetup() {
+  const msg = document.getElementById('su-msg');
+  const keys = Object.keys(setupDirty);
+  if (!keys.length) return;
+  for (const id of ['su-save-top', 'su-save-bottom']) { const b = document.getElementById(id); if (b) b.disabled = true; }
+  if (msg) { msg.className = ''; msg.textContent = 'saving…'; }
+  try {
+    const r = await fetch('/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                                       body: JSON.stringify({ values: setupDirty }) });
+    if (!r.ok) {
+      let detail = `${r.status}`;
+      try { detail = (await r.json()).detail || detail; } catch {}
+      throw new Error(detail);
+    }
+    setupConfig = await r.json();
+    setupDirty = {};
+    if (msg) { msg.className = 'su-saved'; msg.textContent = `saved ${keys.join(', ')} — re-checking…`; }
+    setupStatus = await fetchJSON('/setup/status');
+    paintSetupChip(setupStatus);
+    renderSetup();
+    const m2 = document.getElementById('su-msg');
+    if (m2) { m2.className = 'su-saved'; m2.textContent = 'saved'; }
+    loadEngineStatus();                                       // header plaque follows the engine change
+    if (state.currentBook) { try { await loadBook(state.currentBook); } catch (e) {} }   // voice lists too
+  } catch (e) {
+    if (msg) { msg.className = 'su-err'; msg.textContent = `not saved: ${e.message || e}`; }
+    paintSaveButtons();
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && isSetupOpen()) closeSetupView();
 });
 
 audioEl.addEventListener('play',  () => { playPauseBtn.textContent = '⏸'; });

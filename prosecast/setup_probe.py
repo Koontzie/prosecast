@@ -273,7 +273,17 @@ def probe_gpu() -> dict:
 # ── the one call the Setup page makes ────────────────────────────────────────
 
 def status() -> dict:
-    rows = [probe_voice_engine(), probe_ollama(), probe_whisper(), *probe_tools(), probe_gpu()]
+    # Probes run in parallel: with every service down, the sequential worst
+    # case was ~30 s of timeouts; now it's the slowest single probe (~6 s).
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        f_engine = pool.submit(probe_voice_engine)
+        f_ollama = pool.submit(probe_ollama)
+        f_whisper = pool.submit(probe_whisper)
+        f_tools = pool.submit(probe_tools)
+        f_gpu = pool.submit(probe_gpu)
+        rows = [f_engine.result(), f_ollama.result(), f_whisper.result(),
+                *f_tools.result(), f_gpu.result()]
     required_ok = all(r["ok"] for r in rows if not r["optional"])
     return {
         "ready": required_ok,

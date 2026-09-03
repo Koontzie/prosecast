@@ -1,9 +1,9 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E (UI-first): E1 reader view + E4.1/E4.2 config +
-Setup probes shipped 2026-09-03.** Core goal met (EPUB + PDF, novels + plays).
-Next: Tyler runs tests + `/setup/status`, commits; then E4.3 Setup page → E2
-ingest wizard per `docs/ROADMAP_PHASE_E_UI.md`. Rulebook render + C4 still open.
+**Status:** ACTIVE — **Phase E (UI-first): E1 reader view + E4 (config, probes,
+Setup page) shipped 2026-09-03.** Core goal met (EPUB + PDF, novels + plays).
+Next: Tyler smoke-tests Setup, commits; then E2 ingest wizard per
+`docs/ROADMAP_PHASE_E_UI.md`. Rulebook render + C4 still open.
 **Updated:** 2026-09-03
 
 ## Session 2026-09-03 (Cowork) — Phase E kickoff: reader view + roadmap
@@ -95,15 +95,52 @@ in the roadmap doc.
 - **Not done yet (E4.3):** the Setup *page* in index.html. Backend is
   complete; the UI reads `/setup/status` and PUTs `/config`.
 
+## Session 2026-09-03 pt3 (Cowork) — E4.3: Setup page
+
+- **`⚙ setup` chip in the header** (green dot when the voice engine row is
+  green, amber otherwise) opens `#setup-view` — third occupant of the main
+  grid cell alongside `#main` and `#reader-view`; the three are mutually
+  exclusive via body classes. **First run (no config.json) opens Setup
+  automatically** with a first-run intro. `← Back`/Esc returns to the
+  reader if audio is playing, else the chapter list.
+- **Five sections**, each a live row from `/setup/status` (plaque
+  ready/check/missing/off in both skins, detail line, fix text with
+  backtick-commands rendered as `<code>`) plus the fields that feed it:
+  1 Voices — three engine cards (System voices `say`/`piper` by OS,
+  Chatterbox, ElevenLabs) with the **ElevenLabs "honest part" card**
+  (account/no-markup/referral disclosure + the cost table from
+  `docs/elevenlabs-setup.md`) and a password-type key box; 2 Who's
+  speaking (Ollama URL + model); 3 Read-along timing (whisper); 4 Tools;
+  5 GPU headroom (ComfyUI URL + reclaim GB). Auto-detect shows an amber
+  note asking the user to pick on purpose.
+- **Save & re-check** PUTs only the changed keys, re-probes, repaints the
+  header engine plaque, and reloads the open book (voice lists). Fields
+  overridden by env vars are disabled and the page says which ones. A
+  400 from validation shows inline ("not saved: …").
+- `setup_probe.status()` now runs the probes **in parallel** (worst case
+  ~6 s instead of ~30 s when everything is down).
+- **ElevenLabs affiliate — live and compliant:** Tyler is approved; default
+  PartnerStack link `https://try.elevenlabs.io/dmylr2z8w3w9` is `EL_SIGNUP_URL`.
+  Per the program terms the card now carries the exact disclosure wording
+  ("independent affiliate … may receive compensation for referrals") next to
+  the link and the verbatim trademark attribution as a footer
+  (`EL_ATTRIBUTION`, `.su-attr`). `docs/elevenlabs-setup.md` updated the same
+  way + a "compliance (keep in sync)" section listing the rules (no logo, no
+  nav use, no disparagement, **no self-referrals**); roadmap E5 notes the
+  README + launch video must carry the same two sentences.
+- Verified headless vs mock `/config` + `/setup/status` in both skins:
+  chip state, engine pick → EL card, dirty tracking, save round-trip,
+  400 path, env-shadow banner, first-run auto-open, Esc, reader↔setup
+  hand-off with audio still playing. 134 tests unchanged.
+
 ## NEXT (updated 2026-09-03)
-1. **Tyler:** `.venv/bin/pytest tests/ -q` (expect 134 pass) → restart the
-   server *without* the env var → `curl localhost:8000/setup/status | python3
-   -m json.tool` — every Gideon row should be green from config.json alone.
-   Commit + push.
-2. **E4.3 Setup page** in index.html (reads `/setup/status`, PUTs `/config`,
-   engine picker + EL card from `docs/elevenlabs-setup.md`, amber header chip
-   until the engine row is green) → **E2** starting with `.txt` upload as a
-   job.
+1. **Tyler:** restart server → hard-refresh → click `⚙ setup` → all rows
+   green; try changing the Ollama model to something not pulled, Save, watch
+   the row go amber with the `ollama pull` line, change it back. Swap
+   `EL_SIGNUP_URL` for the real affiliate link. Commit + push.
+2. **E2 ingest wizard** — smallest step: accept `.txt` in `/books/upload`
+   and make upload a job (progress card), then the mode picker, then PDF
+   chapter detection + review, then OCR (tesseract is on the Mac).
 4. Still open from before: rulebook overnight render, C4 voice-ref mirror,
    Voices tab (`docs/CC_BRIEF_voices_tab.md`), audition + upload the 20
    LibriVox US voices.
