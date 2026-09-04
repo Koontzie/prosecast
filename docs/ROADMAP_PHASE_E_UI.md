@@ -168,7 +168,9 @@ the PDF"). Confirm → ingest continues. **This is the step that makes PDF uploa
 honest** — the heuristics will be wrong sometimes, and the fix is 10 seconds of
 editing rather than a bad audiobook.
 
-### E2.4 Scans → OCR — `prosecast/ocr.py`
+### E2.4 Scans → OCR — `prosecast/ocr.py` — BUILT 2026-09-04
+**As built, with one deviation:** PyMuPDF rasterizes the pages (`get_pixmap(dpi=300)`), *not* `pdftoppm` — E2.2 dropped the poppler dependency and this would have brought it back for no gain. tesseract remains the only external binary. OCR text is reflowed with `pdf_ingest.reflow()` before it reaches `book_parser`, or the image's line breaks become TTS block boundaries. Offered in the wizard with a time estimate; cached at `books/<stem>_ocr.txt`. Original plan below:
+
 If `scan_report()` says < ~200 chars/page on average, it's a scan. Offer OCR in
 the wizard: `tesseract` if installed (probe with `which`; say *how* to install
 it on macOS/Linux/Windows in the same dialog), else stop with a clear "this PDF

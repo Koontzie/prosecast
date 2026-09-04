@@ -98,8 +98,11 @@ def router(upload_fixture: dict, *, calls: list, fail_ingest: str = "", ticks: i
     return route
 
 
-def open_wizard(page, fixture_name, calls, **kw):
-    fixture = json.loads((FIXTURES / fixture_name).read_text())
+def open_wizard(page, fixture, calls, **kw):
+    """`fixture` is a fixture filename, or a dict when a check needs to vary a
+    machine-dependent field (whether tesseract exists) that the file pins."""
+    if isinstance(fixture, str):
+        fixture = json.loads((FIXTURES / fixture).read_text())
     page.unroute("**/*")
     page.route("**/*", router(fixture, calls=calls, **kw))
     page.set_input_files("#epub-file-input", [])
@@ -195,14 +198,45 @@ def main() -> int:
             check("Escape closes the wizard",
                   page.locator("#ingest-modal-overlay").is_hidden())
 
-            print("--- a scan is refused kindly, before any work ---")
+            print("--- a scan is offered OCR when this machine can do it ---")
             calls.clear()
-            open_wizard(page, "upload_scan_pdf.json", calls)
-            scan_txt = page.text_content(".ingest-scan") or ""
-            check("it says the PDF is a scan", "scan" in scan_txt.lower(), scan_txt[:60])
-            check("it says what to do about it",
-                  "ocrmypdf" in scan_txt or "tesseract" in scan_txt)
+            fixture = json.loads((FIXTURES / "upload_scan_pdf.json").read_text())
+            fixture["ocr_available"] = True
+            fixture["ocr_hint"] = "macOS: `brew install tesseract`"
+            open_wizard(page, fixture, calls)
+            scan_txt = page.text_content("#ingest-scan-notice") or ""
+            check("it says the PDF is a scan", "scan" in scan_txt.lower(), scan_txt.strip()[:52])
+            check("it says roughly how long OCR will take", "minute" in scan_txt)
+            check("it says the cost is paid once", "once" in scan_txt)
+            check("the button says what it will do",
+                  "OCR" in (page.text_content("#ingest-go-btn") or ""))
+            check("you can still choose how it is read",
+                  page.locator(".ingest-mode").count() == 3)
+            check("no chapter review for a scan — there is no text yet",
+                  page.locator("#ingest-chapters").is_hidden())
+            page.click("#ingest-go-btn")
+            page.wait_for_selector("#ingest-modal-overlay.hidden", state="attached", timeout=8000)
+            body = json.loads(next(c[2] for c in calls if c[1] == "/books/ingest"))
+            check("the server is told to OCR", body["ocr"] is True, body)
+
+            print("--- a scan with no tesseract explains the fix instead ---")
+            calls.clear()
+            fixture = json.loads((FIXTURES / "upload_scan_pdf.json").read_text())
+            fixture["ocr_available"] = False
+            fixture["ocr_hint"] = "macOS: `brew install tesseract`"
+            open_wizard(page, fixture, calls)
+            scan_txt = page.text_content("#ingest-scan-notice") or ""
+            check("it names the missing tool and how to install it",
+                  "brew install tesseract" in scan_txt, scan_txt.strip()[-60:])
             check("Add book is disabled", page.is_disabled("#ingest-go-btn"))
+            page.keyboard.press("Escape")
+
+            print("--- and the next file is not stuck with that disabled button ---")
+            calls.clear()
+            open_wizard(page, "upload_play_txt.json", calls)
+            check("the button works again", not page.is_disabled("#ingest-go-btn"))
+            check("the scan notice is gone",
+                  page.locator("#ingest-scan-notice").is_hidden())
             page.keyboard.press("Escape")
 
             check("no page errors so far", not errs, errs)

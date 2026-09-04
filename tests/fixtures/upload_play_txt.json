@@ -13,5 +13,7 @@
   ],
   "is_scan": false,
   "scan": null,
-  "detection": null
+  "detection": null,
+  "ocr_available": null,
+  "ocr_hint": null
 }

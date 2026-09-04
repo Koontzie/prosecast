@@ -1503,6 +1503,7 @@ html[data-theme="onair"] {
         <span>Title</span>
         <input id="ingest-title" type="text" spellcheck="false">
       </label>
+      <div id="ingest-scan-notice" class="ingest-scan hidden"></div>
       <div id="ingest-modes" class="ingest-modes"></div>
       <div id="ingest-chapters" class="ingest-chapters hidden">
         <div class="ingest-chapters-head">
@@ -3421,12 +3422,9 @@ function openIngestWizard(up) {
   document.getElementById('ingest-go-btn').disabled = false;
   document.getElementById('ingest-cancel-btn').disabled = false;
 
-  if (up.is_scan) {
-    renderIngestScan(up);
-  } else {
-    renderIngestModes();
-    renderIngestChapters();
-  }
+  renderIngestModes();
+  renderIngestChapters();
+  renderScanNotice(up);
   document.getElementById('ingest-modal-overlay').classList.remove('hidden');
   if (!up.is_scan) document.getElementById('ingest-title').focus();
 }
@@ -3462,6 +3460,7 @@ function selectIngestMode(id) {
 function renderIngestChapters() {
   const box = document.getElementById('ingest-chapters');
   const det = ingestWiz.upload.detection;
+  if (ingestWiz.upload.is_scan) { box.classList.add('hidden'); return; }
   if (!det || !det.chapters || !det.chapters.length) { box.classList.add('hidden'); return; }
 
   document.getElementById('ingest-detect-note').textContent = det.note || '';
@@ -3496,17 +3495,32 @@ function collectIngestChapters() {
   });
 }
 
-function renderIngestScan(up) {
-  const pages = up.scan ? up.scan.pages : 0;
-  document.getElementById('ingest-modes').innerHTML = `
-    <div class="ingest-scan">
-      <strong>This PDF is a scan.</strong> Its ${pages} page${pages === 1 ? '' : 's'} are pictures with
-      no text layer, so there is nothing to read yet. Run it through OCR first —
-      <code>ocrmypdf in.pdf out.pdf</code> or <code>tesseract</code> — then add the result.
-      OCR from inside the app is coming.
-    </div>`;
+// A scan has no text layer, so there is nothing to review — but OCR can make
+// one. The mode cards still apply: what comes out is a book like any other.
+function renderScanNotice(up) {
+  const box = document.getElementById('ingest-scan-notice');
+  const goBtn = document.getElementById('ingest-go-btn');
+  if (!up.is_scan) { box.classList.add('hidden'); goBtn.textContent = 'Add book'; return; }
+
   document.getElementById('ingest-chapters').classList.add('hidden');
-  document.getElementById('ingest-go-btn').disabled = true;
+  const pages = (up.scan && up.scan.pages) || 0;
+  const mins = Math.max(1, Math.round(pages * 2.5 / 60));
+
+  if (up.ocr_available) {
+    box.innerHTML = `<strong>This is a scan</strong> — ${pages} page${pages === 1 ? '' : 's'} of
+      pictures, with no text to read. OCR can read them, at a few seconds a page:
+      expect roughly ${mins} minute${mins === 1 ? '' : 's'} for this one. It only happens
+      once — the text is kept next to the file. Accuracy depends on the scan.`;
+    goBtn.textContent = 'Read it with OCR';
+    goBtn.disabled = false;
+  } else {
+    box.innerHTML = `<strong>This is a scan</strong> — ${pages} page${pages === 1 ? '' : 's'} of
+      pictures, with no text to read, and OCR isn't installed on this machine.
+      ${esc(up.ocr_hint || '')} Then add the file again.`;
+    goBtn.textContent = 'Add book';
+    goBtn.disabled = true;
+  }
+  box.classList.remove('hidden');
 }
 
 function showIngestError(msg) {
@@ -3535,6 +3549,7 @@ async function ingestConfirm() {
       mode: ingestWiz.mode,
       title: document.getElementById('ingest-title').value.trim() || ingestWiz.upload.title,
       chapters: collectIngestChapters(),
+      ocr: !!ingestWiz.upload.is_scan,
     });
     await pollIngest(started.job_id, setIngestProgress);
 

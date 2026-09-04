@@ -17,5 +17,7 @@
     "avg_chars_per_page": 0.0,
     "is_scan": true
   },
-  "detection": null
+  "detection": null,
+  "ocr_available": "MACHINE",
+  "ocr_hint": "MACHINE"
 }

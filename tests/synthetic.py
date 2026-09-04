@@ -95,3 +95,45 @@ def build_pdf(path, *, n_chapters: int = 3, pages_per: int = 2, scan: bool = Fal
     doc.save(path)
     doc.close()
     return path
+
+
+SCAN_PAGES = [
+    ("Chapter 1: The Locked Room",
+     "The rain had not stopped for three days and the town smelled of wet stone. "
+     "Nobody went out unless they had to, and those who did came back quiet."),
+    (None,
+     "The second page carries on in much the same weather, with rather fewer "
+     "people in it than the first one had."),
+]
+
+
+def build_scanned_pdf(path, *, pages=SCAN_PAGES, blank: bool = False, dpi: int = 200):
+    """A PDF that is only pictures — a real scan, not a stand-in.
+
+    Text is laid out, rendered to a bitmap, and that bitmap becomes the page, so
+    there is no text layer for pdf_ingest to find and tesseract has something it
+    can genuinely read. ``blank=True`` produces pages with nothing on them, for
+    the "OCR came back empty" path.
+    """
+    import pymupdf
+
+    src = pymupdf.open()
+    for heading, body in pages:
+        page = src.new_page()
+        if blank:
+            continue
+        y = 100
+        if heading:
+            page.insert_text((72, y), heading, fontsize=20)
+            y += 40
+        page.insert_textbox(pymupdf.Rect(72, y, 520, y + 300), body, fontsize=14)
+
+    scan = pymupdf.open()
+    for i in range(src.page_count):
+        pix = src[i].get_pixmap(dpi=dpi)
+        page = scan.new_page(width=pix.width * 72 / dpi, height=pix.height * 72 / dpi)
+        page.insert_image(page.rect, pixmap=pix)
+    scan.save(path)
+    src.close()
+    scan.close()
+    return path

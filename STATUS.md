@@ -1,12 +1,61 @@
 # PROSECAST — STATUS
 
 **Status:** ACTIVE — **Phase E (UI-first): E1 reader, E4 config/probes/Setup,
-E2.1/E2.2/E2.3 ingest (any format, mode picker, PDF chapter review) all shipped.
-No terminal step left between a file and a book.** Core goal met (EPUB +
+E2.1–E2.4 ingest (any format, mode picker, PDF chapter review, OCR for scans)
+all shipped. No terminal step left between a file and a book.** Core goal met (EPUB +
 PDF, novels + plays); any of the three formats can now be added from the UI.
-Next: E2.4 OCR, then E3 pipeline-in-UI per `docs/ROADMAP_PHASE_E_UI.md`.
+Next: E3 pipeline-in-UI per `docs/ROADMAP_PHASE_E_UI.md` (wants Claude Code on
+the Mac — it needs Gideon), then E5 README.
 Rulebook render + C4 still open.
 **Updated:** 2026-09-04
+
+## Session 2026-09-04 pt5 (Cowork) — E2.4: scanned PDFs read themselves
+
+A scan used to be a dead end with an apology. Now the wizard offers to read it,
+says roughly how long that will take, and does it as the ingest job's first
+stage. **Verified against real tesseract**, not a mock — 4.1.1 turned out to be
+installed in the Cowork VM, so the tests build their own scans and read them
+back for real (and skip cleanly where tesseract is absent, like the spaCy ones).
+
+- **`prosecast/ocr.py`** (new): `available()` / `install_hint()` / `version()`,
+  `cache_path()`, `ocr_page()`, `ocr_pdf()`. Per-page progress, cached beside the
+  upload as `<stem>_ocr.txt` and reused unless the PDF is newer.
+- **PyMuPDF rasterizes — no `pdftoppm`.** The roadmap called for poppler, but
+  E2.2 moved PDFs onto PyMuPDF specifically to drop that dependency and
+  `page.get_pixmap(dpi=300)` is one call. tesseract stays the only thing a user
+  installs. Deliberate deviation from the spec; noted in the roadmap doc.
+- **Reflow, not raw tesseract output.** tesseract breaks lines where the *image*
+  broke them. Left alone, every one of those becomes a TTS block boundary and
+  the narration stutters mid-sentence, so the OCR text goes through the same
+  `pdf_ingest.reflow()` the born-digital path uses. Chapter headings survive it:
+  an OCR'd "Chapter 1: The Locked Room" is picked up as a chapter title by
+  `book_parser`, not read aloud as body text — there is a test for that.
+- **A scan that OCRs to nothing says so** ("about 3 characters a page across 40
+  pages — too low-resolution, upside down, or a language tesseract doesn't
+  have") instead of quietly producing an empty book.
+- **`prepare()`** now reports `ocr_available` + `ocr_hint` for a scan;
+  **`run(..., ocr=True)`** makes OCR the first stage and records
+  `ingest.chapter_source = "ocr"`; **`POST /books/ingest`** takes `ocr` and only
+  refuses when it genuinely cannot proceed — with the install line when
+  tesseract is the thing missing.
+- **The wizard** shows the scan notice *above* the mode cards rather than
+  replacing them (a scan still needs to be read as a novel, a rulebook or a
+  play), estimates the time at ~2.5 s/page, says the cost is paid once, and
+  relabels the button "Read it with OCR". No chapter review — there is no text
+  to review until OCR has run.
+
+**Tests: 189 → 201.** `tests/test_ocr.py` (7) plus 5 in `test_ingest.py`;
+`tests/synthetic.py` gained `build_scanned_pdf()`, which lays out text, renders
+it to a bitmap and makes *that* the page — a real scan, not a stand-in. The
+headless wizard check now covers both scan states in both skins, including that
+a disabled button does not leak to the next file.
+
+**Machine-dependent fixture fields:** `ocr_available` / `ocr_hint` depend on the
+box, so the generator and the drift test both pin them to `"MACHINE"` — the same
+class of trap as the `config.json` hermeticity bug from 09-03.
+
+**Still Tyler's to verify:** a real scanned book, end to end, on the Mac. The VM
+proves the mechanism; only a genuine scan proves the quality.
 
 ## Session 2026-09-04 pt4 (Cowork) — E2.3: the ingest wizard
 

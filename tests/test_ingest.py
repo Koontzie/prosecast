@@ -19,7 +19,7 @@ import server  # noqa: E402
 from prosecast import ingest  # noqa: E402
 from prosecast import library as lib  # noqa: E402
 
-from synthetic import NOVEL, PLAY, RULEBOOK, build_pdf  # noqa: E402
+from synthetic import NOVEL, PLAY, RULEBOOK, build_pdf, build_scanned_pdf  # noqa: E402
 
 
 @pytest.fixture
@@ -196,11 +196,12 @@ def test_pdf_run_honours_the_reviewed_split(sandbox):
     assert not any("Story 2" in t for t in titles)
 
 
-def test_pdf_run_refuses_a_scan_with_a_usable_message(sandbox):
+def test_pdf_run_refuses_a_scan_unless_ocr_was_asked_for(sandbox):
     with pytest.raises(ingest.IngestError) as e:
         ingest.run(_pdf(sandbox, "scanned.pdf", scan=True), "narrator", title="Scanned")
     msg = str(e.value)
-    assert "scan" in msg and "OCR" in msg and "tesseract" in msg
+    assert "scan" in msg and "OCR" in msg
+    assert "again" in msg, "tell them what to do, not just what went wrong"
 
 
 # ── endpoints ────────────────────────────────────────────────────────────────
@@ -299,7 +300,11 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 def _upload_fixture(client, name, data):
     body = client.post("/books/upload", files={"file": (name, data)}).json()
-    body["upload_id"] = "FIXTURE"          # random per call; pinned in the file
+    body["upload_id"] = "FIXTURE"
+    # Machine-dependent: whether tesseract is on the box that generated this.
+    if body.get("ocr_available") is not None:
+        body["ocr_available"] = "MACHINE"
+        body["ocr_hint"] = "MACHINE"
     return body
 
 
@@ -323,3 +328,73 @@ def test_wizard_fixtures_still_match_this_endpoint(client, sandbox, fixture, nam
     live = _upload_fixture(client, name, data)
     saved = json.loads((FIXTURES / fixture).read_text())
     assert live == saved, f"{fixture} has drifted from /books/upload — regenerate it"
+
+
+# ── scans, once OCR is allowed (E2.4) ────────────────────────────────────────
+
+needs_tesseract = pytest.mark.skipif(not __import__("prosecast.ocr", fromlist=["ocr"]).available(),
+                                     reason="tesseract not installed")
+
+
+def test_prepare_says_whether_ocr_is_possible_here(sandbox):
+    from prosecast import ocr as ocr_mod
+    info = ingest.prepare(build_scanned_pdf(sandbox / "books" / "scan.pdf"))
+    assert info["is_scan"] is True
+    assert info["ocr_available"] == ocr_mod.available()
+    assert "install" in info["ocr_hint"].lower()
+
+
+@needs_tesseract
+def test_a_scan_becomes_a_book_when_ocr_is_asked_for(sandbox):
+    pdf = build_scanned_pdf(sandbox / "books" / "scan.pdf")
+    stages = []
+    out = ingest.run(pdf, "narrator", slug="scanned", title="Scanned", ocr=True,
+                     progress=lambda stage, detail="": stages.append((stage, detail)))
+    ir = json.loads(lib.ir_path("scanned").read_text())
+    text = " ".join(b["text"] for c in ir["chapters"] for b in c["blocks"])
+
+    assert out["blocks"] > 0
+    assert "wet stone" in text and "second page" in text
+    # the OCR'd heading is recognised as a heading, not read out as body text
+    assert ir["chapters"][0]["title"] == "Chapter 1: The Locked Room"
+    assert ir["ingest"]["chapter_source"] == "ocr", "provenance should record how it was read"
+    assert any("OCR page 1 of 2" in d for _, d in stages), "per-page progress reaches the UI"
+
+
+def test_ocr_failure_reaches_the_user_as_words(sandbox, monkeypatch):
+    from prosecast import ocr as ocr_mod
+    monkeypatch.setattr(ocr_mod, "available", lambda: False)
+    pdf = build_scanned_pdf(sandbox / "books" / "scan.pdf")
+    with pytest.raises(ingest.IngestError) as e:
+        ingest.run(pdf, "narrator", slug="scanned", title="Scanned", ocr=True)
+    assert "tesseract isn't installed" in str(e.value)
+
+
+@needs_tesseract
+def test_the_endpoint_runs_ocr_when_the_wizard_asks(client, sandbox):
+    pdf = build_scanned_pdf(sandbox / "gen_scan.pdf")
+    up = client.post("/books/upload",
+                     files={"file": ("Scanned.pdf", pdf.read_bytes())}).json()
+    assert up["is_scan"] is True and up["ocr_available"] is True
+
+    started = client.post("/books/ingest",
+                          json={"upload_id": up["upload_id"], "ocr": True}).json()
+    job = _wait(client, started["job_id"], timeout=180)
+    assert job["status"] == "done", job.get("error")
+    assert job["ocr"] is True
+    ir = json.loads(lib.ir_path(started["slug"]).read_text())
+    assert "wet stone" in json.dumps(ir)
+    assert ir["ingest"]["chapter_source"] == "ocr"
+
+
+def test_the_endpoint_explains_a_missing_tesseract(client, sandbox, monkeypatch):
+    from prosecast import ocr as ocr_mod
+    monkeypatch.setattr(ocr_mod, "available", lambda: False)
+    pdf = build_scanned_pdf(sandbox / "gen_scan.pdf")
+    up = client.post("/books/upload",
+                     files={"file": ("Scanned.pdf", pdf.read_bytes())}).json()
+    r = client.post("/books/ingest", json={"upload_id": up["upload_id"], "ocr": True})
+    assert r.status_code == 400
+    assert "tesseract" in r.json()["detail"]
+    assert "install" in r.json()["detail"].lower()
+    assert lib.list_book_slugs() == []

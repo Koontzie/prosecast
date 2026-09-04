@@ -59,6 +59,10 @@ def upload(client, name: str, data: bytes) -> dict:
     """An upload response with the random id pinned, so the file is stable."""
     body = client.post("/books/upload", files={"file": (name, data)}).json()
     body["upload_id"] = "FIXTURE"
+    # Machine-dependent: whether tesseract is on the box that generated this.
+    if body.get("ocr_available") is not None:
+        body["ocr_available"] = "MACHINE"
+        body["ocr_hint"] = "MACHINE"
     return body
 
 

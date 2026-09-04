@@ -188,6 +188,9 @@ def prepare(path, *, taken=None) -> dict:
         info["scan"] = scan
         info["is_scan"] = bool(scan["is_scan"])
         if info["is_scan"]:
+            from prosecast import ocr as ocr_mod
+            info["ocr_available"] = ocr_mod.available()
+            info["ocr_hint"] = ocr_mod.install_hint()
             info["guess_mode"] = "narrator"
             info["guess_reason"] = (
                 f"scanned PDF — {scan['avg_chars_per_page']:.0f} extractable chars/page "
@@ -212,11 +215,12 @@ def _noop(stage: str, detail: str = "") -> None:
 
 
 def run(path, mode="novel", *, slug=None, title=None, chapters=None,
-        keep_tables=False, narrator=None, progress=None) -> dict:
+        keep_tables=False, narrator=None, ocr=False, progress=None) -> dict:
     """Ingest a prepared file into library/<slug>/ir.json.
 
     ``chapters`` is the reviewed PDF chapter list (list of dicts with
-    page/title/skip); None means "use what detection found". ``progress`` is
+    page/title/skip); None means "use what detection found". ``ocr=True`` lets a
+    scanned PDF through by reading it with tesseract first. ``progress`` is
     called as progress(stage, detail) with the stages in STAGES.
     """
     say = progress or _noop
@@ -243,36 +247,50 @@ def run(path, mode="novel", *, slug=None, title=None, chapters=None,
         doc = pi.open_pdf(str(p))
         scan = pi.scan_report(doc)
         if scan["is_scan"]:
-            raise IngestError(
-                f"'{p.name}' is a scan ({scan['avg_chars_per_page']:.0f} extractable "
-                f"chars/page over {scan['pages']} pages) — it has no text layer to read. "
-                "OCR isn't wired into the app yet; run it through tesseract or "
-                "ocrmypdf first, then upload the result.")
-        rep = pi.repeated_lines(doc)
-        if mode == "play":
-            script_lines = _pdf_script_lines(doc, rep)
-            detection_source = "script"
-            say("extracting", f"{doc.page_count} pages, {len(script_lines)} lines")
-        else:
-            det = None
-            if chapters is None:
-                det = pi.detect_chapters(doc)
-                chapters, detection_source = det.chapters, det.source
-            else:
-                detection_source = "reviewed"
-            kept = [c for c in chapters
-                    if not (c.skip if hasattr(c, "skip") else c.get("skip"))]
-            say("extracting", f"{doc.page_count} pages, {len(kept)} chapters "
-                              f"({detection_source})")
-            result = pi.extract(doc, chapters, keep_tables=keep_tables, repeated=rep,
-                                progress=lambda done, total, t: say(
-                                    "extracting", f"chapter {done}/{total}: {t[:48]}"))
-            text_path = p.with_name(p.stem + "_extracted.txt")
-            text_path.write_text(result["text"], encoding="utf-8")
-            if not result["text"].strip():
+            if not ocr:
                 raise IngestError(
-                    f"Nothing readable came out of '{p.name}' — every page was empty "
-                    "or filtered. Check the chapter split, or try --keep-tables.")
+                    f"'{p.name}' is a scan ({scan['avg_chars_per_page']:.0f} extractable "
+                    f"chars/page over {scan['pages']} pages) — it has no text layer to read. "
+                    "Add it again and choose to read it with OCR.")
+            # OCR replaces the whole PDF path: there is no text layer to extract
+            # from and no bookmarks to split on, so from here it is a text file.
+            from prosecast import ocr as ocr_mod
+            say("extracting", f"reading {scan['pages']} scanned pages with OCR — the slow part")
+            try:
+                text_path = ocr_mod.ocr_pdf(
+                    p, progress=lambda done, total: say(
+                        "extracting", f"OCR page {done} of {total}"))
+            except ocr_mod.OCRError as e:
+                raise IngestError(str(e))
+            detection_source = "ocr"
+            fmt = ".txt"
+            say("extracting", f"OCR done — {len(text_path.read_text(encoding='utf-8')):,} characters")
+        else:
+            rep = pi.repeated_lines(doc)
+            if mode == "play":
+                script_lines = _pdf_script_lines(doc, rep)
+                detection_source = "script"
+                say("extracting", f"{doc.page_count} pages, {len(script_lines)} lines")
+            else:
+                det = None
+                if chapters is None:
+                    det = pi.detect_chapters(doc)
+                    chapters, detection_source = det.chapters, det.source
+                else:
+                    detection_source = "reviewed"
+                kept = [c for c in chapters
+                        if not (c.skip if hasattr(c, "skip") else c.get("skip"))]
+                say("extracting", f"{doc.page_count} pages, {len(kept)} chapters "
+                                  f"({detection_source})")
+                result = pi.extract(doc, chapters, keep_tables=keep_tables, repeated=rep,
+                                    progress=lambda done, total, t: say(
+                                        "extracting", f"chapter {done}/{total}: {t[:48]}"))
+                text_path = p.with_name(p.stem + "_extracted.txt")
+                text_path.write_text(result["text"], encoding="utf-8")
+                if not result["text"].strip():
+                    raise IngestError(
+                        f"Nothing readable came out of '{p.name}' — every page was empty "
+                        "or filtered. Check the chapter split, or try --keep-tables.")
 
     # ── chapters ──
     say("chapters", "splitting into chapters")

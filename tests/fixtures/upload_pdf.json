@@ -44,5 +44,7 @@
     "repeated_lines": [
       "unless they had to."
     ]
-  }
+  },
+  "ocr_available": null,
+  "ocr_hint": null
 }

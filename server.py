@@ -334,6 +334,9 @@ async def upload_book(file: UploadFile = File(...)):
         "is_scan": info["is_scan"],
         "scan": info["scan"],
         "detection": info["detection"],
+        # only set for a scan: can this machine OCR it, and if not, how to fix that
+        "ocr_available": info.get("ocr_available"),
+        "ocr_hint": info.get("ocr_hint"),
     }
 
 
@@ -343,10 +346,11 @@ class IngestBody(BaseModel):
     title: str | None = None
     chapters: list | None = None     # reviewed PDF split (page/title/skip)
     keep_tables: bool = False
+    ocr: bool = False                # read a scanned PDF with tesseract first
 
 
 def _run_ingest_job(job_id: str, info: dict, mode: str, title: str,
-                    chapters, keep_tables: bool) -> None:
+                    chapters, keep_tables: bool, ocr: bool = False) -> None:
     """Background thread target. Deliberately NOT on the render queue: ingest is
     CPU-bound and GPU-free, and a new upload must not sit behind an overnight
     book render."""
@@ -361,7 +365,7 @@ def _run_ingest_job(job_id: str, info: dict, mode: str, title: str,
 
     try:
         res = ingest_mod.run(info["path"], mode, slug=job["book_slug"], title=title,
-                             chapters=chapters, keep_tables=keep_tables,
+                             chapters=chapters, keep_tables=keep_tables, ocr=ocr,
                              progress=progress)
         with _jobs_lock:
             job.update(status="done", progress=len(ingest_mod.STAGES), result=res)
@@ -387,11 +391,18 @@ def ingest_book(body: IngestBody):
                             detail=f"Unknown mode '{mode}' — pick one of "
                                    f"{', '.join(ingest_mod.MODES)}.")
     if info["is_scan"]:
-        raise HTTPException(
-            status_code=400,
-            detail=f"'{info['filename']}' is a scan with no text layer. OCR isn't "
-                   "wired into the app yet — run it through tesseract or ocrmypdf "
-                   "first, then add the result.")
+        # A scan is only readable if the user asked for OCR and tesseract is here.
+        from prosecast import ocr as ocr_mod
+        if not body.ocr:
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{info['filename']}' is a scan with no text layer. Add it again "
+                       "and choose to read it with OCR.")
+        if not ocr_mod.available():
+            raise HTTPException(
+                status_code=400,
+                detail=f"'{info['filename']}' needs OCR, but tesseract isn't installed. "
+                       f"{ocr_mod.install_hint()} — then add the file again.")
 
     title = (body.title or info["title"]).strip() or info["title"]
     slug = ingest_mod.slug_for(title)
@@ -402,12 +413,14 @@ def ingest_book(body: IngestBody):
     job_id = uuid.uuid4().hex[:10]
     _render_jobs[job_id] = {
         "job_id": job_id, "kind": "ingest", "book_slug": slug, "mode": mode,
+        "ocr": body.ocr,
         "status": "running", "progress": 0, "total": len(ingest_mod.STAGES),
         "stage": "queued", "detail": f"reading {info['filename']}",
         "error": None, "result": None,
     }
     threading.Thread(target=_run_ingest_job, daemon=True, name=f"ingest-{slug}",
-                     args=(job_id, info, mode, title, chapters, body.keep_tables)).start()
+                     args=(job_id, info, mode, title, chapters, body.keep_tables,
+                           body.ocr)).start()
     return {"job_id": job_id, "slug": slug, "mode": mode, "title": title}
 
 
