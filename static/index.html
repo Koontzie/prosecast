@@ -761,6 +761,14 @@
       display: none;
     }
     #upload-error.visible { display: block; }
+    #upload-note {
+      margin: 0 12px 8px;
+      padding: 8px 10px;
+      background: #16161f; border: 1px solid #2e2e3e; border-radius: 5px;
+      font-size: .76rem; color: #8a8a9a; line-height: 1.4;
+      display: none;
+    }
+    #upload-note.visible { display: block; }
     #add-book-btn .spinner {
       width: 12px; height: 12px; border: 2px solid #555;
       border-top-color: #7c6dfa; border-radius: 50%;
@@ -937,6 +945,7 @@ html[data-theme="onair"] {
 [data-theme="onair"] #add-book-btn:hover { border-color: var(--oa-gold-dim); color: var(--oa-gold); background: var(--oa-gold-bg); }
 [data-theme="onair"] #add-book-btn .spinner { border-color: var(--oa-line2); border-top-color: var(--oa-gold); }
 [data-theme="onair"] #upload-error { background: var(--oa-red-bg); border-color: #5c2a1e; color: var(--oa-red); }
+[data-theme="onair"] #upload-note { background: var(--oa-bg2); border-color: var(--oa-line2); color: var(--oa-mut); }
 
 /* ── chapter list ── */
 [data-theme="onair"] .book-title { color: var(--oa-cream); font-weight: 600; letter-spacing: .01em; }
@@ -1254,8 +1263,9 @@ html[data-theme="onair"] {
     <p style="padding:16px;color:#444;font-size:.8rem;">Loading books…</p>
   </div>
   <div id="upload-error"></div>
-  <input id="epub-file-input" type="file" accept=".epub" style="display:none">
-  <button id="add-book-btn" onclick="triggerEpubPicker()" title="Upload an EPUB to process">
+  <div id="upload-note"></div>
+  <input id="epub-file-input" type="file" accept=".epub,.txt,.pdf" style="display:none">
+  <button id="add-book-btn" onclick="triggerEpubPicker()" title="Add a book — EPUB, TXT or PDF">
     <span id="add-book-label">+ Add Book</span>
   </button>
 </aside>
@@ -3119,11 +3129,19 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closePanel(); closeVoicePanel(); closeCastingModal(); closeReaderPopup(); }
 });
 
-// ── EPUB upload ───────────────────────────────────────────────────────────
+// ── Add Book: upload → inspect → ingest (E2.1) ────────────────────────────
 const epubFileInput = document.getElementById('epub-file-input');
 const addBookBtn    = document.getElementById('add-book-btn');
 const addBookLabel  = document.getElementById('add-book-label');
 const uploadErrorEl = document.getElementById('upload-error');
+const uploadNoteEl  = document.getElementById('upload-note');
+
+// How each ingest mode reads, in the user's words (E2.0's three cards).
+const MODE_LABEL = {
+  novel:    'a novel, many voices',
+  narrator: 'a single narrator',
+  play:     'a play, one voice per character',
+};
 
 function showUploadError(msg) {
   uploadErrorEl.textContent = msg;
@@ -3133,9 +3151,53 @@ function clearUploadError() {
   uploadErrorEl.classList.remove('visible');
   uploadErrorEl.textContent = '';
 }
+function showUploadNote(msg) {
+  uploadNoteEl.textContent = msg;
+  uploadNoteEl.classList.add('visible');
+}
+function clearUploadNote() {
+  uploadNoteEl.classList.remove('visible');
+  uploadNoteEl.textContent = '';
+}
+
+function setAddBookLabel(text) {
+  addBookLabel.innerHTML = `<span class="spinner"></span> ${text}`;
+}
+function resetAddBook() {
+  addBookBtn.disabled = false;
+  addBookLabel.textContent = '+ Add Book';
+}
+
+async function postJSON(url, body) {
+  const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'},
+                              body: JSON.stringify(body)});
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({detail: `HTTP ${r.status}`}));
+    throw new Error(err.detail || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
+// Ingest jobs live in the same job table as renders, so /render_status serves
+// both; an ingest job carries kind:'ingest' plus stage + detail.
+function pollIngest(jobId, onTick) {
+  return new Promise((resolve, reject) => {
+    const tick = async () => {
+      try {
+        const s = await fetchJSON(`/render_status/${jobId}`);
+        if (s.status === 'error') return reject(new Error(s.error || 'Ingest failed'));
+        if (s.status === 'done') return resolve(s);
+        if (onTick) onTick(s);
+        setTimeout(tick, 500);
+      } catch (e) { reject(e); }
+    };
+    tick();
+  });
+}
 
 function triggerEpubPicker() {
   clearUploadError();
+  clearUploadNote();
   epubFileInput.value = '';
   epubFileInput.click();
 }
@@ -3146,41 +3208,49 @@ epubFileInput.addEventListener('change', async () => {
   if (!file) return;
 
   clearUploadError();
+  clearUploadNote();
   addBookBtn.disabled = true;
-  addBookLabel.innerHTML = '<span class="spinner"></span> Processing…';
+  setAddBookLabel('Uploading…');
 
   try {
-    console.log('[upload] building FormData and sending POST /books/upload');
+    // Step 1 — save + inspect. The server tells us what it thinks this is.
     const form = new FormData();
     form.append('file', file);
-
     const r = await fetch('/books/upload', {method: 'POST', body: form});
     console.log('[upload] response status:', r.status);
-
     if (!r.ok) {
       const err = await r.json().catch(() => ({detail: `HTTP ${r.status}`}));
-      console.error('[upload] server error:', err);
       throw new Error(err.detail || `HTTP ${r.status}`);
     }
+    const up = await r.json();
+    console.log('[upload] inspected:', up);
 
-    const data = await r.json();
-    console.log('[upload] success:', data);
+    // Step 2 — ingest in the guessed mode. The mode picker and the PDF
+    // chapter-split review are E2.3; until then the guess is accepted as-is
+    // and stated plainly below the book list so it is never a silent choice.
+    setAddBookLabel('Reading…');
+    const started = await postJSON('/books/ingest', {upload_id: up.upload_id});
+    console.log('[upload] ingest job:', started);
 
-    console.log('[upload] refreshing book list');
+    // Step 3 — poll. Stages: extracting → chapters → attributing → done.
+    const job = await pollIngest(started.job_id, s => {
+      setAddBookLabel(s.detail ? `${s.stage}: ${s.detail}`.slice(0, 42) : `${s.stage}…`);
+    });
+    console.log('[upload] ingest finished:', job);
+
     const books = await fetchJSON('/books');
     state.books = books;
     renderBookList(books);
+    resetAddBook();
+    showUploadNote(`Added “${started.title}” — read as ${MODE_LABEL[started.mode] || started.mode}.`
+                   + ' Add the file again to read it a different way.');
 
-    addBookBtn.disabled = false;
-    addBookLabel.textContent = '+ Add Book';
-
-    console.log('[upload] loading book slug:', data.slug);
-    await loadBook(data.slug);
+    console.log('[upload] loading book slug:', started.slug);
+    await loadBook(started.slug);
   } catch (e) {
     console.error('[upload] caught error:', e);
-    addBookBtn.disabled = false;
-    addBookLabel.textContent = '+ Add Book';
-    showUploadError(`Upload failed: ${e.message}`);
+    resetAddBook();
+    showUploadError(`Couldn’t add that book: ${e.message}`);
   }
 });
 

@@ -4,7 +4,10 @@ ProseCast — Phase 3a/3b/3c local web server
 Endpoints:
   GET  /                                        → index.html UI
   GET  /books                                   → list of processed books (library/<slug>/ir.json)
-  POST /books/upload                            → upload an EPUB, run pipeline, return slug
+  POST /books/upload                            → save an .epub/.txt/.pdf, report format +
+                                                  mode guess + PDF chapter split (no ingest)
+  POST /books/ingest                            → ingest an upload in a mode (novel/narrator/
+                                                  play) on its own thread; returns a job_id
   GET  /chapters/{book_slug}                    → chapter titles + block counts + audio availability
   GET  /ir/{book_slug}                          → full IR JSON
   GET  /ir/{book_slug}/characters               → speaking characters for this book
@@ -43,6 +46,7 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from prosecast import ingest as ingest_mod
 from prosecast import library as lib
 
 app = FastAPI(title="ProseCast")
@@ -274,59 +278,137 @@ def list_books():
     return books
 
 
-# ── POST /books/upload ────────────────────────────────────────────────────────
+# ── POST /books/upload → inspect; POST /books/ingest → do it (E2.1) ──────────
 
-BOOKS_DIR = Path(__file__).parent / "books"
+BOOKS_DIR = ingest_mod.BOOKS_DIR          # same path as before; ingest owns it now
+
+_uploads: dict = {}                       # upload_id → prepare() info
+_UPLOADS_KEPT = 40                        # bound the dict; uploads are cheap to redo
 
 
 @app.post("/books/upload")
 async def upload_book(file: UploadFile = File(...)):
-    """Accept an EPUB upload, run it through the parse→IR pipeline, return the slug.
+    """Save an uploaded book and report what it looks like. Does NOT ingest.
 
-    The file is saved to books/ then processed.  Raises 400 on non-EPUB input
-    and 500 if pipeline fails.  Does NOT render audio — that is triggered
-    separately by the client via POST /render/{slug}/{chapter_index}.
+    Two-step on purpose: ingesting a Parade-sized EPUB inside the request
+    thread takes long enough to trip proxies, and the wizard needs to show the
+    mode guess (and, for a PDF, the detected chapter split) before anything is
+    committed. Follow up with POST /books/ingest, then poll /render_status.
     """
-    if not file.filename or not file.filename.lower().endswith(".epub"):
-        raise HTTPException(status_code=400, detail="Only .epub files are accepted")
+    name = file.filename or ""
+    ext = Path(name).suffix.lower()
+    if ext not in ingest_mod.SUPPORTED:
+        raise HTTPException(
+            status_code=400,
+            detail=f"ProseCast reads {', '.join(ingest_mod.SUPPORTED)} — "
+                   f"'{name or 'that file'}' is {ext or 'missing an extension'}.")
 
-    BOOKS_DIR.mkdir(exist_ok=True)
-
-    # Save the uploaded file
-    safe_name = re.sub(r"[^\w\-.]", "_", file.filename)
-    book_path = BOOKS_DIR / safe_name
+    dest = ingest_mod.unique_upload_path(name, BOOKS_DIR)
     try:
-        with open(book_path, "wb") as f:
+        with open(dest, "wb") as f:
             shutil.copyfileobj(file.file, f)
     finally:
         await file.close()
 
-    # Derive slug the same way main.py does
-    book_title = book_path.stem.replace("_", " ").title()
-    book_slug = re.sub(r"[^\w]", "_", book_title.lower())[:30]
-    lib.ensure_book_dir(book_slug)
-    ir_path = lib.ir_path(book_slug)
+    try:
+        info = ingest_mod.prepare(dest)
+    except ingest_mod.IngestError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not read '{dest.name}': {e}")
+
+    upload_id = uuid.uuid4().hex[:10]
+    _uploads[upload_id] = info
+    for stale in list(_uploads)[:-_UPLOADS_KEPT]:
+        _uploads.pop(stale, None)
+
+    return {
+        "upload_id": upload_id,
+        "filename": info["filename"],
+        "format": info["format"],
+        "title": info["title"],
+        "slug": info["slug"],
+        "guess_mode": info["guess_mode"],
+        "guess_reason": info["guess_reason"],
+        "modes": list(ingest_mod.MODES),
+        "is_scan": info["is_scan"],
+        "scan": info["scan"],
+        "detection": info["detection"],
+    }
+
+
+class IngestBody(BaseModel):
+    upload_id: str
+    mode: str | None = None          # None → whatever prepare() guessed
+    title: str | None = None
+    chapters: list | None = None     # reviewed PDF split (page/title/skip)
+    keep_tables: bool = False
+
+
+def _run_ingest_job(job_id: str, info: dict, mode: str, title: str,
+                    chapters, keep_tables: bool) -> None:
+    """Background thread target. Deliberately NOT on the render queue: ingest is
+    CPU-bound and GPU-free, and a new upload must not sit behind an overnight
+    book render."""
+    job = _render_jobs[job_id]
+
+    def progress(stage: str, detail: str = "") -> None:
+        with _jobs_lock:
+            job["stage"] = stage
+            job["detail"] = detail
+            if stage in ingest_mod.STAGES:
+                job["progress"] = ingest_mod.STAGES.index(stage) + 1
 
     try:
-        from prosecast.book_parser import parse_book
-        from prosecast.ir_generator import build_ir, save_ir
-
-        chapters = parse_book(str(book_path))
-        if not chapters:
-            raise ValueError("No chapters found — check EPUB structure")
-
-        ir = build_ir(book_title, chapters)
-        save_ir(ir, str(ir_path))
+        res = ingest_mod.run(info["path"], mode, slug=job["book_slug"], title=title,
+                             chapters=chapters, keep_tables=keep_tables,
+                             progress=progress)
+        with _jobs_lock:
+            job.update(status="done", progress=len(ingest_mod.STAGES), result=res)
+    except ingest_mod.IngestError as e:
+        with _jobs_lock:
+            job.update(status="error", error=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Pipeline failed: {e}")
+        with _jobs_lock:
+            job.update(status="error", error=f"Ingest failed: {e}")
 
-    saved = json.loads(ir_path.read_text())
-    return {
-        "slug": book_slug,
-        "title": book_title,
-        "chapters": len(saved.get("chapters", [])),
-        "unresolved": saved.get("unresolved_count", 0),
+
+@app.post("/books/ingest")
+def ingest_book(body: IngestBody):
+    """Ingest a previously uploaded file in the chosen mode. Returns a job_id
+    to poll at /render_status/{job_id} (kind: 'ingest', plus stage + detail)."""
+    info = _uploads.get(body.upload_id)
+    if not info:
+        raise HTTPException(status_code=404,
+                            detail="That upload has expired — add the file again.")
+    mode = body.mode or info["guess_mode"]
+    if mode not in ingest_mod.MODES:
+        raise HTTPException(status_code=400,
+                            detail=f"Unknown mode '{mode}' — pick one of "
+                                   f"{', '.join(ingest_mod.MODES)}.")
+    if info["is_scan"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{info['filename']}' is a scan with no text layer. OCR isn't "
+                   "wired into the app yet — run it through tesseract or ocrmypdf "
+                   "first, then add the result.")
+
+    title = (body.title or info["title"]).strip() or info["title"]
+    slug = ingest_mod.slug_for(title)
+    chapters = body.chapters
+    if chapters is None and info.get("detection"):
+        chapters = info["detection"]["chapters"]
+
+    job_id = uuid.uuid4().hex[:10]
+    _render_jobs[job_id] = {
+        "job_id": job_id, "kind": "ingest", "book_slug": slug, "mode": mode,
+        "status": "running", "progress": 0, "total": len(ingest_mod.STAGES),
+        "stage": "queued", "detail": f"reading {info['filename']}",
+        "error": None, "result": None,
     }
+    threading.Thread(target=_run_ingest_job, daemon=True, name=f"ingest-{slug}",
+                     args=(job_id, info, mode, title, chapters, body.keep_tables)).start()
+    return {"job_id": job_id, "slug": slug, "mode": mode, "title": title}
 
 
 # ── /ir/{book_slug}/characters ───────────────────────────────────────────────

@@ -3,70 +3,40 @@
 then merge consecutive blocks into ~900-char narration chunks so scare-quoted
 words don't render as isolated TTS fragments. Pass --no-merge to skip merging.
 
+Thin CLI over prosecast.narrator_flatten (the ingest job calls the module).
+
 For nonfiction/rulebook listening where dialogue attribution is irrelevant.
 Run AFTER IR generation, BEFORE rendering:
 
-  .venv/bin/python scripts/flatten_to_narrator.py <slug-or-prefix>
+  .venv/bin/python scripts/flatten_to_narrator.py <slug-or-prefix> [--no-merge]
 
 Idempotent. Rewrites ir.json in place (backs up to ir.json.pre-flatten once).
 """
-import json, shutil, sys
+import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from prosecast import library
+
+from prosecast import library                 # noqa: E402
+from prosecast import narrator_flatten        # noqa: E402
 
 
 def main():
-    if len(sys.argv) != 2:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    merge = "--no-merge" not in sys.argv
+    if len(args) != 1:
         slugs = library.list_book_slugs()
-        sys.exit(f"usage: flatten_to_narrator.py <slug>\navailable: {slugs}")
-    want = sys.argv[1]
+        sys.exit(f"usage: flatten_to_narrator.py <slug> [--no-merge]\navailable: {slugs}")
+    want = args[0]
     matches = [s for s in library.list_book_slugs() if want in s]
     if len(matches) != 1:
         sys.exit(f"need exactly one slug match for '{want}', got: {matches}")
-    slug = matches[0]
-    ir_file = library.ir_path(slug)
-    ir = json.load(open(ir_file))
 
-    backup = ir_file.with_suffix('.json.pre-flatten')
-    if not backup.exists():
-        shutil.copy2(ir_file, backup)
-
-    changed = 0
-    for ch in ir['chapters']:
-        for b in ch['blocks']:
-            if b.get('speaker') != 'NARRATOR' or b.get('unresolved'):
-                changed += 1
-            b['speaker'] = 'NARRATOR'
-            b['unresolved'] = False
-            b['confidence'] = 1.0
-            b['attribution_method'] = 'single_narrator'
-    ir['characters'] = []
-    ir['unresolved_count'] = 0
-
-    TARGET = 900
-    merged_from = sum(len(c['blocks']) for c in ir['chapters'])
-    if '--no-merge' not in sys.argv:
-        for ch in ir['chapters']:
-            out = []
-            for b in ch['blocks']:
-                t = (b.get('text') or '').strip()
-                if not t:
-                    continue
-                if out and len(out[-1]['text']) + len(t) + 1 <= TARGET:
-                    out[-1]['text'] = out[-1]['text'] + ' ' + t
-                else:
-                    b['text'] = t
-                    b['type'] = 'narration'
-                    out.append(b)
-            ch['blocks'] = out
-
-    json.dump(ir, open(ir_file, 'w'), indent=2, ensure_ascii=False)
-    total = sum(len(c['blocks']) for c in ir['chapters'])
-    print(f"{slug}: {changed} reassigned to NARRATOR; merged {merged_from} -> "
-          f"{total} blocks across {len(ir['chapters'])} chapters. Backup at {backup.name}.")
+    st = narrator_flatten.flatten_book(matches[0], merge=merge)
+    print(f"{st['slug']}: {st['reassigned']} reassigned to NARRATOR; merged "
+          f"{st['blocks_before']} -> {st['blocks_after']} blocks across "
+          f"{st['chapters']} chapters. Backup at {st['backup']}.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

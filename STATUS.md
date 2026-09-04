@@ -1,10 +1,69 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E (UI-first): E1 reader view + E4 (config, probes,
-Setup page) shipped 2026-09-03.** Core goal met (EPUB + PDF, novels + plays).
-Next: Tyler smoke-tests Setup, commits; then E2 ingest wizard per
+**Status:** ACTIVE — **Phase E (UI-first): E1 reader, E4 config/probes/Setup,
+E2.2 PDF ingest and E2.1 upload-as-a-job all shipped.** Core goal met (EPUB +
+PDF, novels + plays); any of the three formats can now be added from the UI.
+Next: E2.3 ingest wizard (mode picker + PDF chapter-split review) per
 `docs/ROADMAP_PHASE_E_UI.md`. Rulebook render + C4 still open.
-**Updated:** 2026-09-03
+**Updated:** 2026-09-04
+
+## Session 2026-09-04 pt2 (Cowork) — E2.1 rebuilt from spec + shipped with a UI bridge
+
+The 09-04 morning session built E2.1 in a cloud container and never committed
+it; that container was gone, and the Mac had none of it (confirmed: no
+`prosecast/ingest.py`, 146 tests). Rebuilt from `docs/ROADMAP_PHASE_E_UI.md`
+§E2.0/E2.1 + the handoff's notes, and this time shipped **with** the UI half so
+`+ Add Book` never had a broken window.
+
+- **`prosecast/play_parser.py`** + **`prosecast/narrator_flatten.py`** (new):
+  the guts of `scripts/play_to_ir.py` / `scripts/flatten_to_narrator.py` lifted
+  into importable modules; the scripts are thin CLIs over them, same flags,
+  same stderr summary. **Verified behaviour-identical against the originals at
+  `13877b2`**: play IR byte-identical on She Kills Monsters; flatten identical
+  (IR + stats) on sample, run sheet, She Kills Monsters, the Carl rulebook and
+  Brigands. Two changes on the way over: both now write through
+  `lib.write_json_atomic()`, and `flatten_to_narrator.py --no-merge` actually
+  works (the old arg check rejected any second argument, so the documented flag
+  could never be passed).
+- **`prosecast/ingest.py`** (new): `prepare(path)` → format gate, scan report,
+  PDF chapter detection, mode guess (+ the reason, in words, for the wizard);
+  `run(...)` → text → IR → `library/<slug>/ir.json`, calling
+  `progress(stage, detail)` through `extracting → chapters → attributing →
+  done`. Modes: `novel` (today's path), `narrator` (flatten + ~900-char merge),
+  `play` (SPEAKER. labels). Provenance in `ir["ingest"]`. `slug_for()` and
+  `unique_upload_path()` never overwrite an existing book or upload.
+- **Mode guess:** EPUB → novel; anything with ≥8 `SPEAKER.` labels on ≥5% of
+  lines → play; otherwise single narrator. Calibrated on the real corpus
+  (She Kills Monsters 41.5% of lines, Moby Dick 0.8%, everything else 0.0%), so
+  a novel's quoted dialogue can't be mistaken for a script.
+- **`server.py`:** `POST /books/upload` now saves + inspects and returns
+  `{upload_id, format, title, slug, guess_mode, guess_reason, detection, …}` —
+  **it no longer ingests**. `POST /books/ingest {upload_id, mode?, title?,
+  chapters?, keep_tables?}` runs the ingest on its own daemon thread (NOT the
+  render queue — ingest is CPU-bound and must not sit behind an overnight
+  render) and returns a `job_id` to poll at `/render_status/{job_id}`
+  (`kind: "ingest"` + `stage` + `detail`). Scans are refused at the endpoint
+  with the OCR message, not as a failed job.
+- **UI bridge (not the wizard):** the file picker takes `.epub/.txt/.pdf`; the
+  handler does upload → ingest with the guessed mode → poll (button shows the
+  live stage) → open the book, and then states the choice plainly under the
+  book list: *"Added 'X' — read as a single narrator. Add the file again to read
+  it a different way."* The mode picker and the PDF chapter-split review screen
+  are still E2.3; this keeps the button honest until they exist.
+- **Tests:** `tests/test_ingest.py`, 26 new (naming/collisions, format gate,
+  mode guessing incl. the novel-vs-script case, PDF detection + reviewed
+  edits + scan refusal, the three modes, provenance, stage order, both
+  endpoints end-to-end, and a failing ingest reporting its reason not a
+  traceback). PDFs are built in-test with PyMuPDF. **176 pass** with spaCy
+  installed (172 + 1 module-level skip without it).
+- **UI verified headless** in both skins with a mocked API (Playwright in the
+  cloud container): upload → ingest → poll → book opens, `upload_id` actually
+  carried, book list refreshed, button re-enabled and relabelled, server error
+  text surfaced verbatim, zero console errors.
+
+**Next:** E2.3 wizard (mode cards + PDF chapter-split review) — the server side
+is now waiting for it. Then E2.4 OCR (tesseract is installed on the Mac), E3
+pipeline-in-UI, E5 README.
 
 ## Session 2026-09-03 (Cowork) — Phase E kickoff: reader view + roadmap
 

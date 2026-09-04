@@ -108,7 +108,17 @@ lines in the first pages → Play; otherwise Single narrator. Mode saved into
 `ir.json` as `ingest.mode` (new, additive field) so re-ingest and the E3
 pipeline know what to run.
 
-### E2.1 Server: `POST /books/upload` becomes a job
+### E2.1 Server: `POST /books/upload` becomes a job — BUILT 2026-09-04
+**As built:** two endpoints, not one. `POST /books/upload` saves + inspects
+(returns `upload_id`, `guess_mode`, `guess_reason`, PDF `detection`) and does
+NOT ingest; `POST /books/ingest` takes `{upload_id, mode?, title?, chapters?,
+keep_tables?}` and returns a `job_id`. Ingest runs on **its own daemon thread**
+rather than the render queue (below), so a new upload never waits behind an
+overnight render. `prosecast/ingest.py` holds `prepare()`/`run()`; the play and
+flatten scripts became `prosecast/play_parser.py` + `prosecast/narrator_flatten.py`
+with the scripts as thin CLIs. Shipped with a UI bridge (upload → guessed mode →
+poll), which E2.3 replaces. Original plan below, kept for the reasoning:
+
 - Accept `.epub/.txt/.pdf`; reject the rest with the reason in `detail`.
 - Save to `books/`, then **enqueue** `ingest` on the existing worker (it is a
   GPU-free job, but sequential keeps the code simple — a second lightweight
