@@ -1,11 +1,55 @@
 # PROSECAST — STATUS
 
 **Status:** ACTIVE — **Phase E (UI-first): E1 reader, E4 config/probes/Setup,
-E2.2 PDF ingest and E2.1 upload-as-a-job all shipped.** Core goal met (EPUB +
+E2.2 PDF ingest and E2.1 upload-as-a-job all shipped; player/reader speaker
+labels fixed 09-04.** Core goal met (EPUB +
 PDF, novels + plays); any of the three formats can now be added from the UI.
 Next: E2.3 ingest wizard (mode picker + PDF chapter-split review) per
 `docs/ROADMAP_PHASE_E_UI.md`. Rulebook render + C4 still open.
 **Updated:** 2026-09-04
+
+## Session 2026-09-04 pt3 (Cowork) — the player says the right name again
+
+Two bugs an external review (Codex) surfaced, both confirmed against the code
+before touching anything, both small, both user-visible. Fixed with the guard
+that should have existed.
+
+- **`/timeline` lost `speaker` in `30740dc` (2026-08-04)** — dropped while
+  `text` was being un-truncated in the same edit. That endpoint is the *only*
+  source for the player's speaker label, the reader's per-paragraph label and
+  its dialogue styling (`b.speaker || 'NARRATOR'` in three places), so for a
+  month **every line in the reader rendered as NARRATOR** while the audio played
+  the right voices. One line restored, with the story in a comment above it.
+- **Apostrophe names killed buttons.** `esc()` escapes `& < > "` and the Voices
+  and Cast panels interpolate names into *single-quoted* inline handlers.
+  Verified in Chromium: `previewVoice('O'Brien')` is a syntax error and the
+  button is simply dead — every preview and delete control in those panels was
+  inert for any book with an O'Brien or a Ka'thul. HTML-escaping the quote does
+  **not** fix it (entities decode before the attribute parses as JS), so this
+  needed a JS-string escape: new **`escAttr()`** (backslash first, then HTML),
+  used at the four handlers that take a character name. The real cure is
+  `createElement` + `addEventListener` instead of interpolated handlers — noted
+  in the comment, deliberately not done today.
+- **`tests/test_timeline.py`** (new, 10 tests): the contract field by field —
+  speaker present and matching the IR block for block, unresolved blocks keeping
+  their own name for the correction UI, text *not* re-truncated, start times
+  accumulating from rendered durations, empty chapter, 404s. Confirmed the guard
+  works by removing the fix and watching 4 of them fail.
+
+**The part worth keeping.** The reader view *was* verified headless on 09-03 and
+still shipped this bug, because that check used a hand-written mock that still
+had `speaker` in it — the mock was more generous than the server. So:
+
+- `tests/fixtures/timeline_study_ch0.json` is generated **from the live
+  endpoint** by **`scripts/refresh_ui_fixtures.py`**, and
+  `test_the_ui_fixture_still_matches_this_endpoint` fails if the two drift.
+  Change an endpoint on purpose → re-run the script, don't hand-edit the JSON.
+- **`tests/ui/check_timeline_and_names.py`** is now *in the repo* instead of
+  living in a throwaway container: it serves `static/index.html`, feeds it that
+  fixture, and asserts the reader labels and the apostrophe handlers. Needs
+  playwright, not a project dependency, not collected by pytest.
+
+**186 tests pass** (176 + 10). Next: E2.3 ingest wizard.
 
 ## Session 2026-09-04 pt2 (Cowork) — E2.1 rebuilt from spec + shipped with a UI bridge
 

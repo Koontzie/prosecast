@@ -2506,7 +2506,7 @@ async function openVoicePanel(slug) {
       `<option value="${esc(v.id)}"${v.id === current ? ' selected' : ''}>${esc(v.name)}</option>`
     ).join('');
     const delBtn = char === 'NARRATOR' ? '' :
-      `<button class="voice-delete-btn" onclick="deleteCharacter('${esc(char)}')" title="Reassign all blocks to NARRATOR">✕</button>`;
+      `<button class="voice-delete-btn" onclick="deleteCharacter('${escAttr(char)}')" title="Reassign all blocks to NARRATOR">✕</button>`;
     return `
       <div class="voice-row" id="vrow-${esc(char)}">
         <span class="voice-char ${char === 'NARRATOR' ? 'spk-narrator' : ''}"
@@ -2517,7 +2517,7 @@ async function openVoicePanel(slug) {
           ${options}
         </select>
         <button class="voice-preview-btn" id="vprev-${esc(char)}"
-                onclick="previewVoice('${esc(char)}')" title="Preview voice">▶</button>
+                onclick="previewVoice('${escAttr(char)}')" title="Preview voice">▶</button>
         ${delBtn}
       </div>`;
   }).join('');
@@ -2740,7 +2740,7 @@ async function refreshCast(statusMsg) {
               onchange="castVoicePicks[this.dataset.vsel]=this.value">
         ${voiceOptions(pick, c.profile?.gender)}
       </select>
-      <button class="voice-preview-btn" onclick="castPreview('${esc(c.name)}', this)" title="Preview with this character's line">▶</button>
+      <button class="voice-preview-btn" onclick="castPreview('${escAttr(c.name)}', this)" title="Preview with this character's line">▶</button>
       <div class="cast-context" id="cast-ctx-${i}" style="display:none;"></div>
     </div>`;
   };
@@ -3121,7 +3121,23 @@ async function saveCorrection(segmentId) {
 }
 
 function esc(str) {
-  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// For a value going inside a SINGLE-QUOTED JS string in an inline handler:
+//   onclick="deleteCharacter('${escAttr(name)}')"
+// esc() is not enough there. HTML entities are decoded before the attribute is
+// parsed as JavaScript, so &#39; turns back into ' and still ends the string —
+// a character called O'Brien or Ka'thul breaks the button. Backslash-escape for
+// JS first, then HTML-escape what's left. (The real cure is building these rows
+// with createElement + addEventListener instead of interpolated handlers; that
+// is a bigger change than this bug deserves today.)
+function escAttr(str) {
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 // Close panels on Escape
@@ -3296,7 +3312,7 @@ function showCastingModal(slug, candidates, chapData) {
             ${options}
           </select>
           <button class="casting-preview-btn" id="cprev-${esc(char.name)}"
-                  onclick="previewCastingVoice('${esc(char.name)}')" title="Preview voice">▶</button>
+                  onclick="previewCastingVoice('${escAttr(char.name)}')" title="Preview voice">▶</button>
         </div>
       </div>`;
   }).join('');

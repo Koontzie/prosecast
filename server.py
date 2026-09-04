@@ -564,6 +564,11 @@ def get_timeline(book_slug: str, chapter_index: int):
             "start": round(cursor, 3),
             "duration": round(duration, 3),
             "type": block["type"],
+            # The player's speaker label, the reader's per-paragraph label and its
+            # dialogue styling all read this. Dropped by accident while
+            # un-truncating `text` (30740dc, 2026-08-04), which made every line render as
+            # NARRATOR. tests/test_timeline.py holds the line now.
+            "speaker": block.get("speaker", "NARRATOR"),
             # Full text — the player needs it to keep the follow-along display
             # moving through long blocks (was truncated to 120 chars, which
             # froze the display on the first sentence of every long block).

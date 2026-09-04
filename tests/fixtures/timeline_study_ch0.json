@@ -1,0 +1,46 @@
+{
+  "chapter_index": 0,
+  "title": "One",
+  "timeline": [
+    {
+      "block_index": 0,
+      "segment_id": "ch0_seg_0000",
+      "start": 0.0,
+      "duration": 0.0,
+      "type": "narration",
+      "speaker": "NARRATOR",
+      "text": "The morning light fell across the study.",
+      "unresolved": false
+    },
+    {
+      "block_index": 1,
+      "segment_id": "ch0_seg_0001",
+      "start": 0.0,
+      "duration": 0.0,
+      "type": "dialogue",
+      "speaker": "Darcy",
+      "text": "You have been avoiding me.",
+      "unresolved": false
+    },
+    {
+      "block_index": 2,
+      "segment_id": "ch0_seg_0002",
+      "start": 0.0,
+      "duration": 0.0,
+      "type": "dialogue",
+      "speaker": "Elizabeth",
+      "text": "It was a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife, and the neighbourhood took the matter as settled long before he had any say in it at all, which is how these things usually go. It was a truth universally acknowledged that a single man in possession of a good fortune must be in want of a wife, and the neighbourhood took the matter as settled long before he had any say in it at all, which is how these things usually go. ",
+      "unresolved": false
+    },
+    {
+      "block_index": 3,
+      "segment_id": "ch0_seg_0003",
+      "start": 0.0,
+      "duration": 0.0,
+      "type": "dialogue",
+      "speaker": "UNKNOWN",
+      "text": "Then I shall wait.",
+      "unresolved": true
+    }
+  ]
+}
