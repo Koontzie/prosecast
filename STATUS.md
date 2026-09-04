@@ -1,12 +1,66 @@
 # PROSECAST — STATUS
 
 **Status:** ACTIVE — **Phase E (UI-first): E1 reader, E4 config/probes/Setup,
-E2.2 PDF ingest and E2.1 upload-as-a-job all shipped; player/reader speaker
-labels fixed 09-04.** Core goal met (EPUB +
+E2.1/E2.2/E2.3 ingest (any format, mode picker, PDF chapter review) all shipped.
+No terminal step left between a file and a book.** Core goal met (EPUB +
 PDF, novels + plays); any of the three formats can now be added from the UI.
-Next: E2.3 ingest wizard (mode picker + PDF chapter-split review) per
-`docs/ROADMAP_PHASE_E_UI.md`. Rulebook render + C4 still open.
+Next: E2.4 OCR, then E3 pipeline-in-UI per `docs/ROADMAP_PHASE_E_UI.md`.
+Rulebook render + C4 still open.
 **Updated:** 2026-09-04
+
+## Session 2026-09-04 pt4 (Cowork) — E2.3: the ingest wizard
+
+Everything now goes through the UI. `+ Add Book` takes `.epub`, `.txt` or `.pdf`,
+asks the one question that matters, shows a PDF's detected chapter split for
+review, and reports the job's own stages while it runs. The E2.1 bridge is gone.
+
+- **Mode picker** (E2.0): three cards — Novel / story, Single narrator, Play /
+  script — pre-selected by the server's guess, with the guess **explaining
+  itself** in the card ("Suggested — no script labels found…"). Editable title.
+  The chosen mode is what lands in `ir["ingest"]["mode"]`.
+- **PDF chapter-split review** (the step that makes PDF upload honest): the
+  detected chapters as an editable list — title, start page, tick to include —
+  with `detection.note` ("found 15 bookmarks in the PDF") *and* a plain-words
+  trust line per source: bookmarks "usually right", printed TOC "page numbers
+  are estimated, give them a skim", headings "look for anything that is not
+  really a chapter", fallback "just a fixed page split". The reviewed list is
+  what `POST /books/ingest` receives — verified, not decoration.
+- **Scans** are refused in the wizard before any work, with the `ocrmypdf` /
+  `tesseract` line and "OCR from inside the app is coming" (E2.4).
+- **Progress** card polls the job's `stage`/`detail` with a bar; a server refusal
+  lands *in the modal* with the server's own words and the form comes back so you
+  can retry. Esc closes, but not mid-job.
+
+**Three bugs the headless check caught before Tyler ever saw them**, all mine,
+all from this hour:
+
+1. `.hidden` only ever had a rule for `.modal-overlay` — so the wizard's hidden
+   sections (chapter list, progress card, error box) **rendered anyway**. Scoped
+   `.ingest-modal .hidden { display: none }` added.
+2. A scanned PDF disabled *Add book* and the next file inherited it — the button
+   stayed dead. `openIngestWizard()` now resets the footer.
+3. The mode cards' title and blurb were inline spans, so they ran together on
+   one line instead of stacking.
+
+**And one correction to an earlier claim in this file:** "verified in both skins"
+has been wrong. **On Air is the default skin** (`localStorage['prosecast-theme']
+|| 'onair'`, read by an inline script at parse time), so setting `data-theme`
+after load did nothing and every "both skins" run was really two On Air runs.
+The harness now sets the theme via `add_init_script` *before* load and asserts
+which skin actually applied. Classic was genuinely unverified until now.
+
+- **`tests/ui/check_ingest_wizard.py`** (new, in the repo): 20 assertions per
+  skin, driving the real modal with fixtures generated from the real endpoints —
+  `upload_pdf.json`, `upload_play_txt.json`, `upload_scan_pdf.json`, all built by
+  `scripts/refresh_ui_fixtures.py`, all guarded against drift by
+  `tests/test_ingest.py`. Screenshots land in `tests/ui/` (gitignored).
+- **`tests/synthetic.py`** (new): the sample novel / play / rulebook text and the
+  synthetic-PDF builder, shared by the tests *and* the fixture generator. They
+  used to be near-copies, which is a drift bug waiting to happen when the whole
+  point is that the fixture matches the endpoint.
+
+**189 tests pass.** Next: E2.4 OCR (tesseract is on the Mac), then E3
+pipeline-in-UI — that one wants Claude Code on the Mac, since it needs Gideon.
 
 ## Session 2026-09-04 pt3 (Cowork) — the player says the right name again
 

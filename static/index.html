@@ -857,6 +857,96 @@
       padding: 9px 16px; border-radius: 7px; cursor: pointer; font-size: .82rem;
     }
     #cast-skip-btn:hover { color: #aaa; border-color: #555; }
+
+    /* ── Ingest wizard (E2.3) ── */
+    .ingest-modal { width: 680px; }
+    /* `.hidden` only had a rule for .modal-overlay, so every hidden section
+       in here (chapter list, progress card, error box) rendered anyway. */
+    .ingest-modal .hidden { display: none; }
+    .ingest-body { flex: 1; overflow-y: auto; padding: 16px 20px; }
+    .ingest-field { display: block; margin-bottom: 16px; }
+    .ingest-field > span {
+      display: block; font-size: .72rem; text-transform: uppercase;
+      letter-spacing: .06em; color: #555; margin-bottom: 5px;
+    }
+    #ingest-title {
+      width: 100%; background: #111; border: 1px solid #333; color: #e8e8e8;
+      padding: 7px 10px; border-radius: 6px; font-size: .88rem;
+    }
+    #ingest-title:focus { outline: none; border-color: #7c6dfa; }
+    .ingest-modes { display: flex; flex-direction: column; gap: 8px; }
+    .ingest-mode {
+      display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%;
+      background: #1e1e1e; border: 1px solid #2a2a2a; border-radius: 8px;
+      padding: 12px 14px; cursor: pointer; color: inherit; font: inherit;
+    }
+    .ingest-mode:hover { border-color: #3a3a3a; background: #222; }
+    .ingest-mode.selected { border-color: #7c6dfa; background: #1c1c2e; }
+    .ingest-mode-icon { font-size: 1.1rem; line-height: 1.3; flex-shrink: 0; }
+    .ingest-mode-title { display: block; font-size: .88rem; font-weight: 500; color: #e8e8e8; margin-bottom: 3px; }
+    .ingest-mode-blurb { display: block; font-size: .77rem; color: #6a6a6a; line-height: 1.45; }
+    .ingest-mode-why {
+      font-size: .74rem; color: #9585ff; margin-top: 6px; display: none; line-height: 1.4;
+    }
+    .ingest-mode.selected .ingest-mode-why { display: block; }
+    .ingest-chapters { margin-top: 18px; border-top: 1px solid #242424; padding-top: 14px; }
+    .ingest-chapters-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .ingest-chapters-head strong { font-size: .82rem; color: #e8e8e8; font-weight: 500; }
+    .ingest-chapters-head span { font-size: .75rem; color: #666; }
+    .ingest-detect-trust { font-size: .75rem; color: #6a6a6a; line-height: 1.45; margin-bottom: 10px; }
+    .ingest-chapter-rows {
+      max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+      padding-right: 4px;
+    }
+    .ingest-ch-row {
+      display: flex; align-items: center; gap: 8px;
+      background: #1a1a1a; border: 1px solid #242424; border-radius: 6px; padding: 5px 8px;
+    }
+    .ingest-ch-row.skipped { opacity: .45; }
+    .ingest-ch-row input[type="text"] {
+      flex: 1; background: transparent; border: none; color: #ccc; font-size: .8rem;
+      padding: 3px 4px; border-radius: 4px; min-width: 0;
+    }
+    .ingest-ch-row input[type="text"]:focus { outline: none; background: #111; color: #fff; }
+    .ingest-ch-page {
+      width: 62px; background: #111; border: 1px solid #2e2e2e; color: #888;
+      font-size: .75rem; padding: 3px 6px; border-radius: 4px; text-align: right;
+    }
+    .ingest-ch-page:focus { outline: none; border-color: #7c6dfa; color: #fff; }
+    .ingest-ch-row input[type="checkbox"] { accent-color: #7c6dfa; }
+    .ingest-ch-row label { font-size: .72rem; color: #555; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+    .ingest-hint { font-size: .74rem; color: #555; margin-top: 8px; line-height: 1.45; }
+    .ingest-scan {
+      background: #241a12; border: 1px solid #4a3520; border-radius: 8px;
+      padding: 14px 16px; font-size: .82rem; color: #d8a76a; line-height: 1.55;
+    }
+    .ingest-scan code { color: #e8c48f; font-size: .95em; }
+    .ingest-progress { padding: 22px 24px; }
+    .ingest-progress-stage { font-size: .9rem; color: #e8e8e8; margin-bottom: 5px; text-transform: capitalize; }
+    .ingest-progress-detail { font-size: .78rem; color: #666; min-height: 1.2em; }
+    .ingest-progress-bar {
+      height: 4px; background: #242424; border-radius: 2px; overflow: hidden; margin-top: 14px;
+    }
+    .ingest-progress-fill {
+      height: 100%; background: #7c6dfa; border-radius: 2px; width: 0;
+      transition: width .35s ease;
+    }
+    .ingest-error {
+      margin: 0 20px 12px; padding: 10px 12px;
+      background: #2a1515; border: 1px solid #5a2a2a; border-radius: 6px;
+      font-size: .78rem; color: #e07070; line-height: 1.5;
+    }
+    #ingest-go-btn {
+      flex: 1; background: #7c6dfa; border: none; color: #fff;
+      padding: 9px 0; border-radius: 7px; cursor: pointer; font-size: .88rem; font-weight: 500;
+    }
+    #ingest-go-btn:hover { background: #9585ff; }
+    #ingest-go-btn:disabled { background: #2a2a2a; color: #555; cursor: default; }
+    #ingest-cancel-btn {
+      background: none; border: 1px solid #333; color: #666;
+      padding: 9px 16px; border-radius: 7px; cursor: pointer; font-size: .82rem;
+    }
+    #ingest-cancel-btn:hover { color: #aaa; border-color: #555; }
   </style>
   <style id="theme-onair">
 /* embedded fonts — latin subsets, no network */
@@ -1228,6 +1318,30 @@ html[data-theme="onair"] {
 [data-theme="onair"] .casting-char-count { color: var(--oa-mut); font-family: var(--oa-mono); }
 [data-theme="onair"] .casting-char-sample { color: var(--oa-mut); }
 [data-theme="onair"] .casting-modal-footer { border-top-color: var(--oa-line); }
+[data-theme="onair"] .ingest-mode { background: var(--oa-bg2); border-color: var(--oa-line); }
+[data-theme="onair"] .ingest-mode:hover { border-color: var(--oa-line2); }
+[data-theme="onair"] .ingest-mode.selected { border-color: var(--oa-gold-dim); background: var(--oa-gold-bg); }
+[data-theme="onair"] .ingest-mode-title { color: var(--oa-cream); }
+[data-theme="onair"] .ingest-mode-blurb,
+[data-theme="onair"] .ingest-detect-trust,
+[data-theme="onair"] .ingest-hint { color: var(--oa-mut); }
+[data-theme="onair"] .ingest-mode-why { color: var(--oa-gold); }
+[data-theme="onair"] #ingest-title,
+[data-theme="onair"] .ingest-ch-page { background: var(--oa-bg); border-color: var(--oa-line2); color: var(--oa-cream); }
+[data-theme="onair"] #ingest-title:focus,
+[data-theme="onair"] .ingest-ch-page:focus { border-color: var(--oa-gold-dim); }
+[data-theme="onair"] .ingest-chapters { border-top-color: var(--oa-line); }
+[data-theme="onair"] .ingest-chapters-head strong { color: var(--oa-cream); }
+[data-theme="onair"] .ingest-ch-row { background: var(--oa-bg2); border-color: var(--oa-line); }
+[data-theme="onair"] .ingest-ch-row input[type="text"] { color: var(--oa-cream); }
+[data-theme="onair"] .ingest-ch-row input[type="checkbox"] { accent-color: var(--oa-gold); }
+[data-theme="onair"] .ingest-progress-stage { color: var(--oa-cream); }
+[data-theme="onair"] .ingest-progress-fill { background: var(--oa-gold); }
+[data-theme="onair"] .ingest-error { background: var(--oa-red-bg); border-color: #5c2a1e; color: var(--oa-red); }
+[data-theme="onair"] #ingest-go-btn { background: var(--oa-gold); color: var(--oa-bg); }
+[data-theme="onair"] #ingest-go-btn:hover { background: var(--oa-cream); }
+[data-theme="onair"] #ingest-go-btn:disabled { background: var(--oa-line); color: var(--oa-mut); }
+[data-theme="onair"] #ingest-cancel-btn { border-color: var(--oa-line2); color: var(--oa-mut); }
 [data-theme="onair"] #cast-skip-btn { border-color: var(--oa-line2); color: var(--oa-mut); }
 [data-theme="onair"] #cast-skip-btn:hover { color: var(--oa-cream2); border-color: var(--oa-mut); }
 
@@ -1265,7 +1379,7 @@ html[data-theme="onair"] {
   <div id="upload-error"></div>
   <div id="upload-note"></div>
   <input id="epub-file-input" type="file" accept=".epub,.txt,.pdf" style="display:none">
-  <button id="add-book-btn" onclick="triggerEpubPicker()" title="Add a book — EPUB, TXT or PDF">
+  <button id="add-book-btn" onclick="triggerBookPicker()" title="Add a book — EPUB, TXT or PDF">
     <span id="add-book-label">+ Add Book</span>
   </button>
 </aside>
@@ -1372,6 +1486,47 @@ html[data-theme="onair"] {
     <div class="casting-modal-footer">
       <button id="cast-save-btn" onclick="saveCastAndContinue()">Cast the book →</button>
       <button id="cast-skip-btn" onclick="skipCasting()">Skip for now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Ingest wizard: how should this book be read? (E2.3) ── -->
+<div id="ingest-modal-overlay" class="modal-overlay hidden">
+  <div class="casting-modal ingest-modal">
+    <div class="casting-modal-header">
+      <h2>How should this be read?</h2>
+      <p id="ingest-file-line"></p>
+    </div>
+
+    <div id="ingest-body" class="ingest-body">
+      <label class="ingest-field">
+        <span>Title</span>
+        <input id="ingest-title" type="text" spellcheck="false">
+      </label>
+      <div id="ingest-modes" class="ingest-modes"></div>
+      <div id="ingest-chapters" class="ingest-chapters hidden">
+        <div class="ingest-chapters-head">
+          <strong>Chapters</strong>
+          <span id="ingest-detect-note"></span>
+        </div>
+        <p id="ingest-detect-trust" class="ingest-detect-trust"></p>
+        <div id="ingest-chapter-rows" class="ingest-chapter-rows"></div>
+        <p class="ingest-hint">Untick anything that isn't part of the book — contents pages, copyright, an index.
+          Titles and start pages are editable.</p>
+      </div>
+    </div>
+
+    <div id="ingest-progress" class="ingest-progress hidden">
+      <div id="ingest-progress-stage" class="ingest-progress-stage"></div>
+      <div id="ingest-progress-detail" class="ingest-progress-detail"></div>
+      <div class="ingest-progress-bar"><div id="ingest-progress-fill" class="ingest-progress-fill"></div></div>
+    </div>
+
+    <div id="ingest-error" class="ingest-error hidden"></div>
+
+    <div class="casting-modal-footer">
+      <button id="ingest-go-btn" onclick="ingestConfirm()">Add book</button>
+      <button id="ingest-cancel-btn" onclick="closeIngestWizard()">Cancel</button>
     </div>
   </div>
 </div>
@@ -3142,23 +3297,46 @@ function escAttr(str) {
 
 // Close panels on Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closePanel(); closeVoicePanel(); closeCastingModal(); closeReaderPopup(); }
+  if (e.key === 'Escape') { closePanel(); closeVoicePanel(); closeCastingModal(); closeIngestWizard(); closeReaderPopup(); }
 });
 
-// ── Add Book: upload → inspect → ingest (E2.1) ────────────────────────────
-const epubFileInput = document.getElementById('epub-file-input');
+// ── Add Book: upload → wizard → ingest job (E2.1 server, E2.3 wizard) ───────
+const bookFileInput = document.getElementById('epub-file-input');
 const addBookBtn    = document.getElementById('add-book-btn');
 const addBookLabel  = document.getElementById('add-book-label');
 const uploadErrorEl = document.getElementById('upload-error');
 const uploadNoteEl  = document.getElementById('upload-note');
 
-// How each ingest mode reads, in the user's words (E2.0's three cards).
+// The three ways a book can be read. The server guesses one from the file; the
+// user decides. Whichever wins is stored in ir.json as ingest.mode.
+const INGEST_MODES = [
+  {id: 'novel', icon: '📖', title: 'Novel / story',
+   blurb: 'Many voices. Rules and local AI work out who speaks each line, and you cast them afterwards.'},
+  {id: 'narrator', icon: '📘', title: 'Single narrator',
+   blurb: 'One voice reads everything, tables and stat blocks skipped. Rulebooks, non-fiction, reference.'},
+  {id: 'play', icon: '🎭', title: 'Play / script',
+   blurb: 'SPEAKER. labels become characters; stage directions are read by the narrator.'},
+];
+
 const MODE_LABEL = {
   novel:    'a novel, many voices',
   narrator: 'a single narrator',
   play:     'a play, one voice per character',
 };
 
+// How far to trust a detected chapter split — in words, not a score. The user
+// is the one who knows what the book looks like; this just says where the
+// guess came from so they know how hard to look.
+const DETECT_TRUST = {
+  outline:  'These are the PDF’s own bookmarks, so they are usually right.',
+  toc:      'Read off the printed contents page. Page numbers are estimated from where those titles actually appear, so give them a skim.',
+  headings: 'Guessed from heading sizes, because this PDF has no bookmarks and no contents page. Look for anything that is not really a chapter.',
+  fallback: 'No chapter structure found at all, so this is just a fixed page split. Rename what you can and untick the rest.',
+};
+
+const ingestWiz = {upload: null, mode: null, running: false};
+
+// ── sidebar messages ──
 function showUploadError(msg) {
   uploadErrorEl.textContent = msg;
   uploadErrorEl.classList.add('visible');
@@ -3175,9 +3353,8 @@ function clearUploadNote() {
   uploadNoteEl.classList.remove('visible');
   uploadNoteEl.textContent = '';
 }
-
 function setAddBookLabel(text) {
-  addBookLabel.innerHTML = `<span class="spinner"></span> ${text}`;
+  addBookLabel.innerHTML = `<span class="spinner"></span> ${esc(text)}`;
 }
 function resetAddBook() {
   addBookBtn.disabled = false;
@@ -3194,15 +3371,209 @@ async function postJSON(url, body) {
   return r.json();
 }
 
-// Ingest jobs live in the same job table as renders, so /render_status serves
-// both; an ingest job carries kind:'ingest' plus stage + detail.
+// ── step 1: pick a file, upload it, see what the server makes of it ──
+function triggerBookPicker() {
+  clearUploadError();
+  clearUploadNote();
+  bookFileInput.value = '';
+  bookFileInput.click();
+}
+
+bookFileInput.addEventListener('change', async () => {
+  const file = bookFileInput.files[0];
+  if (!file) return;
+
+  clearUploadError();
+  clearUploadNote();
+  addBookBtn.disabled = true;
+  setAddBookLabel('Reading the file…');
+
+  try {
+    const form = new FormData();
+    form.append('file', file);
+    const r = await fetch('/books/upload', {method: 'POST', body: form});
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({detail: `HTTP ${r.status}`}));
+      throw new Error(err.detail || `HTTP ${r.status}`);
+    }
+    openIngestWizard(await r.json());
+  } catch (e) {
+    console.error('[upload]', e);
+    showUploadError(`Couldn’t read that file: ${e.message}`);
+  } finally {
+    resetAddBook();
+  }
+});
+
+// ── step 2: the wizard ──
+function openIngestWizard(up) {
+  ingestWiz.upload = up;
+  ingestWiz.mode = up.guess_mode;
+  ingestWiz.running = false;
+
+  document.getElementById('ingest-file-line').textContent =
+    `${up.filename} · ${up.format.replace('.', '').toUpperCase()}`;
+  document.getElementById('ingest-title').value = up.title || '';
+  document.getElementById('ingest-error').classList.add('hidden');
+  document.getElementById('ingest-progress').classList.add('hidden');
+  document.getElementById('ingest-body').classList.remove('hidden');
+  // renderIngestScan() disables this; the next file must not inherit that.
+  document.getElementById('ingest-go-btn').disabled = false;
+  document.getElementById('ingest-cancel-btn').disabled = false;
+
+  if (up.is_scan) {
+    renderIngestScan(up);
+  } else {
+    renderIngestModes();
+    renderIngestChapters();
+  }
+  document.getElementById('ingest-modal-overlay').classList.remove('hidden');
+  if (!up.is_scan) document.getElementById('ingest-title').focus();
+}
+
+function closeIngestWizard() {
+  if (ingestWiz.running) return;          // don't abandon a job mid-flight
+  document.getElementById('ingest-modal-overlay').classList.add('hidden');
+  ingestWiz.upload = null;
+}
+
+function renderIngestModes() {
+  const why = ingestWiz.upload.guess_reason || '';
+  document.getElementById('ingest-modes').innerHTML = INGEST_MODES.map(m => `
+    <button type="button" class="ingest-mode ${m.id === ingestWiz.mode ? 'selected' : ''}"
+            data-mode="${m.id}" onclick="selectIngestMode('${m.id}')">
+      <span class="ingest-mode-icon">${m.icon}</span>
+      <span>
+        <span class="ingest-mode-title">${esc(m.title)}</span>
+        <span class="ingest-mode-blurb">${esc(m.blurb)}</span>
+        ${m.id === ingestWiz.upload.guess_mode
+          ? `<span class="ingest-mode-why">Suggested — ${esc(why)}</span>` : ''}
+      </span>
+    </button>`).join('');
+}
+
+function selectIngestMode(id) {
+  ingestWiz.mode = id;
+  document.querySelectorAll('.ingest-mode').forEach(el =>
+    el.classList.toggle('selected', el.dataset.mode === id));
+}
+
+// PDFs only: the detected split, editable, with its provenance in plain words.
+function renderIngestChapters() {
+  const box = document.getElementById('ingest-chapters');
+  const det = ingestWiz.upload.detection;
+  if (!det || !det.chapters || !det.chapters.length) { box.classList.add('hidden'); return; }
+
+  document.getElementById('ingest-detect-note').textContent = det.note || '';
+  document.getElementById('ingest-detect-trust').textContent = DETECT_TRUST[det.source] || '';
+  document.getElementById('ingest-chapter-rows').innerHTML = det.chapters.map((c, i) => `
+    <div class="ingest-ch-row ${c.skip ? 'skipped' : ''}" id="ich-${i}">
+      <label><input type="checkbox" ${c.skip ? '' : 'checked'} onchange="toggleIngestChapter(${i}, this.checked)"></label>
+      <input type="text" value="${esc(c.title || '')}" aria-label="Chapter title">
+      <input type="number" class="ingest-ch-page" value="${c.page}" min="1" aria-label="Start page">
+    </div>`).join('');
+  box.classList.remove('hidden');
+}
+
+function toggleIngestChapter(i, keep) {
+  const row = document.getElementById(`ich-${i}`);
+  if (row) row.classList.toggle('skipped', !keep);
+}
+
+// Read the reviewed split back out of the DOM at confirm time.
+function collectIngestChapters() {
+  const det = ingestWiz.upload.detection;
+  if (!det || !det.chapters || !det.chapters.length) return null;
+  return det.chapters.map((c, i) => {
+    const row = document.getElementById(`ich-${i}`);
+    if (!row) return c;
+    return {
+      ...c,
+      title: row.querySelector('input[type="text"]').value.trim() || c.title,
+      page: parseInt(row.querySelector('.ingest-ch-page').value, 10) || c.page,
+      skip: !row.querySelector('input[type="checkbox"]').checked,
+    };
+  });
+}
+
+function renderIngestScan(up) {
+  const pages = up.scan ? up.scan.pages : 0;
+  document.getElementById('ingest-modes').innerHTML = `
+    <div class="ingest-scan">
+      <strong>This PDF is a scan.</strong> Its ${pages} page${pages === 1 ? '' : 's'} are pictures with
+      no text layer, so there is nothing to read yet. Run it through OCR first —
+      <code>ocrmypdf in.pdf out.pdf</code> or <code>tesseract</code> — then add the result.
+      OCR from inside the app is coming.
+    </div>`;
+  document.getElementById('ingest-chapters').classList.add('hidden');
+  document.getElementById('ingest-go-btn').disabled = true;
+}
+
+function showIngestError(msg) {
+  const el = document.getElementById('ingest-error');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+// ── step 3: ingest, with the job's own stages on screen ──
+async function ingestConfirm() {
+  if (!ingestWiz.upload || ingestWiz.running) return;
+  const goBtn = document.getElementById('ingest-go-btn');
+  const cancelBtn = document.getElementById('ingest-cancel-btn');
+
+  document.getElementById('ingest-error').classList.add('hidden');
+  ingestWiz.running = true;
+  goBtn.disabled = true;
+  cancelBtn.disabled = true;
+  document.getElementById('ingest-body').classList.add('hidden');
+  document.getElementById('ingest-progress').classList.remove('hidden');
+  setIngestProgress({stage: 'starting', detail: '', progress: 0, total: 4});
+
+  try {
+    const started = await postJSON('/books/ingest', {
+      upload_id: ingestWiz.upload.upload_id,
+      mode: ingestWiz.mode,
+      title: document.getElementById('ingest-title').value.trim() || ingestWiz.upload.title,
+      chapters: collectIngestChapters(),
+    });
+    await pollIngest(started.job_id, setIngestProgress);
+
+    ingestWiz.running = false;
+    document.getElementById('ingest-modal-overlay').classList.add('hidden');
+    const books = await fetchJSON('/books');
+    state.books = books;
+    renderBookList(books);
+    showUploadNote(`Added “${started.title}” — read as ${MODE_LABEL[started.mode] || started.mode}.`);
+    await loadBook(started.slug);
+  } catch (e) {
+    console.error('[ingest]', e);
+    ingestWiz.running = false;
+    document.getElementById('ingest-progress').classList.add('hidden');
+    document.getElementById('ingest-body').classList.remove('hidden');
+    showIngestError(e.message);
+  } finally {
+    ingestWiz.running = false;
+    goBtn.disabled = false;
+    cancelBtn.disabled = false;
+  }
+}
+
+function setIngestProgress(s) {
+  document.getElementById('ingest-progress-stage').textContent = s.stage || 'working';
+  document.getElementById('ingest-progress-detail').textContent = s.detail || '';
+  const pct = s.total ? Math.round(100 * (s.progress || 0) / s.total) : 0;
+  document.getElementById('ingest-progress-fill').style.width = `${pct}%`;
+}
+
+// Ingest jobs share the render job table, so /render_status serves both; an
+// ingest job carries kind:'ingest' plus stage + detail.
 function pollIngest(jobId, onTick) {
   return new Promise((resolve, reject) => {
     const tick = async () => {
       try {
         const s = await fetchJSON(`/render_status/${jobId}`);
         if (s.status === 'error') return reject(new Error(s.error || 'Ingest failed'));
-        if (s.status === 'done') return resolve(s);
+        if (s.status === 'done') { if (onTick) onTick(s); return resolve(s); }
         if (onTick) onTick(s);
         setTimeout(tick, 500);
       } catch (e) { reject(e); }
@@ -3210,65 +3581,6 @@ function pollIngest(jobId, onTick) {
     tick();
   });
 }
-
-function triggerEpubPicker() {
-  clearUploadError();
-  clearUploadNote();
-  epubFileInput.value = '';
-  epubFileInput.click();
-}
-
-epubFileInput.addEventListener('change', async () => {
-  const file = epubFileInput.files[0];
-  console.log('[upload] change event fired, file:', file?.name ?? '(none)');
-  if (!file) return;
-
-  clearUploadError();
-  clearUploadNote();
-  addBookBtn.disabled = true;
-  setAddBookLabel('Uploading…');
-
-  try {
-    // Step 1 — save + inspect. The server tells us what it thinks this is.
-    const form = new FormData();
-    form.append('file', file);
-    const r = await fetch('/books/upload', {method: 'POST', body: form});
-    console.log('[upload] response status:', r.status);
-    if (!r.ok) {
-      const err = await r.json().catch(() => ({detail: `HTTP ${r.status}`}));
-      throw new Error(err.detail || `HTTP ${r.status}`);
-    }
-    const up = await r.json();
-    console.log('[upload] inspected:', up);
-
-    // Step 2 — ingest in the guessed mode. The mode picker and the PDF
-    // chapter-split review are E2.3; until then the guess is accepted as-is
-    // and stated plainly below the book list so it is never a silent choice.
-    setAddBookLabel('Reading…');
-    const started = await postJSON('/books/ingest', {upload_id: up.upload_id});
-    console.log('[upload] ingest job:', started);
-
-    // Step 3 — poll. Stages: extracting → chapters → attributing → done.
-    const job = await pollIngest(started.job_id, s => {
-      setAddBookLabel(s.detail ? `${s.stage}: ${s.detail}`.slice(0, 42) : `${s.stage}…`);
-    });
-    console.log('[upload] ingest finished:', job);
-
-    const books = await fetchJSON('/books');
-    state.books = books;
-    renderBookList(books);
-    resetAddBook();
-    showUploadNote(`Added “${started.title}” — read as ${MODE_LABEL[started.mode] || started.mode}.`
-                   + ' Add the file again to read it a different way.');
-
-    console.log('[upload] loading book slug:', started.slug);
-    await loadBook(started.slug);
-  } catch (e) {
-    console.error('[upload] caught error:', e);
-    resetAddBook();
-    showUploadError(`Couldn’t add that book: ${e.message}`);
-  }
-});
 
 // ── Pre-casting modal ─────────────────────────────────────────────────────
 const castingModalOverlay = document.getElementById('casting-modal-overlay');

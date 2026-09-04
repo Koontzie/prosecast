@@ -19,52 +19,7 @@ import server  # noqa: E402
 from prosecast import ingest  # noqa: E402
 from prosecast import library as lib  # noqa: E402
 
-NOVEL = """Chapter 1: The Study
-
-The morning light fell across the study as Elizabeth sat reading.
-
-"You have been avoiding me," said Darcy.
-
-"I have been reading," Elizabeth replied. "There is a difference."
-
-"Then I shall wait," he said.
-"""
-
-PLAY = """SCENE ONE
-
-(A basement. AGNES enters, holding a red box.)
-
-AGNES. This is where it started.
-
-TILLY. You never listened to me.
-
-AGNES. I was fifteen. Nobody listens at fifteen.
-
-TILLY. That is not an excuse.
-
-AGNES. No. It is not.
-
-(TILLY exits. AGNES sits alone.)
-
-AGNES. Roll for initiative.
-
-TILLY. Too late for that.
-
-AGNES. It is never too late.
-
-TILLY. Says the girl with the box.
-"""
-
-RULEBOOK = """Chapter 1: Running the Game
-
-The Game Master describes the room. Players say what they do.
-
-A check is rolled when the outcome is uncertain and failure is interesting.
-
-Chapter 2: Combat
-
-Initiative is rolled once per encounter. Ties go to the player.
-"""
+from synthetic import NOVEL, PLAY, RULEBOOK, build_pdf  # noqa: E402
 
 
 @pytest.fixture
@@ -89,30 +44,9 @@ def _txt(sandbox, name, body):
     return p
 
 
-def _pdf(sandbox, name="rules.pdf", *, n_chapters=3, pages_per=2, scan=False):
-    pymupdf = pytest.importorskip("pymupdf")
-    body = ("The rain had not stopped for three days and the town smelled of wet stone. "
-            "Nobody went out unless they had to. ") * 6
-    doc = pymupdf.open()
-    toc = []
-    for c in range(n_chapters):
-        for k in range(pages_per):
-            page = doc.new_page()
-            if scan:
-                pix = pymupdf.Pixmap(pymupdf.csRGB, pymupdf.IRect(0, 0, 40, 40), 0)
-                pix.clear_with(200)
-                page.insert_image(pymupdf.Rect(72, 72, 400, 400), pixmap=pix)
-                continue
-            if k == 0:
-                page.insert_text((72, 72), f"Chapter {c + 1}: Story {c + 1}", fontsize=11)
-                toc.append([1, f"Chapter {c + 1}: Story {c + 1}", doc.page_count])
-            page.insert_textbox(pymupdf.Rect(72, 110, 540, 700), body, fontsize=11)
-    if toc:
-        doc.set_toc(toc)
-    path = sandbox / "books" / name
-    doc.save(path)
-    doc.close()
-    return path
+def _pdf(sandbox, name="rules.pdf", **kw):
+    pytest.importorskip("pymupdf")
+    return build_pdf(sandbox / "books" / name, **kw)
 
 
 def _wait(client, job_id, timeout=90):
@@ -356,3 +290,36 @@ def test_a_failing_ingest_reports_the_reason_not_a_traceback(client, sandbox, mo
     assert job["status"] == "error"
     assert job["error"] == "No chapters found in 'Rules.txt'."
     assert lib.list_book_slugs() == []
+
+
+# ── keeping the wizard's fixtures honest ─────────────────────────────────────
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def _upload_fixture(client, name, data):
+    body = client.post("/books/upload", files={"file": (name, data)}).json()
+    body["upload_id"] = "FIXTURE"          # random per call; pinned in the file
+    return body
+
+
+@pytest.mark.parametrize("fixture,name,payload", [
+    ("upload_play_txt.json", "Scene One.txt", None),
+    ("upload_pdf.json", "The Rulebook.pdf", "pdf"),
+    ("upload_scan_pdf.json", "Scanned.pdf", "scan"),
+])
+def test_wizard_fixtures_still_match_this_endpoint(client, sandbox, fixture, name, payload):
+    """`tests/ui/check_ingest_wizard.py` drives the wizard with these files.
+    They are generated from POST /books/upload by scripts/refresh_ui_fixtures.py —
+    regenerate them when the response shape changes on purpose, rather than
+    hand-editing, or the headless check goes back to testing a fiction.
+    """
+    if payload == "pdf":
+        data = build_pdf(sandbox / "gen.pdf").read_bytes()
+    elif payload == "scan":
+        data = build_pdf(sandbox / "gen_scan.pdf", scan=True).read_bytes()
+    else:
+        data = PLAY.encode()
+    live = _upload_fixture(client, name, data)
+    saved = json.loads((FIXTURES / fixture).read_text())
+    assert live == saved, f"{fixture} has drifted from /books/upload — regenerate it"

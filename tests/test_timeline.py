@@ -24,22 +24,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import server  # noqa: E402
 from prosecast import library as lib  # noqa: E402
 
+from synthetic import BLOCKS, LONG_LINE  # noqa: E402
+
 # Every key the frontend reads off a timeline entry. Adding one here is fine;
 # removing one is a breaking change to the player and should fail loudly.
 PLAYER_FIELDS = {"block_index", "segment_id", "start", "duration", "type",
                  "speaker", "text", "unresolved"}
-
-LONG_LINE = ("It was a truth universally acknowledged that a single man in "
-             "possession of a good fortune must be in want of a wife, and the "
-             "neighbourhood took the matter as settled long before he had any "
-             "say in it at all, which is how these things usually go. ") * 2
-
-BLOCKS = [
-    ("narration", "NARRATOR", "The morning light fell across the study.", False),
-    ("dialogue", "Darcy", "You have been avoiding me.", False),
-    ("dialogue", "Elizabeth", LONG_LINE, False),
-    ("dialogue", "UNKNOWN", "Then I shall wait.", True),
-]
 
 
 def _silent_wav(path: Path, seconds: float) -> None:

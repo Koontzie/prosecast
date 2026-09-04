@@ -27,8 +27,9 @@ os.environ.setdefault("PROSECAST_CONFIG", str(Path(tempfile.mkdtemp()) / "config
 from fastapi.testclient import TestClient  # noqa: E402
 
 import server  # noqa: E402
+from prosecast import ingest as ingest_mod  # noqa: E402
 from prosecast import library as lib  # noqa: E402
-from test_timeline import BLOCKS  # noqa: E402
+from synthetic import BLOCKS, PLAY, build_pdf  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures"
 
@@ -54,6 +55,13 @@ def build_study_book(root: Path) -> str:
     return "study"
 
 
+def upload(client, name: str, data: bytes) -> dict:
+    """An upload response with the random id pinned, so the file is stable."""
+    body = client.post("/books/upload", files={"file": (name, data)}).json()
+    body["upload_id"] = "FIXTURE"
+    return body
+
+
 def main() -> None:
     tmp = Path(tempfile.mkdtemp())
     lib.LIBRARY_DIR = tmp
@@ -61,10 +69,26 @@ def main() -> None:
     client = TestClient(server.app)
 
     FIXTURES.mkdir(parents=True, exist_ok=True)
-    for name, url in [("timeline_study_ch0.json", f"/timeline/{slug}/0")]:
-        data = client.get(url).json()
+
+    def write(name: str, data, source: str) -> None:
         (FIXTURES / name).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-        print(f"{name:32s} <- {url}")
+        print(f"{name:32s} <- {source}")
+
+    write("timeline_study_ch0.json", client.get(f"/timeline/{slug}/0").json(),
+          f"GET /timeline/{slug}/0")
+
+    # The wizard's three shapes, straight from POST /books/upload.
+    books = tmp / "books"
+    books.mkdir(exist_ok=True)
+    ingest_mod.BOOKS_DIR = server.BOOKS_DIR = books
+    write("upload_pdf.json", upload(client, "The Rulebook.pdf",
+                                    build_pdf(tmp / "r.pdf").read_bytes()),
+          "POST /books/upload (pdf with bookmarks)")
+    write("upload_play_txt.json", upload(client, "Scene One.txt", PLAY.encode()),
+          "POST /books/upload (script)")
+    write("upload_scan_pdf.json", upload(client, "Scanned.pdf",
+                                          build_pdf(tmp / "s.pdf", scan=True).read_bytes()),
+          "POST /books/upload (scanned pdf)")
 
 
 if __name__ == "__main__":

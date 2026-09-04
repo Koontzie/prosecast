@@ -1,0 +1,17 @@
+{
+  "upload_id": "FIXTURE",
+  "filename": "Scene_One.txt",
+  "format": ".txt",
+  "title": "Scene One",
+  "slug": "scene_one",
+  "guess_mode": "play",
+  "guess_reason": "9 SPEAKER. labels in the first pages (75% of lines) — looks like a script",
+  "modes": [
+    "novel",
+    "narrator",
+    "play"
+  ],
+  "is_scan": false,
+  "scan": null,
+  "detection": null
+}

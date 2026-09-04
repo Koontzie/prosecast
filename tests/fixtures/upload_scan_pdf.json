@@ -1,0 +1,21 @@
+{
+  "upload_id": "FIXTURE",
+  "filename": "Scanned.pdf",
+  "format": ".pdf",
+  "title": "Scanned",
+  "slug": "scanned",
+  "guess_mode": "narrator",
+  "guess_reason": "scanned PDF — 0 extractable chars/page over 6 pages; needs OCR before it can be read",
+  "modes": [
+    "novel",
+    "narrator",
+    "play"
+  ],
+  "is_scan": true,
+  "scan": {
+    "pages": 6,
+    "avg_chars_per_page": 0.0,
+    "is_scan": true
+  },
+  "detection": null
+}

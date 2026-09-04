@@ -155,7 +155,13 @@ detected split; `book.pdf out.txt` extracts; `--toc toc.json` still overrides
 copyrighted fixtures. New dependency: `pymupdf` (pure wheel, Windows-friendly;
 poppler is no longer required for PDFs).
 
-### E2.3 Chapter-split review (UI)
+### E2.3 Chapter-split review (UI) — BUILT 2026-09-04
+**As built:** one wizard covers E2.0 and E2.3 together — mode cards (with the
+server's guess pre-selected and its reason shown), an editable title, and for
+PDFs the detected split as a tick-list with `detection.note` plus a plain-words
+trust line per detection source. Scans are refused here with the OCR message.
+The progress card polls the ingest job's stage/detail. Original plan below:
+
 For PDFs the wizard shows the detected split as an editable list (title, start
 page, [skip]) with the detection source stated in words ("found 11 bookmarks in
 the PDF"). Confirm → ingest continues. **This is the step that makes PDF upload

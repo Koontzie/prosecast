@@ -30,3 +30,6 @@ output/
 librivox_voices/*.wav
 vctk_voices/
 .cache/
+
+# Headless UI check screenshots — regenerable artifacts
+tests/ui/*.png
