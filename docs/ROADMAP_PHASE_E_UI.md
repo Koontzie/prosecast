@@ -118,22 +118,32 @@ pipeline know what to run.
 - Stage names for progress: `extracting` → `chapters` → `attributing` →
   `done`, with counts.
 
-### E2.2 PDF text + chapter detection — `prosecast/pdf_ingest.py`
-Lift the guts of `scripts/pdf_to_txt.py` into a module with **no** book-specific
-regexes (the Carl watermark line becomes a generic "line repeated on >60% of
-pages" running-head filter, which is what it really is). Then chapter split,
-in order of trust:
-1. **PDF outline/bookmarks** (`pdftotext` doesn't give them; use `pypdf`
-   `reader.outline` — new dependency, pure Python — or `pdfinfo`/`mutool`
-   if present). Most published PDFs and every KDP/Renegade-style rulebook have
-   them. This alone covers the Carl case with zero hand-written TOC.
-2. **Printed TOC page** — leader lines (`.....` + page number) in the first
-   ~15 pages; already regex'd as `LEADER_RE`.
-3. **Heading heuristic** — CAPS lines / large-gap lines at page tops.
-4. **Fallback:** one chapter per N pages, clearly labelled as such.
-Output: `{"chapters":[{"page":..,"title":..}], "source":"outline|toc|heuristic|fallback"}`
-— the same shape `toc.json` has today, so `pdf_to_txt.py` keeps working as the
-CLI over the same function.
+### E2.2 PDF text + chapter detection — `prosecast/pdf_ingest.py` — BUILT 2026-09-03
+**Decision:** PyMuPDF instead of pdftotext + pypdf + hand-written `toc.json`.
+Three things pdftotext can't give: the PDF's own bookmarks, every line with
+its page position, and font sizes. That makes both halves of the old problem
+*generic*: chapter detection needs no `toc.json`, and the Carl-specific
+watermark regex is gone — replaced by "a line that repeats on ≥35% of pages
+in the header/footer zone (or ≥60% anywhere, if short)". Works the same with
+or without a watermark.
+
+Detection order, each labelled so the review screen can say how much to trust
+it: **outline** (bookmarks; front/back-matter titles like Contents/Copyright/
+Index are suggested as `skip`, never silently dropped) → **toc** (printed
+contents page, with the printed-vs-PDF page offset estimated by locating the
+first titles) → **headings** (font ≥1.6× body, one per page) → **fallback**
+(every 20 pages, clearly labelled "rename or merge"). `scan_report()` flags
+image-only PDFs (<200 chars/page) so the caller routes to OCR instead of
+producing an empty book. `extract()` takes the *reviewed* list (skip/title/
+page edits honoured) and writes the same "Chapter N: Title" TXT that
+`book_parser` already splits. Cleanup (reflow, de-hyphenate, table/stat-block
+filter, divider-art salad) ported from the old script unchanged.
+
+`scripts/pdf_to_txt.py` is now a thin CLI: `book.pdf --list` shows the
+detected split; `book.pdf out.txt` extracts; `--toc toc.json` still overrides
+(old files keep working). 11 tests build their own PDFs with PyMuPDF — no
+copyrighted fixtures. New dependency: `pymupdf` (pure wheel, Windows-friendly;
+poppler is no longer required for PDFs).
 
 ### E2.3 Chapter-split review (UI)
 For PDFs the wizard shows the detected split as an editable list (title, start
@@ -143,7 +153,7 @@ honest** — the heuristics will be wrong sometimes, and the fix is 10 seconds o
 editing rather than a bad audiobook.
 
 ### E2.4 Scans → OCR — `prosecast/ocr.py`
-If `pdftotext` yields < ~200 chars/page on average, it's a scan. Offer OCR in
+If `scan_report()` says < ~200 chars/page on average, it's a scan. Offer OCR in
 the wizard: `tesseract` if installed (probe with `which`; say *how* to install
 it on macOS/Linux/Windows in the same dialog), else stop with a clear "this PDF
 is a scan and OCR isn't installed" message. 300 dpi via `pdftoppm` → tesseract

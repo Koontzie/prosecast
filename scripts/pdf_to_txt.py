@@ -1,141 +1,93 @@
 #!/usr/bin/env python3
-"""PDF -> ProseCast-ingestible TXT (single-narrator listening copy).
+"""PDF -> ProseCast-ingestible TXT, for any PDF (thin CLI over prosecast.pdf_ingest).
 
-Extracts text with pdftotext (poppler), strips per-page noise (watermark,
-page numbers, running heads, TOC leader lines), reflows hard-wrapped lines
-into paragraphs, drops table/stat-block paragraphs, and emits one TXT with
-'Chapter N: Title' delimiter lines that prosecast/book_parser.py splits on.
+    python3 scripts/pdf_to_txt.py book.pdf --list                # show detected chapters, write nothing
+    python3 scripts/pdf_to_txt.py book.pdf out.txt               # detect chapters + extract
+    python3 scripts/pdf_to_txt.py book.pdf out.txt --toc toc.json  # use a hand-written chapter list
+    python3 scripts/pdf_to_txt.py book.pdf out.txt --keep-tables
 
-Usage:
-  python3 scripts/pdf_to_txt.py book.pdf toc.json out.txt [--keep-tables]
+Chapters come from the PDF's bookmarks, else a printed contents page, else
+large headings, else a fixed page split — printed with the source so you know
+how much to trust it. Lines that repeat on most pages (copyright watermark,
+running heads, page numbers) are dropped generically; nothing here is written
+for one particular book.
 
-toc.json: {"chapters": [{"page": 8, "title": "Introduction", "end": null}, ...]}
-  'page' = 1-based PDF page where the chapter starts. Last chapter's 'end'
-  defaults to the last page. A chapter with "skip": true is omitted entirely.
+toc.json (optional override, same shape as before):
+    {"chapters": [{"page": 8, "title": "Introduction", "skip": false}, ...]}
+    'page' = 1-based PDF page where the chapter starts.
+
+Scanned PDFs (no text layer) are detected and refused with a pointer to OCR.
 """
-import json, re, subprocess, sys
+import json
+import sys
+from pathlib import Path
 
-WATERMARK_RE = re.compile(r'Copyright Renegade Game Studios|Unauthorized distribution prohibited', re.I)
-PAGENUM_RE   = re.compile(r'^\s*\d{1,3}\s*$')
-LEADER_RE    = re.compile(r'\.{4,}')
-DICE_RE      = re.compile(r'\b\d*d\d+\b')
-STAT_BULLET  = re.compile(r'^\s*[•▪◦]?\s*[+−–-]\d')
-CAPS_LINE    = re.compile(r'^[^a-z]{4,60}$')
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-def caps_ratio(s):
-    letters = [c for c in s if c.isalpha()]
-    if not letters: return 0.0
-    return sum(c.isupper() for c in letters) / len(letters)
+from prosecast import pdf_ingest as pi  # noqa: E402
 
-def digit_sym_ratio(s):
-    core = [c for c in s if not c.isspace()]
-    if not core: return 0.0
-    return sum(c.isdigit() or c in '+−–%/()x×' for c in core) / len(core)
-
-def extract(pdf, first, last):
-    out = subprocess.run(
-        ['pdftotext', '-f', str(first), '-l', str(last), pdf, '-'],
-        capture_output=True, text=True, check=True)
-    return out.stdout.split('\f')
-
-def clean_page(page_text, chapter_title):
-    lines, out = page_text.split('\n'), []
-    title_up = chapter_title.upper()
-    for i, ln in enumerate(lines):
-        s = ln.strip()
-        if not s: out.append(''); continue
-        if WATERMARK_RE.search(s): continue
-        if PAGENUM_RE.match(s): continue
-        if LEADER_RE.search(s): continue                     # TOC leader rows
-        toks = s.split()
-        if len(toks) >= 3 and sum(len(t) <= 2 for t in toks) / len(toks) > 0.7:
-            continue                                          # divider-art letter salad
-        if len(s) <= 2 and s.isupper():
-            continue                                          # single stacked divider letters
-        if i < 4 and (title_up in s.upper() or re.match(r'^CHAPTER \d', s.upper())):
-            continue                                          # running head
-        out.append(s)
-    return out
-
-def reflow(lines):
-    """Join hard-wrapped lines into paragraphs; merge consecutive caps headers."""
-    paras, cur = [], []
-    def flush():
-        if cur:
-            p = ' '.join(cur)
-            p = re.sub(r'(\w)[­-]\s+(\w)', r'\1\2', p)   # de-hyphenate
-            p = re.sub(r'\s+', ' ', p).strip()
-            for item in re.split(r'\s+[•▪◦]\s+', p):
-                item = item.lstrip('•▪◦ ').strip()
-                if item: paras.append(item)
-            cur.clear()
-    prev_caps = False
-    for ln in lines:
-        if not ln: flush(); prev_caps = False; continue
-        is_caps = bool(CAPS_LINE.match(ln)) and caps_ratio(ln) > 0.8 and not DICE_RE.search(ln)
-        if is_caps:
-            if prev_caps and cur: cur.append(ln)             # multi-line header
-            else: flush(); cur.append(ln)
-            prev_caps = True
-        else:
-            if prev_caps: flush()                            # header done
-            prev_caps = False
-            cur.append(ln)
-    flush()
-    # Titlecase pure-caps headers so TTS doesn't spell/shout them; end with period.
-    out = []
-    for p in paras:
-        if caps_ratio(p) > 0.8 and len(p) < 70 and not p.endswith(('.', '!', '?', ':')):
-            out.append(p.title().rstrip(':') + '.')
-        else:
-            out.append(p)
-    return out
-
-def is_tableish(p):
-    if re.match(r'^Table \d+', p): return True
-    if digit_sym_ratio(p) > 0.22: return True                 # numeric grids
-    if STAT_BULLET.match(p): return True                      # "+3 Strength" bonus rows
-    words = p.split()
-    if len(words) <= 6 and DICE_RE.search(p): return True     # bare dice cells
-    return False
 
 def main():
-    keep_tables = '--keep-tables' in sys.argv
-    args = [a for a in sys.argv[1:] if not a.startswith('--')]
-    pdf, toc_path, out_path = args
-    toc = json.load(open(toc_path))['chapters']
-    # figure last page per chapter
-    for i, ch in enumerate(toc):
-        if not ch.get('end'):
-            ch['end'] = (toc[i+1]['page'] - 1) if i + 1 < len(toc) else None
-    book_out, dropped = [], 0
-    num = 0
-    for ch in toc:
-        if ch.get('skip'): continue
-        num += 1
-        pages = extract(pdf, ch['page'], ch['end'] or 10**6)
-        lines = []
-        for pg in pages:
-            lines.extend(clean_page(pg, ch['title']))
-            lines.append('')
-        paras = reflow(lines)
-        kept = []
-        for p in paras:
-            if len(p) < 5: continue                            # divider-page fragments
-            if re.search(r'chapt', p[:20], re.I) and len(p) < 80: continue  # garbled chapter art
-            if re.match(r'(?i)^chapt\S*\s+\S+', p):           # scrambled divider text w/ blurb
-                p = re.sub(r'(?i)^chapt\S*(\s+\S+){0,4}?\.\s*', '', p)
-                if len(p) < 5: continue
-            if not keep_tables and is_tableish(p): dropped += 1; continue
-            if re.match(r'(?i)^\s*(chapter|part)\s+\w+', p) and kept:
-                kept[-1] = kept[-1] + ' ' + p                  # don't let body lines look like delimiters
-                continue
-            kept.append(p)
-        book_out.append(f"Chapter {num}: {ch['title']}\n\n" + '\n\n'.join(kept))
-        print(f"  ch{num:02d} {ch['title'][:40]:<40} pages {ch['page']}-{ch['end']}"
-              f"  kept {len(kept)} paras ({sum(len(p) for p in kept)} chars)", file=sys.stderr)
-    open(out_path, 'w').write('\n\n\n'.join(book_out) + '\n')
-    print(f"Wrote {out_path}; dropped {dropped} table-ish paragraphs", file=sys.stderr)
+    argv = sys.argv[1:]
+    if not argv or argv[0] in ("-h", "--help"):
+        print(__doc__); sys.exit(0)
+    keep_tables = "--keep-tables" in argv
+    list_only = "--list" in argv
+    toc_path = None
+    if "--toc" in argv:
+        toc_path = argv[argv.index("--toc") + 1]
+    args = [a for i, a in enumerate(argv)
+            if not a.startswith("--") and (i == 0 or argv[i - 1] != "--toc")]
+    pdf = args[0]
+    out_path = args[1] if len(args) > 1 else None
+    if not list_only and not out_path:
+        print("need an output path (or --list)", file=sys.stderr); sys.exit(2)
 
-if __name__ == '__main__':
+    if not Path(pdf).is_file():
+        print(f"No such file: {pdf}\n(tip: mdfind -name \"part of the name\" | grep -i '\\.pdf$' finds it)",
+              file=sys.stderr)
+        sys.exit(2)
+    doc = pi.open_pdf(pdf)
+    scan = pi.scan_report(doc)
+    if scan["is_scan"]:
+        print(f"'{pdf}' looks like a SCAN: {scan['avg_chars_per_page']} extractable chars/page "
+              f"over {scan['pages']} pages. Run OCR first (tesseract / ocrmypdf) — the ingest "
+              "wizard will do this for you in a later step.", file=sys.stderr)
+        sys.exit(3)
+
+    if toc_path:
+        chapters = json.load(open(toc_path))["chapters"]
+        det = None
+        source, note = "toc.json", f"{len(chapters)} chapters from {toc_path}"
+    else:
+        det = pi.detect_chapters(doc)
+        chapters, source, note = det.chapters, det.source, det.note
+
+    print(f"{pdf}: {scan['pages']} pages, ~{scan['avg_chars_per_page']:.0f} chars/page", file=sys.stderr)
+    print(f"chapters via {source}: {note}", file=sys.stderr)
+    if det and det.repeated_lines:
+        print(f"dropping {len(det.repeated_lines)} repeated line(s) (watermark / running heads):",
+              file=sys.stderr)
+        for l in det.repeated_lines[:8]:
+            print(f"    · {l[:90]}", file=sys.stderr)
+    for i, ch in enumerate(chapters, 1):
+        d = ch.to_dict() if hasattr(ch, "to_dict") else ch
+        flag = "  (skip)" if d.get("skip") else ""
+        print(f"  {i:3d}. p{d['page']:<5} {str(d['title'])[:60]}{flag}", file=sys.stderr)
+    if list_only:
+        sys.exit(0)
+
+    def progress(done, total, title):
+        print(f"  [{done}/{total}] {title[:50]}", file=sys.stderr)
+
+    result = pi.extract(doc, chapters, keep_tables=keep_tables,
+                        repeated=det.repeated_lines if det else None, progress=progress)
+    Path(out_path).write_text(result["text"], encoding="utf-8")
+    for r in result["chapters"]:
+        print(f"    {r['title'][:40]:<40} pages {r['pages'][0]}-{r['pages'][1]}  "
+              f"{r['paragraphs']} paras ({r['chars']} chars)", file=sys.stderr)
+    print(f"Wrote {out_path}; dropped {result['dropped_tables']} table-ish paragraphs", file=sys.stderr)
+
+
+if __name__ == "__main__":
     main()

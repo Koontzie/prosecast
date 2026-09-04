@@ -133,14 +133,56 @@ in the roadmap doc.
   400 path, env-shadow banner, first-run auto-open, Esc, reader↔setup
   hand-off with audio still playing. 134 tests unchanged.
 
+## Session 2026-09-03 pt4 (Cowork) — E2.2: PDF ingest on PyMuPDF
+
+- **Why:** "upload a PDF" was blocked on `pdf_to_txt.py` needing a hand-written
+  `toc.json` and carrying a Carl-only watermark regex. Tyler asked for the
+  option that works with or without a watermark; recommendation was PyMuPDF.
+- **`prosecast/pdf_ingest.py`** (new): chapter detection **outline** (PDF
+  bookmarks; Contents/Copyright/Index suggested as `skip`, never dropped) →
+  **toc** (printed contents page + printed-vs-PDF page offset estimation) →
+  **headings** (font ≥1.6× body) → **fallback** (every 20 pages, labelled).
+  Result is a `Detection` with `source` + human `note` — a *suggestion* for
+  the E2.3 review screen. **Generic furniture filter** `repeated_lines()`:
+  a line on ≥35% of pages in the top/bottom 12% zone, or ≥60% anywhere if
+  short, is a watermark/running head/page number → dropped. Body text can't
+  trip it. `scan_report()` flags image-only PDFs for OCR. `extract()` honours
+  reviewed edits (skip/title/page) and emits the same "Chapter N: Title" TXT.
+  Cleanup (reflow, de-hyphenate, table/stat filter) ported unchanged; the
+  greedy running-head rule that ate the first body line on chapter pages is
+  fixed (short lines only).
+- **`scripts/pdf_to_txt.py`** rewritten as a thin CLI: `book.pdf --list`
+  (detect, print, write nothing), `book.pdf out.txt`, `--toc toc.json` still
+  works, `--keep-tables`. Scans exit 3 with an OCR pointer.
+- **Tests:** `tests/test_pdf_ingest.py`, 11 tests that build their own PDFs
+  with PyMuPDF (bookmarks, junk-skip, printed TOC w/ offset, headings,
+  fallback, scan, watermark+page numbers dropped, no-watermark untouched,
+  reviewed edits, book_parser round-trip, table filter). **145 pass / 1 skip.**
+- **New dependency:** `pymupdf` in requirements.txt (pure wheel; poppler no
+  longer needed for PDFs). Roadmap E2.2 rewritten to match.
+- **Verified on the real Carl rulebook (2026-09-04, Tyler's Mac):** 650 pages,
+  ~2,813 chars/page, `chapters via outline: 15 bookmarks`, the Renegade
+  watermark caught generically *including its per-page date stamp*
+  (`#/#/#` after digit normalisation). Bookmark pages match the hand-written
+  `toc_carl_core.json` exactly (8/16/56/102/174/280/332/426/524/636) and
+  improve on it: appendices split into 3 + Index. One real discrepancy for
+  the review screen to show: the hand TOC started "Gamemastering the
+  Dungeon" at p236, the PDF's own bookmark puts "Chapter 5: Running the
+  Game" at p251 — the book's bookmark is probably right, the old TOC split
+  mid-chapter. Follow-up: "Index of Rules" now suggested as skip (146 tests).
+
 ## NEXT (updated 2026-09-03)
 1. **Tyler:** restart server → hard-refresh → click `⚙ setup` → all rows
    green; try changing the Ollama model to something not pulled, Save, watch
    the row go amber with the `ollama pull` line, change it back. Swap
    `EL_SIGNUP_URL` for the real affiliate link. Commit + push.
-2. **E2 ingest wizard** — smallest step: accept `.txt` in `/books/upload`
-   and make upload a job (progress card), then the mode picker, then PDF
-   chapter detection + review, then OCR (tesseract is on the Mac).
+2. **Tyler:** `.venv/bin/pip install pymupdf` → `.venv/bin/pytest tests/ -q`
+   (145) → `python3 scripts/pdf_to_txt.py <carl.pdf> --list` and eyeball the
+   split vs `scripts/toc_carl_core.json`; then `--list` on the She Kills
+   Monsters PDF (expect the scan exit). Commit.
+3. **E2.1 + E2.3** — upload as a job with a mode picker (novel / single
+   narrator / play) for .epub/.txt/.pdf, and the chapter-split review screen
+   fed by `detect_chapters()`. Then E2.4 OCR (tesseract is on the Mac).
 4. Still open from before: rulebook overnight render, C4 voice-ref mirror,
    Voices tab (`docs/CC_BRIEF_voices_tab.md`), audition + upload the 20
    LibriVox US voices.
