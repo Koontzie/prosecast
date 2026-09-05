@@ -29,7 +29,7 @@ If the server was unreachable in Step 1, you must have STOPPED there — that's 
 ---
 
 ## Step 0 — Orient
-Read, in this order: `PROJECT_REFERENCE*.md` (if present), `CLAUDE.md`, `STATUS.md`, `PRD.md`, then
+Read, in this order: `PROJECT_REFERENCE*.md` (if present), `CLAUDE.md`, `STATUS.md`, `docs/PRD.md`, then
 `prosecast/tts_engine.py` and `prosecast/tag_mapper.py`. Note the existing ElevenLabs backend
 (`_synthesize_elevenlabs`, `test_elevenlabs_connection`) and the `VoiceAssigner` pools — you are
 mirroring those patterns, not inventing new ones.
