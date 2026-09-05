@@ -29,6 +29,10 @@ Endpoints:
   GET  /config                                  → resolved settings (secrets masked) + sources
   PUT  /config                                  → merge settings into config.json
   GET  /setup/status                            → live probes: engine, Ollama, whisper, tools, GPU
+  GET  /pipeline/{book_slug}                    → pipeline card state: AI-pass history,
+                                                  per-chapter alignment, probe verdicts
+  POST /pipeline/{book_slug}/ai_pass            → queue the LLM attribution (+ profile) pass
+  POST /pipeline/{book_slug}/align              → queue word alignment for chapters
 """
 
 import copy
@@ -1506,6 +1510,7 @@ def _run_one_render_job(job_id: str) -> None:
         ir_path = lib.ir_path(book_slug)
         ir = _load_ir(ir_path)
         engine = make_engine(book_slug, engine_name)
+        whisper_ok = None          # probed lazily, once, after the first chapter
         for i, ch_idx in enumerate(job["chapters"]):
             with _jobs_lock:
                 job["progress"] = i
@@ -1522,6 +1527,16 @@ def _run_one_render_job(job_id: str) -> None:
                     job["chapter_results"].append(
                         {k: r[k] for k in ("chapter_index", "skipped", "rendered",
                                            "cached", "failed", "audio_seconds")})
+                # Auto-chain alignment (E3): a rendered chapter gets word timings
+                # without anyone asking. Enqueued on the PIPELINE worker, never
+                # run inline — the render worker must not call whisper and must
+                # not wait for it. Probed once per job, not once per chapter.
+                if whisper_ok is None:
+                    whisper_ok = bool(_probe_row("whisper").get("ok"))
+                if whisper_ok and r.get("rendered"):
+                    _enqueue_pipeline("align", book_slug,
+                                      {"chapters": [ch_idx], "force": False},
+                                      merge=True)
             except Exception as e:
                 # continue-on-chapter-failure: a mid-night hiccup on chapter 3
                 # must not kill chapters 4-10
@@ -1615,8 +1630,9 @@ def get_render_status(job_id: str):
         raise HTTPException(status_code=404, detail=f"No job '{job_id}'")
     with _jobs_lock:
         job = copy.deepcopy(_render_jobs[job_id])
-    job["queue_position"] = (_queue_order.index(job_id)
-                             if job_id in _queue_order and job.get("status") == "queued"
+    order = _queue_order if job_id in _queue_order else _pipeline_order
+    job["queue_position"] = (order.index(job_id)
+                             if job_id in order and job.get("status") == "queued"
                              else 0)
     return job
 
@@ -1629,6 +1645,260 @@ def get_render_queue():
                 if j.get("kind") == "render"]
     return {"queued": [j["job_id"] for j in jobs if j["status"] == "queued"],
             "jobs": jobs}
+
+
+# ── Pipeline endpoints — the AI pass and alignment as jobs (E3) ───────────────
+#
+# A SECOND worker, deliberately not the render queue. The render queue is one
+# job at a time because there is one GPU; these jobs are a different resource
+# (Ollama coexists with a resident Chatterbox) and a 40-minute attribution pass
+# must never sit in front of an overnight render — or behind one.
+#
+# Jobs live in the same _render_jobs table, so GET /render_status/{id} serves
+# them too, carrying kind: 'ai_pass' | 'align' plus stage / detail / done /
+# total. The UI reuses one poller for all four job kinds.
+
+_pipeline_queue: "_queue_mod.Queue[str]" = _queue_mod.Queue()
+_pipeline_order: list = []
+_pipeline_worker_started = False
+_pipeline_worker_lock = threading.Lock()
+
+PIPELINE_KINDS = ("ai_pass", "align")
+
+
+def _live_job(kind: str, book_slug: str) -> dict | None:
+    """The queued-or-running job of this kind for this book, if there is one."""
+    with _jobs_lock:
+        for j in _render_jobs.values():
+            if (j.get("kind") == kind and j.get("book_slug") == book_slug
+                    and j.get("status") in ("queued", "running")):
+                return j
+    return None
+
+
+def _run_one_pipeline_job(job_id: str) -> None:
+    from prosecast import pipeline as pipe
+
+    job = _render_jobs[job_id]
+    slug = job["book_slug"]
+    params = job.get("params", {})
+    with _jobs_lock:
+        job["status"] = "running"
+
+    def progress(stage: str, detail: str, done: int, total: int) -> None:
+        with _jobs_lock:
+            job["stage"] = stage
+            job["detail"] = detail
+            job["progress"] = done
+            job["total"] = total
+
+    try:
+        if job["kind"] == "ai_pass":
+            res = pipe.run_ai_pass(slug, scope=params.get("scope", "unresolved"),
+                                   model=None, profile=params.get("profile", True),
+                                   job_id=job_id, on_progress=progress)
+        else:
+            res = pipe.run_align(slug, params.get("chapters"),
+                                 force=params.get("force", False),
+                                 job_id=job_id, on_progress=progress)
+        with _jobs_lock:
+            job["result"] = res
+            # An aborted pass is DONE, not failed: everything it decided before
+            # the breaker fired is saved. The card shows the reason in amber.
+            job["status"] = "done"
+            if res.get("aborted"):
+                job["error"] = res.get("abort_reason")
+    except pipe.PipelineError as e:
+        with _jobs_lock:
+            job.update(status="error", error=str(e))
+    except Exception as e:
+        with _jobs_lock:
+            job.update(status="error", error=f"{job['kind']} failed: {e}")
+
+
+def _pipeline_worker() -> None:
+    while True:
+        job_id = _pipeline_queue.get()
+        try:
+            _run_one_pipeline_job(job_id)
+        except Exception as e:
+            _render_jobs.get(job_id, {}).update(status="error", error=str(e))
+        finally:
+            if job_id in _pipeline_order:
+                _pipeline_order.remove(job_id)
+            _pipeline_queue.task_done()
+
+
+def _ensure_pipeline_worker() -> None:
+    global _pipeline_worker_started
+    with _pipeline_worker_lock:
+        if not _pipeline_worker_started:
+            threading.Thread(target=_pipeline_worker, daemon=True,
+                             name="pipeline-worker").start()
+            _pipeline_worker_started = True
+
+
+def _enqueue_pipeline(kind: str, book_slug: str, params: dict,
+                      merge: bool = False) -> str:
+    """Queue one pipeline job. One at a time, per kind, per book.
+
+    `merge=False` (what the endpoints use): a second request while one is
+    queued or running hands back the existing job_id instead of stacking a
+    duplicate. `merge=True` (what the render worker's auto-chain uses): fold
+    the chapters into a still-queued align job if there is one, and otherwise
+    always make a new job — a chapter that finished rendering must not be
+    swallowed by an align job that is already past it.
+    """
+    existing = _live_job(kind, book_slug)
+    if existing is not None:
+        if kind == "align" and existing["status"] == "queued":
+            with _jobs_lock:
+                have = existing["params"].get("chapters")
+                want = params.get("chapters")
+                if have is None or want is None:
+                    existing["params"]["chapters"] = None      # None = whole book
+                else:
+                    existing["params"]["chapters"] = sorted(set(have) | set(want))
+                existing["params"]["force"] = (existing["params"].get("force")
+                                               or params.get("force", False))
+            return existing["job_id"]
+        if not merge:
+            return existing["job_id"]
+
+    job_id = uuid.uuid4().hex[:10]
+    _render_jobs[job_id] = {
+        "job_id": job_id, "kind": kind, "book_slug": book_slug, "params": params,
+        "status": "queued", "progress": 0, "total": 0,
+        "stage": "queued", "detail": "", "error": None, "result": None,
+    }
+    _pipeline_order.append(job_id)
+    _pipeline_queue.put(job_id)
+    _ensure_pipeline_worker()
+    return job_id
+
+
+def _probe_row(name: str) -> dict:
+    probe = getattr(_setup_probe, f"probe_{name}")
+    try:
+        return probe()
+    except Exception as e:                       # a probe must never 500 the page
+        return {"ok": False, "state": "missing", "detail": str(e), "fix": ""}
+
+
+def _refusal(row: dict) -> str:
+    """The probe's own words — 'not responding' plus the sentence that fixes it."""
+    return " ".join(x for x in (row.get("detail"), row.get("fix")) if x)
+
+
+class AIPassBody(BaseModel):
+    scope: str = "unresolved"           # unresolved | low-confidence | all
+    profile: bool = True                # also sketch the cast for blind casting
+
+
+class AlignBody(BaseModel):
+    chapters: list | None = None        # None = every chapter that needs it
+    force: bool = False
+
+
+@app.post("/pipeline/{book_slug}/ai_pass")
+def start_ai_pass(book_slug: str, body: AIPassBody):
+    """Queue the scene-batch attribution pass (+ optional cast profile).
+
+    The button is disabled in the UI when Ollama is down, but the server is the
+    one that must not silently do nothing — hence the 409 with the probe's
+    fix text rather than a job that quietly resolves zero lines.
+    """
+    from prosecast import pipeline as pipe
+
+    if not lib.ir_path(book_slug).exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    if body.scope not in pipe.SCOPES:
+        raise HTTPException(status_code=400,
+                            detail=f"Unknown scope '{body.scope}' — pick one of "
+                                   f"{', '.join(pipe.SCOPES)}.")
+    render = _live_job("render", book_slug)
+    if render is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="A render is running on this book — the AI pass would fight it for "
+                   "ir.json. Try again when the render finishes.")
+    row = _probe_row("ollama")
+    if not row.get("ok"):
+        raise HTTPException(status_code=409, detail=_refusal(row))
+    return {"job_id": _enqueue_pipeline("ai_pass", book_slug,
+                                        {"scope": body.scope, "profile": body.profile})}
+
+
+@app.post("/pipeline/{book_slug}/align")
+def start_align(book_slug: str, body: AlignBody):
+    """Queue word alignment. Alignment writes only word_timings.json, so it is
+    free to run alongside a render — that is what the auto-chain depends on."""
+    if not lib.ir_path(book_slug).exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    row = _probe_row("whisper")
+    if not row.get("ok"):
+        raise HTTPException(status_code=409, detail=_refusal(row))
+    chapters = ([int(c) for c in body.chapters] if body.chapters is not None else None)
+    return {"job_id": _enqueue_pipeline("align", book_slug,
+                                        {"chapters": chapters, "force": body.force})}
+
+
+@app.get("/pipeline/{book_slug}")
+def get_pipeline(book_slug: str):
+    """Everything the Pipeline card draws, in one call."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from prosecast import pipeline as pipe
+    from prosecast.scene_attributor import is_target
+
+    ir_path = lib.ir_path(book_slug)
+    if not ir_path.exists():
+        raise HTTPException(status_code=404, detail=f"No IR found for '{book_slug}'")
+    ir = _load_ir(ir_path)
+    blocks = [b for ch in ir.get("chapters", []) for b in ch.get("blocks", [])]
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        f_ollama = pool.submit(_probe_row, "ollama")
+        f_whisper = pool.submit(_probe_row, "whisper")
+        ollama, whisper = f_ollama.result(), f_whisper.result()
+
+    state = pipe.read_state(book_slug)
+    ai_state = state.get("ai_pass", {})
+    align_state = state.get("align", {})
+    running = (_live_job("ai_pass", book_slug) or _live_job("align", book_slug))
+
+    per_chapter = pipe.align_overview(book_slug)
+    alignable = [c for c in per_chapter if c["state"] in ("stale", "none")]
+
+    return {
+        "slug": book_slug,
+        "chapters": len(ir.get("chapters", [])),
+        "rendered": sum(1 for i in range(len(ir.get("chapters", [])))
+                        if lib.chapter_wav_path(book_slug, i).exists()),
+        "ai_pass": {
+            "unresolved": sum(1 for b in blocks if b.get("unresolved")),
+            "in_scope": {scope: sum(1 for b in blocks if is_target(b, scope))
+                         for scope in pipe.SCOPES},
+            "last_run": ai_state.get("updated"),
+            "stage": ai_state.get("stage"),
+            "detail": ai_state.get("detail"),
+            "result": ai_state.get("result"),
+        },
+        "align": {
+            "per_chapter": per_chapter,
+            "needs_alignment": [c["index"] for c in alignable],
+            "last_run": align_state.get("updated"),
+            "result": align_state.get("result"),
+            "auto_chain": bool(whisper.get("ok")),
+        },
+        "ollama_ok": bool(ollama.get("ok")),
+        "ollama_fix": _refusal(ollama) if not ollama.get("ok") else "",
+        "whisper_ok": bool(whisper.get("ok")),
+        "whisper_fix": _refusal(whisper) if not whisper.get("ok") else "",
+        "render_running": _live_job("render", book_slug) is not None,
+        "running_job_id": running["job_id"] if running else None,
+        "running_kind": running["kind"] if running else None,
+    }
 
 
 # ── M4B export endpoints ──────────────────────────────────────────────────────

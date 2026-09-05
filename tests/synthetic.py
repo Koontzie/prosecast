@@ -72,6 +72,28 @@ PDF_BODY = ("The rain had not stopped for three days and the town smelled of wet
             "Nobody went out unless they had to. ") * 6
 
 
+def study_ir() -> dict:
+    """The little one-chapter book behind the `study` fixtures.
+
+    Shared so the drift tests and scripts/refresh_ui_fixtures.py feed the
+    endpoints byte-identical input — a near-copy in each would match neither.
+    """
+    blocks = []
+    for i, (kind, speaker, text, unresolved) in enumerate(BLOCKS):
+        blocks.append({
+            "segmentId": f"ch0_seg_{i:04d}", "type": kind, "text": text,
+            "speaker": speaker, "confidence": 0.0 if unresolved else 0.9,
+            "unresolved": unresolved, "attribution_method": "postfix",
+            "cacheKey": None,
+            "audioVariants": {"standard": {"url": None, "cached": False},
+                              "premium": {"url": None, "cached": False}},
+            "selectedVariant": "standard",
+        })
+    return {"book_title": "The Study", "unresolved_count": 1,
+            "characters": ["Darcy", "Elizabeth", "O'Brien"],
+            "chapters": [{"index": 0, "title": "One", "blocks": blocks}]}
+
+
 def build_pdf(path, *, n_chapters: int = 3, pages_per: int = 2, scan: bool = False):
     """A small PDF with real bookmarks — or, with scan=True, image-only pages."""
     import pymupdf

@@ -29,30 +29,42 @@ from fastapi.testclient import TestClient  # noqa: E402
 import server  # noqa: E402
 from prosecast import ingest as ingest_mod  # noqa: E402
 from prosecast import library as lib  # noqa: E402
-from synthetic import BLOCKS, PLAY, build_pdf  # noqa: E402
+from prosecast import setup_probe as setup_probe_mod  # noqa: E402
+from synthetic import PLAY, build_pdf, study_ir  # noqa: E402
 
 FIXTURES = ROOT / "tests" / "fixtures"
 
 
 def build_study_book(root: Path) -> str:
-    """The same little book tests/test_timeline.py uses."""
-    blocks = []
-    for i, (kind, speaker, text, unresolved) in enumerate(BLOCKS):
-        blocks.append({
-            "segmentId": f"ch0_seg_{i:04d}", "type": kind, "text": text,
-            "speaker": speaker, "confidence": 0.0 if unresolved else 0.9,
-            "unresolved": unresolved, "attribution_method": "postfix",
-            "cacheKey": None,
-            "audioVariants": {"standard": {"url": None, "cached": False},
-                              "premium": {"url": None, "cached": False}},
-            "selectedVariant": "standard",
-        })
-    ir = {"book_title": "The Study", "unresolved_count": 1,
-          "characters": ["Darcy", "Elizabeth", "O'Brien"],
-          "chapters": [{"index": 0, "title": "One", "blocks": blocks}]}
+    """The same little book tests/test_timeline.py uses (from synthetic.py)."""
     lib.ensure_book_dir("study")
-    (root / "study" / "ir.json").write_text(json.dumps(ir))
+    (root / "study" / "ir.json").write_text(json.dumps(study_ir()))
     return "study"
+
+
+# GET /pipeline/{slug} asks Ollama and whisper whether they are up, so on a
+# machine that runs them the answer differs from one that doesn't — the same
+# problem `ocr_available` has. The probe verdicts are pinned to fixed rows here
+# (the two states the card must draw) so the SHAPE still comes from the live
+# endpoint while the fixture stays reproducible anywhere.
+def probe_row(key: str, label: str, ok: bool, fix: str = "") -> dict:
+    return {"key": key, "label": label, "ok": ok, "state": "ok" if ok else "missing",
+            "detail": f"{label} · http://localhost · " + ("ready" if ok else "not responding"),
+            "fix": fix, "optional": True}
+
+
+OLLAMA_FIX = ("Install Ollama from ollama.com and start it, or point the URL at a machine "
+              "that runs it.")
+WHISPER_FIX = ("Optional. Without it the read-along highlights by sentence (estimated) "
+               "instead of by word.")
+
+
+def pin_probes(ollama_ok: bool, whisper_ok: bool) -> None:
+    setup_probe_mod.probe_ollama = lambda: probe_row(
+        "ollama", "Who's speaking (local AI)", ollama_ok, "" if ollama_ok else OLLAMA_FIX)
+    setup_probe_mod.probe_whisper = lambda: probe_row(
+        "whisper", "Read-along timing (whisper)", whisper_ok,
+        "" if whisper_ok else WHISPER_FIX)
 
 
 def upload(client, name: str, data: bytes) -> dict:
@@ -93,6 +105,14 @@ def main() -> None:
     write("upload_scan_pdf.json", upload(client, "Scanned.pdf",
                                           build_pdf(tmp / "s.pdf", scan=True).read_bytes()),
           "POST /books/upload (scanned pdf)")
+
+    # The Pipeline card's two states: everything reachable, and nothing is.
+    pin_probes(ollama_ok=True, whisper_ok=True)
+    write("pipeline_ready.json", client.get(f"/pipeline/{slug}").json(),
+          f"GET /pipeline/{slug} (services up)")
+    pin_probes(ollama_ok=False, whisper_ok=False)
+    write("pipeline_offline.json", client.get(f"/pipeline/{slug}").json(),
+          f"GET /pipeline/{slug} (services down)")
 
 
 if __name__ == "__main__":
