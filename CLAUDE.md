@@ -1,118 +1,92 @@
 # ProseCast
 
-A multi-voice audiobook narration app that parses books and plays them back with distinct voices for narration and dialogue.
+A multi-voice audiobook app: parses a book (EPUB/TXT/PDF, scans via OCR),
+works out who is speaking, lets the user cast a voice per character, renders
+with local TTS (Chatterbox first; `say`/piper/ElevenLabs also wired), and plays
+it back with inline correction and word-level read-along. Local-first: the book
+never leaves the machine.
 
-## Last Session (2026-06-10)
+## Read first, every session
 
-**Project hygiene pass** (no pipeline behavior changes):
-- **Git initialized** — `.gitignore` excludes `.venv`, `output/`, `books/` (copyrighted EPUBs), `.env`, `__pycache__`. GitHub remote: pending (`Koontzie/prosecast` planned).
-- **Stray root `ir_generator.py` removed** — was an accidental paste from another project's terminal session (preserved in git history at the initial commit).
-- **`requirements.txt` added** — note: `ebooklib`/`beautifulsoup4`/`lxml` were never imported (EPUB parsing is stdlib) and are dropped. `SETUP.sh` rewritten: venv-aware, installs from requirements.txt.
-- **Corrections journal** — `server.py` now appends every manual correction to `output/{slug}_corrections.jsonl` (append-only; events: `speaker_correction`, `merge_next`, `character_deleted`). This is the raw labeled data for the attribution training flywheel. Never rewrite this file.
-- **Golden-file tests** — `tests/test_attribution.py` runs the built-in sample through `build_ir` and asserts 0 unresolved + exact speaker set. Run `.venv/bin/pytest tests/ -v` after touching any attribution layer. Requires spaCy + `en_core_web_sm` (skips otherwise).
-- **STATUS.md added** per the cross-project STATUS protocol.
-- **Per-book library layout** — replaced the flat `output/` with `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/}`. All paths go through `prosecast/library.py` — never construct book paths by hand. Audio endpoint is now `GET /audio/{slug}/ch{N}.wav`. Render artifacts (`renders/`) are disposable; everything else in a book dir is precious. ~5.5GB of old say-engine test renders were deleted (Tyler-approved); legacy `output/` retains only el_test files and a log.
+1. **`HANDOFF.md`** — where the project stands, what is real and unfixed, and
+   the hard-won facts. Supersedes anything below that contradicts it.
+2. **`STATUS.md`** — the running log, newest entry at the top; update it at
+   chapter-close (single-writer).
+3. **`docs/ROADMAP_PHASE_E_UI.md`** — the current phase's spec and parking lot.
 
-- **M4B export shipped** — `prosecast/m4b_export.py` builds a chapterized .m4b from rendered chapter WAVs + IR titles (ffmpeg concat + FFMETADATA, AAC 64k mono, faststart). CLI: `--export-m4b [--author "Name"]` (export-only unless render flags also given). Server: `POST /export/{slug}` (background job, poll via `/render_status/{job_id}`) + `GET /export/{slug}/file` (download, friendly filename). UI: ⬇ Export M4B button in the book header. Unrendered chapters are skipped, not blocking. Output: `library/<slug>/exports/<slug>.m4b` (disposable). **Requires ffmpeg on PATH** (`brew install ffmpeg`).
+The rest of this file is the standing technical reference (architecture,
+attribution layers, tag schema, engine notes). It is accurate for what it
+covers but does not track session state — HANDOFF and STATUS do.
 
-Planned next (agreed with Tyler, not yet built): pipeline-in-UI processing jobs, cast review screen (merge/ignore noisy characters), per-chapter narrator dropdown.
+## Three working rules (each learned the expensive way — see HANDOFF)
 
-## Previous Session (2026-05-28)
+1. **Commit to the Mac as you go.** Work that exists only in a cloud container
+   is not work; a whole feature was lost that way on 2026-09-04.
+2. **Never hand-write a UI fixture or mock.** `tests/fixtures/*.json` come from
+   the live endpoints via `scripts/refresh_ui_fixtures.py`, and tests fail if
+   they drift.
+3. **After touching `static/index.html`, run both checks in `tests/ui/`.** They
+   need Playwright (cloud container, not the device VM).
 
-### What's working end-to-end
+Also: every `ir.json` write goes through `lib.write_json_atomic()`; all book
+paths go through `prosecast/library.py`; `corrections.jsonl` is append-only;
+never rename WAVs on the Chatterbox server; never emit `speed` to Chatterbox.
 
-**Pipeline:** EPUB/TXT → IR (rule-based + LLM attribution) → tag pass → TTS → WAV. `main.py` CLI handles all steps; `--narrator` for POV, `--llm` for the LLM pass, `--tag` for tagging, `--use-existing-ir` to skip rebuild.
+## Where it stands (2026-09-05)
 
-**Tagging pipeline** (`prosecast/tag_generator.py`), implemented and smoke-tested:
-- `--tag` flag adds actor-facing emotion/tone tags to every IR block after attribution
-- `--retag` forces re-tagging of blocks that already have tags
-- `--tag-model mistral:7b` selects the Ollama model (default: mistral:7b on Gideon)
-- `--tag-dialogue-only` tags only dialogue blocks (skips narration — faster for validation runs)
-- Schema: `{action, emotion, intensity, pace, tag_method}` — see Tag Schema section
-- Zero-error rate on sample book (51/51); prompt enforces "to VERB" constraint via validation
-- Failures logged to `/tmp/prosecast-tag-failures.json`
-- Gideon connectivity checked at startup; graceful skip if unreachable
-
-**Tag mapper** (`prosecast/tag_mapper.py`): translates abstract IR tags to engine-specific parameters at render time. ElevenLabs (stability/style), Orpheus (inline tags), Chatterbox (exaggeration/speed) all wired. say/gtts/stub/piper return `{}` — no tag support.
-
-**Web UI** (`server.py` + `static/index.html`), all verified working:
-- Book list sidebar, chapter list with titles and 1-based numbering
-- Playback: play/pause/seek, timeline-synced speaker display, `✎` edit icon always visible next to speaker name
-- Block text display above scrubber — shows text for **all** block types (narration and dialogue), 3-line clamp, clickable to open inline correction
-- Inline correction popup: character datalist (speaking chars only, NARRATOR always first), free-type for new names, merge-next button, saves via PATCH endpoint
-- Unresolved panel (right drawer): opens from chapter badge, bulk review of unresolved blocks
-- Voices panel (right drawer): one row per speaking character, voice dropdown, preview button, ✕ delete (reassigns all blocks to NARRATOR, shows inline count confirmation)
-- Voice map persisted to `{slug}_voice_map.json`, loaded by `main.py` before rendering
-
-**ElevenLabs TTS** (`ELEVENLABS_API_KEY` in `.env`) verified working:
-- Auto-detected as highest-priority engine when key is present
-- Connection check hits `/v1/voices` on startup
-- Voice auto-assignment: NARRATOR→Sarah, characters round-robin Daniel/Aria/Charlie/Matilda
-- MP3→WAV decode via `miniaudio` (no ffmpeg needed)
-- `output/el_test.wav` — 2-block test file with NARRATOR and Darcy voices, confirmed audible
-- Partial render limited by free-tier character quota (402 on blocks beyond budget); add credits to test at full scale
-
-**Server endpoints:** `/books` (GET + `POST /books/upload`), `/chapters/{slug}`, `/timeline/{slug}/{ch}`, `/ir/{slug}`, `/ir/{slug}/characters`, `/ir/{slug}/cast_candidates`, `/ir/{slug}/unresolved/{ch}`, `PATCH /ir/{slug}/block/{seg_id}`, `POST /ir/{slug}/block/{seg_id}/merge_next`, `DELETE /ir/{slug}/character/{name}`, `/voices`, `/voice_map/{slug}` (GET + POST), `/voice/preview/{voice_name}` (supports `?text=` for actual dialogue preview), `/audio/{file}`, `POST /render/{slug}/{ch}`, `POST /render/{slug}`, `GET /render_status/{job_id}`
-
-### Known issues not yet tackled
-
-1. **Fuzzy name matching** — alias collapse doesn't catch alternate spellings (e.g. `Kimberly` vs `Kimberley`). Needs Levenshtein distance ≤ 2 matching in `build_alias_map()`.
-2. **Multiple POV narrators** — some books (and Carousel specifically) shift first-person POV between chapters or scenes. The `--narrator` flag only accepts one name. The IR generator needs chapter-level or scene-level POV detection, and the LLM pass needs context to distinguish which POV character is speaking. Agreed direction (2026-06-10): per-chapter narrator dropdown in the UI rather than automatic detection.
-
-~~3. `--tts` flag missing `elevenlabs` option~~ — fixed; `elevenlabs` is in the choices list.
-
-### IR file state
-
-- Parade IR: lazy-migrated (old `id` → `segmentId`). 255 speaking characters after Vinata deleted during smoke test (1 block reassigned to NARRATOR).
-- Sample book: rebuilt fresh this session (Elizabeth was deleted in prior smoke test; IR regenerated with 4 chars: Bingley, Darcy, Elizabeth, Jane).
-- Carousel: 47 speaking characters, high unresolved count expected — see Test Books section.
-
-### Next step
-
-**Full validation of tagging pipeline** — Frankenstein in-progress; Yumi and the Nightmare Painter queued. See `test_books/TAGGING_RESULTS.md` once runs complete.
-
-**Chatterbox-Turbo on Gideon** — Tyler is setting up Chatterbox-Turbo on the Gideon server. See "Local TTS Tier — Engine Decision" section for the Orpheus vs Chatterbox tradeoff analysis.
-
-**ElevenLabs full-chapter render** — once account has sufficient credits, render the sample book chapter 1 end-to-end with ElevenLabs and listen for voice consistency across speaker transitions.
-
-## Project Goal
-
-**Phase 1:** Play one chapter with voice switching between narrator and characters. ✓ Done.
-**Current focus:** Attribution quality on real EPUBs. Target: <5% unresolved across a full book.
+Phases A–D and E1, E2.1–E2.4, E4.1–E4.3, E5 are shipped: any format in from the
+UI, casting, safe whole-book renders, reader view, Setup page with probes,
+`config.json`, README + install story + `docs/PHILOSOPHY.md`. Git history was
+rewritten on 2026-09-05 to scrub the home-network host (commit hashes quoted in
+older STATUS/HANDOFF entries predate the rewrite). **Next: E3 pipeline-in-UI**
+(the AI attribution pass and `align_words` as jobs behind buttons) — belongs
+in Claude Code on the Mac because it needs Gideon; brief at
+`docs/CC_BRIEF_pipeline_in_ui.md`. After that: the cast exchange (see
+PHILOSOPHY.md), cover art and in-book images (roadmap parking lot).
 
 ## Architecture
 
-The pipeline is a four-stage process:
+```
+EPUB/TXT/PDF → ingest.py (book_parser / pdf_ingest / ocr / play_parser)
+            → ir_generator.py (+ scene_attributor / llm_attributor, cast_profiler, tag_generator)
+            → renderer.py + tts_engine.py (tag_mapper at render time)
+            → library/<slug>/renders/  → word_aligner.py → m4b_export.py
+```
 
-```
-EPUB/TXT → book_parser.py → ir_generator.py → tts_engine.py → audio_merger.py → WAV
-```
+`server.py` (FastAPI) + `static/index.html` (single-file UI, On Air skin default)
+sit on top; `main.py` is the CLI over the same modules. `prosecast/config.py`
+resolves *defaults < config.json < env vars*; `setup_probe.py` backs the Setup
+page. `preflight.py` guards GPU co-residency before renders.
 
 ### Core Files
 
-- **`prosecast/book_parser.py`** — Parses EPUB (stdlib spine-based, no ebooklib) or TXT into chapters. Skips nav/TOC/cover items automatically.
-- **`prosecast/ir_generator.py`** — The core. 6-layer attribution pipeline → structured IR JSON with narration/dialogue blocks, speaker names, confidence scores, and attribution method tags.
-- **`prosecast/llm_attributor.py`** — Phase 2 LLM pass. Sends unresolved blocks to Ollama for speaker attribution. Uses localhost:11434 by default.
-- **`prosecast/tag_generator.py`** — Phase 4 tagging pass. Sends all blocks to Gideon (mistral:7b at `GIDEON_HOST:11434`) for actor-facing emotion/tone tags. Additive — never modifies attribution fields.
-- **`prosecast/tag_mapper.py`** — Translates abstract IR tags to engine-specific render parameters. Pure function: `map_tags(tags, engine_name) → dict`. Called at render time, not at tag time.
-- **`prosecast/tts_engine.py`** — Text → audio. Backends: `say` (macOS, local, default), `gtts` (Google TTS, network), `piper` (local, high quality), `stub` (silence, for testing). gTTS output is decoded MP3→WAV via `miniaudio` (no ffmpeg needed).
-- **`prosecast/audio_merger.py`** — Merges audio blocks into a final WAV. Uses pydub if available, falls back to pure-Python WAV concat.
+- **`prosecast/ingest.py`** — `prepare(path)` (format gate, mode guess, scan report, PDF chapter detection) and `run(...)` (the ingest job: extract → chapters → attribute). Runs on its own thread, never the render queue.
+- **`prosecast/book_parser.py`** — EPUB (stdlib spine-based) and TXT → chapters.
+- **`prosecast/pdf_ingest.py`** — PDFs on PyMuPDF: bookmarks → printed TOC → heading sizes → fixed split; generic watermark/running-head filter; `reflow()`.
+- **`prosecast/ocr.py`** — scanned PDFs: PyMuPDF rasterizes, tesseract reads, output reflowed. Cached at `books/<stem>_ocr.txt`.
+- **`prosecast/play_parser.py`** — script-format (play) mode.
+- **`prosecast/ir_generator.py`** — the 6-layer rule-based attribution pipeline → IR JSON (below).
+- **`prosecast/scene_attributor.py`** / **`llm_attributor.py`** — the Ollama passes: scene-batched (v2, preferred) and per-block (v1).
+- **`prosecast/cast_profiler.py`** — gender/age/voice hints per character for blind casting.
+- **`prosecast/tag_generator.py`** / **`tag_mapper.py`** — emotion/tone tags on every block; mapped to engine parameters at render time.
+- **`prosecast/renderer.py`** — the render queue: one at a time, resumable, per-block cache, atomic IR writes.
+- **`prosecast/tts_engine.py`** — backends: `chatterbox` (primary), `elevenlabs`, `piper`, `say`, `gtts`, `stub`.
+- **`prosecast/word_aligner.py`** — word timings via an OpenAI-compatible `/v1/audio/transcriptions` server (faster-whisper / Speaches).
+- **`prosecast/m4b_export.py`** — chapterized `.m4b` via ffmpeg.
+- **`prosecast/library.py`** — the only place book paths are built: `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/, exports/}`.
+- **`prosecast/config.py`**, **`setup_probe.py`**, **`preflight.py`** — config, Setup-page probes, GPU preflight.
 
 ### CLI
 
-```bash
-python main.py --sample --tts say                        # built-in sample, local voices
-python main.py --book book.epub --ir-only                # IR only, no audio
-python main.py --book book.epub --narrator "Carl"        # set POV character for "I said" lines
-python main.py --book book.epub --tts say                # render chapter 0
-python main.py --book book.epub --all-chapters --tts say # render entire book
+The UI is the primary surface; the CLI drives the same modules. Until E3 lands, two steps are CLI-only:
 
-# Tagging (Phase 4)
-python main.py --sample --tag --ir-only                  # smoke test: tag the sample book
-python main.py --book book.epub --ir-only --tag          # build IR + tag all blocks
-python main.py --book book.epub --use-existing-ir --tag  # tag existing IR without rebuilding
-python main.py --book book.epub --use-existing-ir --retag  # force re-tag already-tagged blocks
-python main.py --book book.epub --ir-only --tag --tag-dialogue-only  # dialogue only (faster)
+```bash
+bash SETUP.sh                                           # venv, deps, spaCy model (verified), config.json, tools, smoke test
+.venv/bin/uvicorn server:app --port 8000                # the app; first run lands on Setup
+.venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene   # AI attribution pass (model from config.json)
+.venv/bin/python scripts/align_words.py <slug>          # word timings after a render (whisper server)
+.venv/bin/python main.py --sample --tts stub            # silent smoke test
+.venv/bin/pytest tests/ -q                              # ~200 tests; spaCy/tesseract-gated ones skip cleanly
 ```
 
 ## IR Attribution Pipeline (ir_generator.py)
@@ -155,62 +129,28 @@ Six layers, each filling gaps left by the previous:
 | Carousel B8 Ch17-30 | Stress test only | Source is copy-pasted web chapters reformatted as EPUB with minimal structure. Mostly first-person POV (narrator = protagonist, so most dialogue is self-narration). Occasional interlude chapters switch POV. Incomplete book. High unresolved count (103) is expected given the format, not a pipeline failure. |
 | Sample (P&P excerpt) | Smoke test | Built-in sample, always 0 unresolved. Use for quick sanity checks. |
 
-## Phase Status
+## Phase status
 
-| Phase | Description | Status |
-|-------|-------------|--------|
-| 1 | Parse book → IR → TTS → WAV, voice switching | ✓ Done |
-| 2 | LLM attribution pass for unresolved blocks | ✓ Done |
-| 3a | Playback UI — load WAV, play, show current speaker | ✓ Done (web UI) |
-| 3b | Correction UI — review unresolved blocks, assign speaker | ✓ Done (web UI) |
-| 3c | Voice assignment — map characters to TTS voices before render | ✓ Done (web UI) |
-| 4a | Emotion/tone tagging pipeline | ✓ Done (tag_generator.py + tag_mapper.py) |
-| 4b | Tag editing UI — per-block tag review and correction | Next |
-| 4c | Tag-aware TTS render — use tags to shape ElevenLabs/Orpheus delivery | Next |
-| 5 | Flutter mobile app | Future |
+Live status lives in `HANDOFF.md` (table at the top) and `STATUS.md`. Summary as of 2026-09-05:
 
-## Phase 3 Plan
+| Phase | What | State |
+|---|---|---|
+| 1–4a (2026-05/06) | parse → IR → TTS → WAV; LLM pass; web UI playback/correction/casting; emotion tagging | ✓ |
+| A–D (2026-07/08) | Chatterbox backend, cast screen, safe whole-book render, word-level read-along | ✓ |
+| E1, E2.1–E2.4, E4.1–E4.3 (2026-09-03/04) | reader view; ingest wizard incl. PDF review + OCR; config.json, probes, Setup page | ✓ |
+| E5 (2026-09-05) | README, SETUP.sh, PHILOSOPHY.md, pre-publish history scrub | ✓ |
+| **E3** | pipeline-in-UI: AI pass + align as jobs behind buttons | **next — Claude Code on the Mac** |
+| 4b / 4c | tag editing UI; tags actually reaching ElevenLabs | open (4c is one of the Codex findings in HANDOFF) |
+| later | cast exchange (PHILOSOPHY.md), cover art + in-book images (roadmap parking lot), Flutter app | direction |
 
-### 3a — Playback UI
-- Load a rendered WAV file
-- Play/pause/seek
-- Highlight current speaker name as audio progresses (requires a speaker timeline derived from the IR block timings)
+## Known remaining issues
 
-### 3b — Correction UI
-- Load an IR JSON, filter to `unresolved=True` blocks
-- Show dialogue line + surrounding context
-- Dropdown / text input to assign a character name
-- Save corrected IR back to disk; re-render affected audio blocks only
+The four real, unfixed findings from the 2026-09-04 external review are in `HANDOFF.md` → "Known-real, not yet fixed". Older, still true:
 
-### 3c — Voice Assignment
-- Show character list extracted from IR
-- Let user assign a TTS voice (say voice name, gTTS accent, piper model) to each character
-- Persist as a `voice_map.json` alongside the IR
-- `tts_engine.py` reads `voice_map.json` if present, falls back to auto-assignment
-
-### 4 — Flutter Mobile App
-- Targets iOS/Android
-- Loads rendered WAV (or streams block-by-block)
-- Embeds the correction UI for on-device editing
-- Syncs IR + audio to device
-
-## Phase 3 Design Requirements
-
-1. **MULTIPLE POV NARRATORS** — Some books have multiple first-person POV characters. Currently all are collapsed into NARRATOR. The system needs to detect POV shifts (chapter-level or scene-level) and attribute first-person narration to the correct POV character. The `--narrator` flag currently accepts one name — extend to support multiple POV characters, each associated with specific chapters or scene markers. The LLM pass should use surrounding context to determine which POV character is narrating when ambiguous.
-
-2. **INLINE CORRECTION UI** — User should be able to flag a speaker mid-playback ("this voice is wrong") and immediately reassign it. The correction writes back to the IR and re-renders only that block. Do not require stopping playback.
-
-3. **DIALOGUE STABILITY** — Investigate whether the alternating heuristic is flipping speakers too aggressively in fast back-and-forth exchanges. In a 2-person conversation, once two speakers are established, the heuristic should hold them stable rather than reassigning on every low-confidence line.
-
-4. **SHARED ATTRIBUTION DATABASE** — When a user corrects an unresolved block, that correction (`book_id`, `block_id`, `speaker`) gets contributed to a shared database. Future users of the same book load pre-computed corrections before running the LLM pass. Book identified by ISBN or title+author hash.
-
-## Known Remaining Issues
-
-1. **Noisy character list** — spaCy tags game skill names (e.g. `"Gut Instinct"`, `"Dark Knight"`) as PERSON entities in LitRPG books. A per-book character allowlist/denylist would help.
-2. **Kimberly / Kimberley duplicates** — alias collapse doesn't catch alternate spellings. Needs fuzzy matching (Levenshtein distance ≤ 2).
-3. **No sentence-boundary awareness in segmentation** — A quote split across a paragraph break can create false dialogue blocks.
-4. **Speaker timeline not yet computed** — Playback UI needs per-block start/end timestamps; currently only block order is known. Requires timing the TTS output during render.
-5. **Chapter indexing mismatch** — the `--chapter` flag uses internal IR index (0-based, includes front matter like Dedication, Epigraph, Definition) rather than the book's chapter numbers. Phase 3 UI needs to display the actual chapter title and let users select by name, not index number. The IR already has the `title` field on each chapter — just needs to be surfaced.
+1. **Noisy character list** — spaCy tags LitRPG skill names as PERSON. The Voices panel delete (reassigns to NARRATOR) is the workaround; a per-book denylist would be the fix.
+2. **Alternate spellings** (`Kimberly` / `Kimberley`) are not collapsed — needs Levenshtein ≤ 2 in `build_alias_map()`.
+3. **No sentence-boundary awareness in segmentation** — a quote split across a paragraph break can create a false dialogue block.
+4. **Multiple first-person POV narrators** — `--narrator` takes one name; agreed direction is a per-chapter narrator dropdown, not automatic detection.
 
 ## UI Polish — Future Items
 
@@ -218,7 +158,6 @@ Six layers, each filling gaps left by the previous:
 
 ## Future Considerations
 
-- **PDF support** — PDF text extraction is messier than EPUB. Requires handling scrambled text layers, multi-column layouts, and header/footer bleed. Lower priority than EPUB but needed eventually.
 
 - **Comic/manga reader** — OCR on panel images to extract speech bubble text, attribute to visual characters, read via TTS. Potentially a browser extension (hover-to-read bubbles). Separate product surface from the main app, revisit after core product has traction.
 
@@ -284,6 +223,9 @@ IR stores abstract tags once. Engine format translates at render time. Swapping 
 When the tag editing UI (Phase 4b) exists, user tag corrections get logged the same way attribution corrections do. Tag edits train the tagging model alongside the attribution model. The flywheel: more corrections → better fine-tuned local model → fewer corrections needed.
 
 ### Local TTS Tier — Engine Decision (Orpheus vs Chatterbox)
+
+**Decided (2026-07/08): Chatterbox, base model, is the primary local engine.** The Setup page and connection check warn loudly on the Turbo variant because it ignores `exaggeration`. The analysis below is kept for the record.
+
 
 Tyler is standing up Chatterbox-Turbo on the Gideon server. The original CLAUDE.md recommended Orpheus as the local expressive tier. Here's the current tradeoff:
 
@@ -377,13 +319,17 @@ Long-horizon feature. Architecture decisions now must not block it — keep IR e
 
 ## Dependencies
 
+`bash SETUP.sh` does all of this and verifies each step. By hand:
+
 ```bash
-# create venv first
-python3 -m venv .venv && source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate     # Python 3.11+
 pip install -r requirements.txt
 python -m spacy download en_core_web_sm
-# ffmpeg optional — needed only if pydub MP3 merging is required
-# Note: ebooklib/beautifulsoup4/lxml are NOT needed — EPUB parsing is stdlib
+python -c 'import spacy; spacy.load("en_core_web_sm")' # prove it — a rebuilt venv silently skips the attribution tests without this
+cp config.example.json config.json                      # gitignored; the Setup page edits it
+# ffmpeg REQUIRED (m4b export, voice-clip prep); tesseract only for scanned PDFs; poppler NOT needed
 ```
 
-**Note:** `pip` / `python` resolve to the venv. Always run via `.venv/bin/python` or activate first.
+`pydub` is effectively dead on Python 3.13 (`audioop` removed); the merger falls back to pure-WAV concat and works. Always run via `.venv/bin/python` or activate first.
+
+**Cowork device VM:** `/opt/homebrew` is not mounted, so `.venv/bin/python` fails there. Use the VM's own `python3` with `pip install --break-system-packages fastapi httpx python-multipart pytest requests miniaudio pymupdf` and run `python3 -m pytest tests/`. Playwright is only in the cloud container.
