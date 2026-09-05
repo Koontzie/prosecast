@@ -1,4 +1,14 @@
-# ProseCast
+<p align="center">
+  <img src="docs/assets/prosecast-banner.png" alt="ProseCast — full-cast audiobooks from the books you own" width="800">
+</p>
+
+<p align="center">
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-cd9a43?style=flat-square"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-cd9a43?style=flat-square">
+  <img alt="Runs locally" src="https://img.shields.io/badge/runs-100%25%20local-63b3a0?style=flat-square">
+  <img alt="EPUB · PDF · TXT" src="https://img.shields.io/badge/reads-EPUB%20%C2%B7%20PDF%20%C2%B7%20TXT-cdbb97?style=flat-square">
+  <a href="https://ko-fi.com/tylerxkoontz"><img alt="Ko-fi" src="https://img.shields.io/badge/ko--fi-buy%20me%20a%20coffee-d8503a?style=flat-square"></a>
+</p>
 
 **Turn a book you own into a full-cast audiobook, on your own machine.**
 ProseCast reads an EPUB, PDF or text file, works out who is speaking on every
@@ -14,11 +24,11 @@ Ollama or a local TTS server, you are the person this was written for.
 > rulebooks, including scanned PDFs. Used daily by one person. Two steps —
 > the AI "who's speaking" pass and word-accurate read-along timing — are still
 > terminal commands; everything else is in the browser. See
-> [Where it is](#where-it-is) before you decide it is for you.
+> [Where it is](#%EF%B8%8F-where-it-is) before you decide it is for you.
 
 ---
 
-## What it actually does
+## 📖 What it actually does
 
 1. **Reads the book.** EPUB, TXT, or PDF. Born-digital PDFs get chapter
    detection from bookmarks, the printed contents page, or heading sizes, and
@@ -46,7 +56,7 @@ something you bring.
 
 ---
 
-## Which rung are you on?
+## 🪜 Which rung are you on?
 
 ProseCast is built as a ladder. Every rung works on its own; each one up
 sounds better or thinks harder.
@@ -63,7 +73,7 @@ services as you go; each row turns green as its service appears.
 
 ---
 
-## Install
+## 🔧 Install
 
 **You need:** Python 3.11 or newer, `git`, and `ffmpeg` (required — it makes
 the `.m4b` and preps voice clips). `tesseract` only if you have scanned PDFs.
@@ -184,12 +194,12 @@ which chapters have timings and which are on sentence estimates.
 
 ---
 
-## `config.json`
+## ⚙️ `config.json`
 
 One file at the project root, created for you by `SETUP.sh` from
 `config.example.json`. It is gitignored, so your URLs and keys stay local. The
 Setup page edits the same file; environment variables
-(`PROSECAST_CHATTERBOX_URL`, `PROSECAST_OLLAMA_URL`, …) override it.
+(`CHATTERBOX_URL`, `PROSECAST_OLLAMA_URL`, `ELEVENLABS_API_KEY`, …) override it.
 
 | Key | What it is | Default |
 |---|---|---|
@@ -209,7 +219,7 @@ exposing it; there is no authentication.
 
 ---
 
-## Using it
+## 🎧 Using it
 
 - **Add a book** — `+ Add Book` takes `.epub`, `.txt`, `.pdf`. The wizard
   guesses whether it's a novel, a single-narrator work or a play, and tells
@@ -222,8 +232,9 @@ exposing it; there is no authentication.
 - **Render** — per chapter or the whole book. Renders queue one at a time
   (the GPU is the bottleneck), survive a restart, and cache per line.
 - **Listen and correct** — the block text shows above the scrubber; click it
-  or the ✎ to reassign the speaker. Playback doesn't stop.
-- **Read along** — the full-page reader with speaker-colored paragraphs.
+  or the ✎ to reassign the speaker without leaving the player.
+- **Read along** — the full-page reader; the current paragraph lights up and
+  dialogue is marked, by word when timings exist.
 - **Export** — ⬇ Export M4B builds a chapterized audiobook from whatever
   chapters are rendered.
 
@@ -233,7 +244,7 @@ disposable. Back up the rest; `scripts/backup_library.sh` is one way.
 
 ---
 
-## ElevenLabs (optional)
+## ✨ ElevenLabs (optional)
 
 The local tier is the product, not a trial: a whole book can be narrated on
 Chatterbox without paying anyone. ElevenLabs is an optional upgrade for people
@@ -252,7 +263,7 @@ ElevenLabs Creator Affiliate Program.*
 
 ---
 
-## Where it is
+## 🗺️ Where it is
 
 Done and used daily: EPUB/TXT/PDF ingest including scans, three reading modes,
 rule-based + LLM attribution (99.8% on a 115-chapter test novel), per-character
@@ -273,7 +284,7 @@ healthy, not a failure.
 
 ---
 
-## How this was built
+## 🛠️ How this was built
 
 This repo keeps its process files in the open, because they are half the
 story. A solo builder, working in short chapters with Claude (Cowork and
@@ -293,14 +304,19 @@ that came out of it.
 
 ---
 
-## Contributing, support, license
+## 🤝 Contributing, support, license
 
 Issues and pull requests are welcome on GitHub. This is one person's project
 built in evenings; there is no promised response time, and Issues is the only
 support channel.
 
-If it saves you a subscription: [ko-fi.com/tylerxkoontz](https://ko-fi.com/tylerxkoontz).
-Never a gate — nothing in ProseCast is paywalled.
+**If ProseCast read you a book, consider buying its author a coffee.**
+Every full-cast render it does for free is one you didn't pay a subscription
+or an audiobook credit for. This is built in evenings by one person on one
+home server; the coffees pay for the parts, the GPU hours and the next
+feature. [**☕ ko-fi.com/tylerxkoontz**](https://ko-fi.com/tylerxkoontz)
+
+Never a gate — nothing in ProseCast is paywalled, and nothing will be.
 
 **License:** [GPL-3.0](LICENSE). Use it on books you own, for yourself.
 Don't distribute generated audio of works you don't hold the rights to.
