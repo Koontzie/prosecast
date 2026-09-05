@@ -1801,7 +1801,7 @@ def _probe_row(name: str) -> dict:
 
 def _refusal(row: dict) -> str:
     """The probe's own words — 'not responding' plus the sentence that fixes it."""
-    return " ".join(x for x in (row.get("detail"), row.get("fix")) if x)
+    return " — ".join(x for x in (row.get("detail"), row.get("fix")) if x)
 
 
 class AIPassBody(BaseModel):

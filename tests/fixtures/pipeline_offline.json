@@ -27,9 +27,9 @@
     "auto_chain": false
   },
   "ollama_ok": false,
-  "ollama_fix": "Who's speaking (local AI) · http://localhost · not responding Install Ollama from ollama.com and start it, or point the URL at a machine that runs it.",
+  "ollama_fix": "Who's speaking (local AI) · http://localhost · not responding — Install Ollama from ollama.com and start it, or point the URL at a machine that runs it.",
   "whisper_ok": false,
-  "whisper_fix": "Read-along timing (whisper) · http://localhost · not responding Optional. Without it the read-along highlights by sentence (estimated) instead of by word.",
+  "whisper_fix": "Read-along timing (whisper) · http://localhost · not responding — Optional. Without it the read-along highlights by sentence (estimated) instead of by word.",
   "render_running": false,
   "running_job_id": null,
   "running_kind": null
