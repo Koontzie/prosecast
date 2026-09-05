@@ -180,7 +180,8 @@ def main():
                         help="Which blocks --llm-scene reviews: 'unresolved' (rule-cascade leftovers only, laptop-friendly), "
                              "'low-confidence' (+ turn-taking guesses; default), 'all' (every non-protected dialogue block). "
                              "Manual corrections and explicit said-tags are never overwritten in any scope.")
-    parser.add_argument("--llm-model",  default="llama3.2",  help="Ollama model to use (default: llama3.2)")
+    parser.add_argument("--llm-model",  default=None,
+                        help="Ollama model to use (default: ollama_model from config.json, else gemma3:12b)")
     parser.add_argument("--llm-threshold", type=float, default=0.6, help="Min confidence to accept LLM attribution (default: 0.6)")
     parser.add_argument("--profile-cast", action="store_true", help="Infer character gender/age/voice hints for blind casting (titles resolve free; LLM reads sample lines for the rest)")
     parser.add_argument("--reprofile",  action="store_true", help="Re-run cast profiling even for characters that already have profiles")
@@ -191,6 +192,9 @@ def main():
     parser.add_argument("--export-m4b",    action="store_true", help="Export rendered chapters as a chapterized .m4b audiobook (needs ffmpeg)")
     parser.add_argument("--author",        default="", help="Author metadata for the m4b export")
     args = parser.parse_args()
+    if args.llm_model is None:
+        from prosecast import config as _config
+        args.llm_model = _config.get("ollama_model") or "gemma3:12b"
 
     lib.LIBRARY_DIR.mkdir(exist_ok=True)
 
