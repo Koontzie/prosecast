@@ -13,6 +13,7 @@ though the UI already disables the button.
 import importlib.util
 import json
 import queue
+import threading
 import time
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from fastapi.testclient import TestClient
 
 import server
 from prosecast import library as lib
+from prosecast import renderer as renderer_mod
 from prosecast import pipeline as pipe
 from prosecast import setup_probe as sp
 
@@ -291,6 +293,68 @@ def test_the_whisper_probe_runs_once_per_render_job_not_once_per_chapter(
                         lambda: (probes.append(1), _row(True))[1])
     _wait(client, client.post(f"/render/{slug}").json()["job_id"])
     assert len(probes) == 1, f"probed {len(probes)} times for 3 chapters"
+
+
+# ── the overlap guard ────────────────────────────────────────────────────────
+#
+# Two writers, one ir.json. The render worker writes the whole document back
+# after every block from a snapshot it took at the start of the job; the AI
+# pass read-modify-writes the same file from the other worker. E3 does not fix
+# that (it is its own HANDOFF item) — it refuses the overlap, bluntly, in both
+# directions, and says which job is in the way.
+
+def test_a_render_refuses_to_start_under_a_running_ai_pass(
+        client, tmp_path, services_up, frozen):
+    slug = _mk_book(tmp_path, "pbook_guard_r")
+    client.post(f"/pipeline/{slug}/ai_pass", json={})
+    r = client.post(f"/render/{slug}")
+    assert r.status_code == 409
+    assert "AI pass" in r.json()["detail"]
+    r = client.post(f"/render/{slug}/0")
+    assert r.status_code == 409
+
+
+def test_an_ai_pass_refuses_to_start_under_a_running_render(
+        client, tmp_path, services_up, monkeypatch):
+    slug = _mk_book(tmp_path, "pbook_guard_a")
+    started, release = threading.Event(), threading.Event()
+    real = renderer_mod.render_chapter
+
+    def slow(*a, **kw):
+        started.set()
+        release.wait(10)
+        return real(*a, **kw)
+
+    monkeypatch.setattr(renderer_mod, "render_chapter", slow)
+    job = client.post(f"/render/{slug}").json()["job_id"]
+    assert started.wait(10)
+    try:
+        r = client.post(f"/pipeline/{slug}/ai_pass", json={})
+        assert r.status_code == 409
+        assert "ir.json" in r.json()["detail"]
+    finally:
+        release.set()
+    _wait(client, job)
+
+
+def test_alignment_is_exempt_from_the_guard_in_both_directions(
+        client, tmp_path, services_up, frozen):
+    """Align writes only word_timings.json. Guarding it would buy nothing and
+    would break the auto-chain, which runs alignment *during* a render."""
+    slug = _mk_book(tmp_path, "pbook_guard_align")
+    client.post(f"/pipeline/{slug}/align", json={"chapters": [0]})
+    assert client.post(f"/render/{slug}").status_code == 200
+
+    other = _mk_book(tmp_path, "pbook_guard_align2")
+    client.post(f"/pipeline/{other}/ai_pass", json={})
+    assert client.post(f"/pipeline/{other}/align", json={}).status_code == 200
+
+
+def test_the_guard_is_per_book(client, tmp_path, services_up, frozen):
+    busy = _mk_book(tmp_path, "pbook_guard_busy")
+    free = _mk_book(tmp_path, "pbook_guard_free")
+    client.post(f"/pipeline/{busy}/ai_pass", json={})
+    assert client.post(f"/render/{free}").status_code == 200
 
 
 # ── keeping the card's fixtures honest ───────────────────────────────────────

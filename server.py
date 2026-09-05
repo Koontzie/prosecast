@@ -1584,6 +1584,20 @@ def _ensure_queue_worker() -> None:
 
 
 def _enqueue_render(book_slug: str, chapter_indices: list, force: bool) -> str:
+    # The overlap guard (E3.3). The render worker holds one IR snapshot for the
+    # whole job and writes the whole document back after every block; the AI
+    # pass read-modify-writes the same file from the pipeline worker. Whichever
+    # finishes second silently wins, and what is lost is attribution labor.
+    # Fixing that properly (the worker merging only the fields it owns) is its
+    # own item in HANDOFF; until then the two simply refuse to overlap.
+    #
+    # Alignment is NOT in the guard, in either direction: it writes only
+    # renders/chN_blocks/word_timings.json, which nothing else touches — and
+    # the auto-chain depends on being able to run while a render continues.
+    if _live_job("ai_pass", book_slug) is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="An AI pass is running on this book — render when it finishes.")
     job_id = uuid.uuid4().hex[:10]
     _render_jobs[job_id] = {
         "job_id": job_id, "kind": "render", "book_slug": book_slug,
