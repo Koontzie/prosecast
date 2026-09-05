@@ -2,9 +2,9 @@
 
 This page is the long answer to two questions a stranger reasonably asks of a
 tool that clones voices and reads books aloud: *whose books?* and *whose
-voices?* It is written by the one person who builds ProseCast, in September
-2026, and it describes what is true today. Where it describes a direction
-rather than a fact, it says so.
+voices?* ProseCast is built by one person. This page describes what is true
+as of September 2026; where something is a plan rather than a fact, it says
+so.
 
 ## Your book, your machine
 
@@ -72,10 +72,9 @@ exists in the code today, and this page will be updated when that changes.
 
 ## Sharing casts and voices — how it would work
 
-"Marketplace" is the wrong word for what is near. What is near is an
-*exchange*: people sharing the work of casting a book, with credit attached,
-the way ComfyUI nodes and Ollama's model library began — a community folder
-with a naming convention and a README, no payment rails.
+An exchange: people sharing the work of casting a book, with credit
+attached, the way ComfyUI nodes and Ollama's model library began — a
+community folder with a naming convention and a README, no payment rails.
 
 **A cast is two small files, and neither contains the book.** On disk, a
 finished cast is `voice_map.json` (character → voice) and
