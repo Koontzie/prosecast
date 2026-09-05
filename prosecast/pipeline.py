@@ -132,8 +132,11 @@ def run_ai_pass(slug: str, *, scope: str = "unresolved", model: Optional[str] = 
     progress("attributing", f"{targets} lines in scope · {model}", 0, 0)
     run_scene_pass(
         ir, model=model, scope=scope, checkpoint_path=str(ir_path), report=report,
+        # `done` is how many scenes have FINISHED; the sentence names the one in
+        # flight, which is what a person watching a progress bar is asking.
         on_progress=lambda done, total: progress(
-            "attributing", f"scene {done} of {total}" if total else "nothing in scope",
+            "attributing",
+            f"scene {min(done + 1, total)} of {total}" if total else "nothing in scope",
             done, total),
     )
 
@@ -145,7 +148,9 @@ def run_ai_pass(slug: str, *, scope: str = "unresolved", model: Optional[str] = 
         run_profile_pass(
             ir, model=model, checkpoint_path=str(ir_path), report=prof_report,
             on_progress=lambda done, total: progress(
-                "profiling", f"character {done} of {total}" if total else "cast already profiled",
+                "profiling",
+                f"character {min(done + 1, total)} of {total}" if total
+                else "cast already profiled",
                 done, total),
         )
         profiled = prof_report.get("profiled", 0)

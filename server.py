@@ -1533,7 +1533,10 @@ def _run_one_render_job(job_id: str) -> None:
                 # not wait for it. Probed once per job, not once per chapter.
                 if whisper_ok is None:
                     whisper_ok = bool(_probe_row("whisper").get("ok"))
-                if whisper_ok and r.get("rendered"):
+                # Chained whether or not this render synthesized anything: an
+                # all-cache render of a chapter that was never aligned still
+                # needs timings, and run_align skips the ones already fresh.
+                if whisper_ok:
                     _enqueue_pipeline("align", book_slug,
                                       {"chapters": [ch_idx], "force": False},
                                       merge=True)

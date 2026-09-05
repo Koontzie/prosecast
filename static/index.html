@@ -4249,6 +4249,13 @@ async function watchPipelineJob(slug, jobId, kind) {
   if (state.pipeJob === jobId) return;              // already watching this one
   state.pipeJob = jobId;
   pipeShow('pipe-run', true);
+  // Mark the stage busy right away rather than waiting for the next card
+  // reload — the plaques are how the card says which step is moving.
+  const plaque = pipeEl(kind === 'ai_pass' ? 'pipe-ai-plaque' : 'pipe-align-plaque');
+  if (plaque) plaque.className = 'pipe-step busy';
+  const step = document.querySelector(
+    `#pipe-flow .pipe-step[data-stage="${kind === 'ai_pass' ? 'ai-pass' : 'align'}"]`);
+  if (step) step.className = 'pipe-step busy';
   paintPipelineProgress({status: 'queued', stage: 'queued', total: 0, progress: 0});
   try {
     const s = await pollRenderStatus(jobId, paintPipelineProgress);
