@@ -254,8 +254,7 @@ def main():
 
         # Migrate to new segment model if needed
         ir_data = migrate_ir(ir_data)
-        with open(ir_path, "w", encoding="utf-8") as f:
-            json.dump(ir_data, f, indent=2, ensure_ascii=False)
+        lib.write_json_atomic(ir_path, ir_data)
         print(f"[IR] Migrated to new segment model → {ir_path}")
     else:
         # ── Parse → Build IR ─────────────────────────────────────────────────
@@ -284,8 +283,7 @@ def main():
                 model=args.llm_model,
                 confidence_threshold=args.llm_threshold,
             )
-            with open(ir_path, "w", encoding="utf-8") as f:
-                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            lib.write_json_atomic(ir_path, ir_data)
             print(f"[LLM] IR updated → {ir_path}")
         else:
             print(f"\n[LLM] Skipping LLM pass — model '{args.llm_model}' unavailable.")
@@ -302,8 +300,7 @@ def main():
                 confidence_threshold=args.llm_threshold,
                 checkpoint_path=ir_path,
             )
-            with open(ir_path, "w", encoding="utf-8") as f:
-                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            lib.write_json_atomic(ir_path, ir_data)
             print(f"[SCENE] IR updated → {ir_path}")
         else:
             print(f"\n[SCENE] Skipping scene pass — model '{args.llm_model}' unavailable.")
@@ -319,8 +316,7 @@ def main():
                 reprofile=args.reprofile,
                 checkpoint_path=ir_path,
             )
-            with open(ir_path, "w", encoding="utf-8") as f:
-                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            lib.write_json_atomic(ir_path, ir_data)
             print(f"[PROFILE] IR updated → {ir_path}")
         else:
             print(f"\n[PROFILE] Skipping profile pass — model '{args.llm_model}' unavailable.")
@@ -336,8 +332,7 @@ def main():
                 dialogue_only=args.tag_dialogue_only,
                 checkpoint_path=ir_path,
             )
-            with open(ir_path, "w", encoding="utf-8") as f:
-                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            lib.write_json_atomic(ir_path, ir_data)
             print(f"[TAG] IR updated → {ir_path}")
         else:
             print(f"\n[TAG] Skipping tag pass — Gideon/Ollama not reachable or model '{args.tag_model}' unavailable.")

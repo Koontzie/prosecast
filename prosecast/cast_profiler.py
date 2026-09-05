@@ -28,7 +28,9 @@ import json
 import re
 import urllib.request
 import urllib.error
-from typing import Optional
+from typing import Callable, Optional
+
+from prosecast import library as lib
 
 from prosecast.llm_attributor import OLLAMA_BASE
 
@@ -181,6 +183,8 @@ def run_profile_pass(
     confidence_threshold: float = 0.5,
     reprofile: bool = False,
     checkpoint_path: Optional[str] = None,
+    on_progress: Optional[Callable[[int, int], None]] = None,
+    report: Optional[dict] = None,
 ) -> dict:
     """Profile every character with >= MIN_LINES_TO_PROFILE dialogue blocks.
 
@@ -188,6 +192,12 @@ def run_profile_pass(
     corrections only fill gaps). Below-threshold LLM answers are stored as
     ambiguous/unknown — an honest '?' chip beats a confident wrong one.
     """
+    def _fill(**kw):
+        if report is not None:
+            report.update(kw)
+
+    _fill(profiled=0, targets=0, errors=0, aborted=False, abort_reason=None)
+
     counts = {}
     for ch in ir_data.get("chapters", []):
         for b in ch.get("blocks", []):
@@ -202,8 +212,11 @@ def run_profile_pass(
     if not reprofile:
         targets = [n for n in targets if n not in profiles]
 
+    _fill(targets=len(targets))
     if not targets:
         print("[PROFILE] Every eligible character already profiled — nothing to do.")
+        if on_progress:
+            on_progress(0, 0)
         return ir_data
 
     print(f"[PROFILE] Model:   {model}")
@@ -211,16 +224,28 @@ def run_profile_pass(
 
     by_title = llm_done = ambiguous = errors = 0
     consecutive_errors = 0
+    done = 0
+    if on_progress:
+        on_progress(0, len(targets))
+
+    def _step(who: str) -> None:
+        nonlocal done
+        done += 1
+        if on_progress:
+            on_progress(done, len(targets))
+
     for name in targets:
         titled = profile_from_name(name)
         if titled:
             profiles[name] = titled
             by_title += 1
             print(f"  ✓ {name:<22} {titled['gender']:<10} (title, no LLM)")
+            _step(name)
             continue
 
         excerpts = gather_excerpts(ir_data, name)
         if not excerpts:
+            _step(name)
             continue
         raw = _call_ollama(
             PROMPT_TEMPLATE.format(name=name, excerpts="\n\n".join(excerpts)),
@@ -232,12 +257,18 @@ def run_profile_pass(
             if consecutive_errors >= 3:
                 print(f"\n[PROFILE] {consecutive_errors} connection failures in a row — "
                       "aborting pass (profiles so far are saved; re-run to resume).")
+                _fill(aborted=True,
+                      abort_reason=f"Ollama stopped answering after {consecutive_errors} "
+                                   "tries while profiling the cast — the profiles finished "
+                                   "so far are saved.")
                 break
+            _step(name)
             continue
         consecutive_errors = 0
         prof = parse_profile_response(raw)
         if prof is None:
             errors += 1
+            _step(name)
             continue
         if prof["confidence"] < confidence_threshold:
             prof["gender"] = "ambiguous"
@@ -249,9 +280,10 @@ def run_profile_pass(
               f"{prof['evidence'][:45]!r}")
 
         if checkpoint_path:
-            with open(checkpoint_path, "w", encoding="utf-8") as f:
-                json.dump(ir_data, f, indent=2, ensure_ascii=False)
+            lib.write_json_atomic(checkpoint_path, ir_data)
+        _step(name)
 
     print(f"\n[PROFILE] {by_title} by title, {llm_done} by LLM, "
           f"{ambiguous} ambiguous, {errors} errors")
+    _fill(profiled=by_title + llm_done + ambiguous, errors=errors)
     return ir_data

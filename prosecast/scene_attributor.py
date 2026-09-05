@@ -25,8 +25,9 @@ import json
 import re
 import urllib.request
 import urllib.error
-from typing import Optional
+from typing import Callable, Optional
 
+from prosecast import library as lib
 from prosecast.llm_attributor import OLLAMA_BASE
 
 OLLAMA_API = f"{OLLAMA_BASE}/api/generate"
@@ -252,8 +253,22 @@ def run_scene_pass(
     scope: str = "low-confidence",
     confidence_threshold: float = 0.6,
     checkpoint_path: Optional[str] = None,
+    on_progress: Optional[Callable[[int, int], None]] = None,
+    report: Optional[dict] = None,
 ) -> dict:
-    """Scene-batch attribution over ir_data (modified in place and returned)."""
+    """Scene-batch attribution over ir_data (modified in place and returned).
+
+    `on_progress(scenes_done, scenes_total)` fires after every scene that had
+    targets — the UI's progress bar. `report`, if given, is filled with the
+    run's counters plus `aborted`/`abort_reason`, because the circuit breaker
+    must reach the caller as data, not only as a printed line.
+    """
+    def _fill(**kw):
+        if report is not None:
+            report.update(kw)
+
+    _fill(calls=0, changed=0, confirmed=0, low_conf=0, errors=0,
+          scenes_total=0, scenes_done=0, aborted=False, abort_reason=None)
     cast = _build_cast(ir_data)
     method_label = f"llm_scene_{model.split(':')[0]}"
 
@@ -264,7 +279,21 @@ def run_scene_pass(
     )
     if total_targets == 0:
         print(f"[SCENE] No blocks in scope '{scope}' — nothing to do.")
+        if on_progress:
+            on_progress(0, 0)
         return ir_data
+
+    # Pre-count the scenes that actually have work, so the progress bar has a
+    # denominator before the first Ollama call.
+    scenes_total = sum(
+        1 for ch in ir_data.get("chapters", [])
+        for scene in segment_scenes(ch.get("blocks", []))
+        if any(is_target(ch["blocks"][i], scope) for i in scene)
+    )
+    scenes_done = 0
+    _fill(scenes_total=scenes_total)
+    if on_progress:
+        on_progress(0, scenes_total)
 
     print(f"[SCENE] Model:   {model}")
     print(f"[SCENE] Scope:   {scope}  ({total_targets} blocks to review)")
@@ -285,6 +314,7 @@ def run_scene_pass(
             targets = [i for i in scene_idx if is_target(blocks[i], scope)]
             if not targets:
                 continue
+            scenes_done += 1
 
             for chunk_start in range(0, len(targets), TARGETS_PER_CALL):
                 chunk = targets[chunk_start:chunk_start + TARGETS_PER_CALL]
@@ -303,6 +333,9 @@ def run_scene_pass(
                         print(f"\n[SCENE] {consecutive_errors} connection failures in a row — "
                               "aborting pass (progress is saved; re-run to resume).")
                         aborted = True
+                        _fill(abort_reason=f"Ollama stopped answering after "
+                                           f"{consecutive_errors} tries — everything decided "
+                                           f"so far is saved; run the pass again to resume.")
                         break
                     continue
                 consecutive_errors = 0
@@ -332,12 +365,16 @@ def run_scene_pass(
 
             if chapter_dirty and checkpoint_path:
                 _recount_unresolved(ir_data)
-                with open(checkpoint_path, "w", encoding="utf-8") as f:
-                    json.dump(ir_data, f, indent=2, ensure_ascii=False)
+                lib.write_json_atomic(checkpoint_path, ir_data)
+            if on_progress:
+                on_progress(scenes_done, scenes_total)
             if aborted:
                 break
 
     _recount_unresolved(ir_data)
+    _fill(calls=calls, changed=changed, confirmed=confirmed, low_conf=low_conf,
+          errors=errors, scenes_total=scenes_total, scenes_done=scenes_done,
+          aborted=aborted)
     print(f"\n[SCENE] {calls} calls: {changed} changed, {confirmed} confirmed, "
           f"{low_conf} left low-confidence, {errors} errors")
     print(f"[SCENE] Unresolved remaining: {ir_data.get('unresolved_count')}")
