@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use ProseCast or build on its attribution, casting or actioning-tag design, please cite it."
+title: "ProseCast: local-first full-cast audiobooks with speaker attribution, casting, and actioning-verb delivery tags"
+type: software
+authors:
+  - family-names: Koontz
+    given-names: Tyler
+repository-code: "https://github.com/Koontzie/prosecast"
+license: GPL-3.0
+date-released: 2026-09-05
+version: 0.9.0
+keywords:
+  - audiobook
+  - text-to-speech
+  - speaker attribution
+  - dialogue attribution
+  - voice casting
+  - actioning
+  - local-first
+abstract: >-
+  ProseCast turns a book the user owns into a multi-voice audiobook on the
+  user's own machine. It attributes dialogue to speakers with a rule cascade
+  plus a local language model, records every human correction as labeled
+  data, lets the user cast a voice per character, tags each line with an
+  actor's playable intention (an actioning verb, intensity and pace) stored
+  independently of the speech engine, and renders locally.
