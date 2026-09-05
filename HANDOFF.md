@@ -45,7 +45,7 @@ Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
    `backup_library.sh` now reads its target from `.backup/dest`.
 2. **README** with banner (rendered from the On Air theme tokens —
    `docs/assets/prosecast-banner.png`), ladder, three install paths, "How this
-   was built", Ko-fi. **No affiliate tracking link yet** — application pending.
+   was built", Ko-fi, and the ElevenLabs affiliate link with its disclosure.
 3. **PHILOSOPHY.md** — the voice-actor answer and the cast exchange as a
    direction. Tyler-edited; approved.
 4. **SETUP.sh** verifies every step; **CLAUDE.md** is no longer a trap;
@@ -63,10 +63,10 @@ cast exchange design → the four findings below.
   do first — he flips it, submits the application with the URL, and tests the
   README on the gaming laptop (rungs 1–2). Anything the laptop test turns up
   is a README/SETUP fix, small and Cowork-able.
-- **When the affiliate application is approved:** one commit adds
-  `https://try.elevenlabs.io/dmylr2z8w3w9` to the README's ElevenLabs section
-  *with the disclosure sentence beside it* (the app and
-  `docs/elevenlabs-setup.md` already carry it). Nothing else changes.
+- **ElevenLabs affiliate** is approved and the link is in the README, the app
+  and `docs/elevenlabs-setup.md`, each with the disclosure beside it. Nothing
+  to do unless a new surface (the launch video, the website) shows the link —
+  then the same disclosure + attribution rules apply.
 - **E3** — run `docs/CC_BRIEF_pipeline_in_ui.md` in Claude Code on the Mac
   with Gideon up. Eight steps, `END OF BRIEF` sentinel, one real run against
   Ollama in Step 5. It ends by deleting the README's "Where the terminal is
@@ -122,10 +122,6 @@ scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,
 first run lands on Setup, `main.py --llm-model` defaults to the configured
 model. If code changes make any of those false, change the README in the same
 commit.
-
-**ElevenLabs affiliate link is NOT in the README yet** — the application is
-pending. It lands in one commit after approval, with the disclosure sentence
-beside it. The app and `docs/elevenlabs-setup.md` already carry link + disclosure.
 
 **Config (new, 09-03).** `prosecast/config.py` resolves *defaults <
 `config.json` < env vars*. `config.json` is gitignored and holds Tyler's

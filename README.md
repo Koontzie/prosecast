@@ -256,6 +256,12 @@ is about 550,000 of them. The sane pattern is to render the book locally and
 reserve ElevenLabs for the leads. Full guide, with the cost table:
 [docs/elevenlabs-setup.md](docs/elevenlabs-setup.md).
 
+**Disclosure:** ProseCast is an independent affiliate of ElevenLabs and may
+receive compensation for referrals. If you sign up through
+[this link](https://try.elevenlabs.io/dmylr2z8w3w9), ElevenLabs may pay us a
+referral; it costs you nothing extra, and we would rather say so out loud than
+bury it.
+
 *ElevenLabs and the ElevenLabs logo are registered trademarks or trademarks of
 ElevenLabs, Inc. Used with permission. ProseCast is not sponsored by, endorsed
 by, or affiliated with ElevenLabs except as an independent participant in the

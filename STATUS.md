@@ -35,9 +35,10 @@ string; the launchd plist explains its absolute path.
   BYO ElevenLabs), three install paths each ending in "how you know it worked",
   `config.json` table, "How this was built" (the process files as a feature),
   Ko-fi, GPL-3.0. Windows: untested natively, WSL2 is the known-good path.
-  **No affiliate tracking link** — the application is pending; the ElevenLabs
-  section carries the trademark attribution and the link lands in one commit
-  after approval.
+  ElevenLabs section carries the affiliate link with the disclosure beside it
+  and the trademark attribution (added later the same day, once it was clear
+  the affiliate account was already approved — the "pending" note in the
+  morning handoff was wrong).
 - **`docs/PHILOSOPHY.md`** (new): your book/your machine; attribution as the
   heart of it; the voice-actor question as provenance / consent / direction;
   the **cast exchange** — how a cast (`voice_map` + `corrections`, never the
