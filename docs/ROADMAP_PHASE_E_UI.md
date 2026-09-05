@@ -340,6 +340,38 @@ Chapter-close for each session: STATUS entry, tests green, `git push`.
 ## 7. Parking lot — Phase G "Stage" (later; ideas from 2026-09-03)
 
 Not now. Written down so they aren't lost, with the hook each one needs.
+
+- **The pictures that are already in the book** (Tyler, 2026-09-05). Distinct
+  from everything else here: not generated art, *fidelity to the source*. A
+  rulebook's diagrams, a novel's map, an illustrated edition's plates — they are
+  sitting in the file and the pipeline currently throws them away.
+  - *Where they are.* PDF is nearly free: PyMuPDF already opens every one
+    (E2.2), and `page.get_image_info()` gives position and bytes, so extraction
+    rides along with `extract()`. EPUB is the awkward one — images are entries
+    in the zip referenced by `<img src>` in the spine XHTML, and
+    `book_parser._parse_epub` flattens to text today, so it would have to emit a
+    position marker where the image sat *and* copy the bytes out. Scans are a
+    special case worth noticing: the page image **is** the source, and E2.4
+    already rasterizes every page, so pairing OCR text with its page picture is
+    almost free.
+  - *IR shape.* A new block type — `{"type": "image", "src": …, "caption": …}`,
+    no text, no audio. Additive, but every consumer that assumes
+    `narration|dialogue` has to tolerate it: the renderer (skip, no TTS), the
+    timeline (emit it with `duration: 0` — that zero is what lets the reader
+    place it in sequence without disturbing the audio cursor), cast counting,
+    m4b chapter export, the word aligner.
+  - *Storage and serving.* `library/<slug>/images/`, plus a
+    `/image/{slug}/{file}` endpoint mirroring `/audio/{slug}/{file}`.
+  - *Where it shows: the reader, not the player bar.* An audiobook is often
+    listened to with the screen off or in a car. Images serve the read-along
+    mode specifically — anchored between paragraphs, arriving as playback
+    reaches them. That is a reason to build it, but also a reason it is not
+    urgent.
+  - **The cheap first version is cover art only.** One image per book, in the
+    sidebar and the book header. No IR change at all — pull the EPUB cover (or
+    render PDF page 1), store `library/<slug>/cover.jpg`, add it to `/books`.
+    Perhaps an hour, and it delivers a surprising share of the felt value.
+    Do that before touching block types.
 - **Character art from the text.** `ir.character_profiles` (E3's profiler)
   already extracts gender/age/voice hints; extend the profile prompt to
   capture stated physical description, then render a portrait per main
