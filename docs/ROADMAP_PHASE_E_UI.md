@@ -362,16 +362,27 @@ Not now. Written down so they aren't lost, with the hook each one needs.
     m4b chapter export, the word aligner.
   - *Storage and serving.* `library/<slug>/images/`, plus a
     `/image/{slug}/{file}` endpoint mirroring `/audio/{slug}/{file}`.
-  - *Where it shows: the reader, not the player bar.* An audiobook is often
-    listened to with the screen off or in a car. Images serve the read-along
-    mode specifically — anchored between paragraphs, arriving as playback
-    reaches them. That is a reason to build it, but also a reason it is not
-    urgent.
-  - **The cheap first version is cover art only.** One image per book, in the
-    sidebar and the book header. No IR change at all — pull the EPUB cover (or
-    render PDF page 1), store `library/<slug>/cover.jpg`, add it to `/books`.
-    Perhaps an hour, and it delivers a surprising share of the felt value.
-    Do that before touching block types.
+  - *Two places, and they cost very different amounts.* **A gallery** on the
+    chapters screen — every image in the book, browsable, grouped by chapter —
+    and **inline in the expanded reader**, arriving as playback reaches them.
+    The gallery is much the cheaper of the two and worth noticing why: it only
+    needs each image and *which chapter it came from*, never where in the text
+    it sat. For EPUB that is the whole difference between reading the zip's
+    image entries per spine document (easy) and threading position markers
+    through `_parse_epub`'s text flattening (not). So the gallery needs no IR
+    block type at all.
+  - **Ladder, cheapest first — each step is worth shipping alone:**
+    1. **Cover art.** One image per book in the sidebar and book header. No IR
+       change: pull the EPUB cover or render PDF page 1 to
+       `library/<slug>/cover.jpg` and add it to `/books`. About an hour, and a
+       library with covers *feels* like a product in a way a list of titles
+       does not.
+    2. **Gallery on the chapters screen.** Extract every image with its chapter,
+       serve them, add a panel. Still no IR block type.
+    3. **Inline in the reader.** Only this one needs the `image` block, the
+       position markers, and the `duration: 0` timeline entry.
+  - *Timing:* **post-publish** (Tyler, 2026-09-05) — after E5 and the public
+    repo, not before.
 - **Character art from the text.** `ir.character_profiles` (E3's profiler)
   already extracts gender/age/voice hints; extend the profile prompt to
   capture stated physical description, then render a portrait per main
