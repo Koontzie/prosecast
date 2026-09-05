@@ -1,13 +1,96 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E complete except E3. E5 shipped 2026-09-05: README,
-SETUP.sh, PHILOSOPHY.md, git history scrubbed and force-pushed — the repo can
-go public.** Core goal met (EPUB/PDF/TXT, novels/plays/rulebooks, scans); every
-step but the AI pass and word alignment is in the UI.
-Next: **E3 pipeline-in-UI** per `docs/CC_BRIEF_pipeline_in_ui.md` (Claude Code
-on the Mac — needs Gideon), then the cast exchange design, then the four
-HANDOFF findings. Rulebook render + C4 still open.
+**Status:** ACTIVE — **Phase E is complete. E3 shipped 2026-09-05: the AI
+attribution pass and word alignment are jobs behind buttons on a Pipeline
+card.** Core goal met (EPUB/PDF/TXT, novels/plays/rulebooks, scans); **nothing
+in the product requires a terminal any more.**
+Next: the **cast exchange** design (PHILOSOPHY.md is the spec-of-record), then
+the four HANDOFF findings — the render worker's whole-document write first, now
+that E3 is guarding around it rather than fixing it. Rulebook render + C4 still
+open. E3's commits are LOCAL — Tyler reviews and pushes.
 **Updated:** 2026-09-05
+
+## Session 2026-09-05 (Claude Code, Mac) — E3: the pipeline in the UI
+
+Ran `docs/CC_BRIEF_pipeline_in_ui.md` end to end, including the real run against
+Gideon that a container could not have done. **Phase E is finished.** The two
+steps that still needed a terminal — `main.py --llm-scene` and
+`scripts/align_words.py` — are buttons now.
+
+**Shipped:**
+- **`prosecast/pipeline.py`** (new): `run_ai_pass(slug, scope=, model=, profile=)`
+  and `run_align(slug, chapters, force=)`, both taking
+  `on_progress(stage, detail, done, total)`. Thin wrappers over the existing
+  passes, so the CLI and the UI run identical code. `run_ai_pass` returns
+  `{targets, resolved, unresolved_after, aborted, abort_reason}` — the circuit
+  breaker's abort is *data* now, not a printed line the UI could not see.
+  Advisory `library/<slug>/pipeline_state.json`, keyed by job kind.
+- **A second worker** in `server.py` with its own queue, plus
+  `POST /pipeline/{slug}/ai_pass`, `POST /pipeline/{slug}/align` and
+  `GET /pipeline/{slug}` (one call; everything the card draws). Jobs live in the
+  same `_render_jobs` table, so `/render_status/{id}` serves them with
+  `kind: ai_pass | align` and the UI reuses `pollRenderStatus` — no third poller.
+  Both POSTs **409 with the Setup probe's own `fix` sentence** when their
+  service is down: the button is disabled anyway, but a server that silently
+  does nothing is the exact failure PRODUCT_NOTES names.
+- **Alignment auto-chains after every chapter render** when whisper probes ok —
+  enqueued on the pipeline worker, never run inline; whisper is probed once per
+  render job, not once per chapter.
+- **The overlap guard** (not in the spec, added deliberately): render and AI
+  pass refuse each other on the same book, in both directions, each naming the
+  job in the way. Two writers on one `ir.json` is a real HANDOFF finding; E3
+  guards, it does not fix. Alignment is exempt — it writes only
+  `word_timings.json`, and the auto-chain runs *during* a render by design.
+- **The Pipeline card** in `static/index.html`: six plaques
+  (Rules → AI pass → Cast → Render → Align → Export), the unresolved count and
+  when the pass last ran, a scope selector carrying each scope's line count with
+  the provenance warning on *all*, per-chapter `words ✓` / `words stale` /
+  `no timings` chips, and an Align button that counts what it will do. Disabled
+  always says why, in the probe's words, with a link to Setup. Both skins.
+- **`tests/ui/check_pipeline_card.py`** — 40 checks per skin against the
+  generated fixtures. **231 passed, 1 skipped** (was 197); all three
+  `tests/ui/` checks green.
+
+**The real run (Gideon over Tailscale, gemma3:12b + faster-whisper-small):**
+- **Sample book, scope *unresolved*, 9 lines: 47 s.** All 9 resolved, 3
+  characters profiled, the chapter's `⚠ 9 unresolved` badge disappeared, the
+  progress bar moved through *loading → attributing → profiling → saving*.
+- **Force-render of chapter 2 on Chatterbox: 30 s** for 20 blocks / 45.8 s of
+  audio. The align job **appeared by itself**, finished in **68 s**, the
+  chapter's chip turned *words ✓*, 139 word timings, not stale. Opened the
+  reader and the words light up one at a time — 30 distinct highlights in 12 s.
+- **Manual Align on the other chapter: 68 s**, chip green, button correctly
+  disabled itself once nothing needed timings.
+- **Broke `ollama_url` to a dead port from Setup:** the button disabled with
+  "Ollama isn't reachable — open Setup" plus the probe's install sentence, and
+  `POST …/ai_pass` returned **409** carrying the same words. Restored; verified
+  `config.json` identical to its backup.
+
+**Three things only the real run could show, all fixed:**
+1. `attributing · scene 0 of 1` — `done` counts *finished* scenes, so a
+   one-scene chapter read "0" for the 25 s the model was thinking. The bar still
+   measures finished work; the sentence names the scene in flight.
+2. Alignment auto-chained only when a chapter actually synthesized audio, so a
+   chapter that rendered entirely from cache and had never been aligned never
+   got timings. It chains after every chapter that renders without error now.
+3. The stage plaques only went busy on the next card load.
+
+**Two older debts paid on the way** (both were on the "found 09-05, not yet
+fixed" list): `scene_attributor`'s checkpoint, `cast_profiler`'s checkpoint and
+**all five** of `main.py`'s writes of `ir.json` went through plain
+`open(..., "w")`. They all go through `lib.write_json_atomic` now, and
+`tests/test_pipeline.py` fails the build if a plain write of `ir.json` ever
+comes back.
+
+**A fourth alignment state was needed:** `no_blocks`. A chapter rendered on
+`say` has no per-block wavs, so whisper has nothing to hear. The UI shows no
+chip and offers no button for those rather than one that would fail.
+
+**Still Tyler's to verify:** the card against a *large* book (Parade, 115
+chapters — the scene counter's denominator will be in the hundreds and the pass
+will run for tens of minutes, which is the case the sample book cannot test);
+whether the AI pass wants a cancel button once a run is that long; and the
+overlap guard's wording in practice. **All commits are local — nothing pushed.**
 
 ## Session 2026-09-05 (Cowork) — E5: README, install story, philosophy, and the pre-publish scrub
 

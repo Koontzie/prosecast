@@ -7,10 +7,12 @@ Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
 2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
 gmail author scrubbed) and force-pushed; every commit hash from before this
 session changed, so hashes quoted in older STATUS entries no longer resolve.
-**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **197 passed,
-1 skipped** — the skip is `en_core_web_sm` missing from the venv; `bash SETUP.sh`
-installs and verifies it, after which the number is 201. Without tesseract a
-further 6 skip. Skips are healthy, not regressions.
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **231 passed,
+1 skipped** (was 197 before E3) — the skip is `en_core_web_sm` missing from the
+venv; `bash SETUP.sh` installs and verifies it, after which the number is 235.
+Without tesseract a further 6 skip. Skips are healthy, not regressions. There
+are now **three** `tests/ui/` checks, and Playwright + chromium are installed in
+the Mac venv.
 
 ---
 
@@ -18,8 +20,9 @@ further 6 skip. Skips are healthy, not regressions.
 
 The original goal is **met** and the repo is **publishable**: EPUB, TXT and PDF
 (novels, rulebooks, plays, scans) narrate end-to-end with multi-voice casting,
-whole-book resumable renders and word-accurate read-along, every step in the UI
-except the two E3 covers. Phase E ("UI-first") has one chapter left.
+whole-book resumable renders and word-accurate read-along — **every step in the
+UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05. **E3's commits
+are local; Tyler reviews and pushes.**
 
 | Phase | What | State |
 |---|---|---|
@@ -28,7 +31,7 @@ except the two E3 covers. Phase E ("UI-first") has one chapter left.
 | E4.1–E4.3 | `config.json`, `/setup/status` probes, Setup page, EL affiliate compliance | ✓ 09-03 |
 | E2.1–E2.4 | Upload-as-job, PDF ingest on PyMuPDF, ingest wizard, OCR for scans | ✓ 09-04 |
 | **E5** | README, `SETUP.sh`, `docs/PHILOSOPHY.md`, history scrub, `CLAUDE.md` refresh | **✓ 09-05** |
-| **E3** | **Pipeline-in-UI (AI pass + align as jobs)** | **next — brief written, needs the Mac** |
+| **E3** | **Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card** | **✓ 09-05 (local commits)** |
 
 Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 `README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
@@ -57,7 +60,10 @@ Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 ## Where to start
 
 **The plan Tyler approved, in order:** publish → ElevenLabs application → E3 →
-cast exchange design → the four findings below.
+cast exchange design → the four findings below. The first three are done; the
+cast exchange is next. Of the four findings, **the render worker's
+whole-document write is now the one to do first** — E3 guards around it with a
+blunt 409, and that guard can be relaxed the moment the merge fix lands.
 
 - **If Tyler has not yet flipped the repo public:** nothing for a session to
   do first — he flips it, submits the application with the URL, and tests the
@@ -67,10 +73,12 @@ cast exchange design → the four findings below.
   and `docs/elevenlabs-setup.md`, each with the disclosure beside it. Nothing
   to do unless a new surface (the launch video, the website) shows the link —
   then the same disclosure + attribution rules apply.
-- **E3** — run `docs/CC_BRIEF_pipeline_in_ui.md` in Claude Code on the Mac
-  with Gideon up. Eight steps, `END OF BRIEF` sentinel, one real run against
-  Ollama in Step 5. It ends by deleting the README's "Where the terminal is
-  still needed" section.
+- **E3 is done** (09-05, Claude Code on the Mac, verified against Gideon —
+  see the STATUS entry for the numbers). What is left of it is Tyler's to
+  check: the card against a **large** book (Parade, 115 chapters — the sample
+  book has one scene and cannot exercise a long run), whether a pass that runs
+  for tens of minutes wants a **cancel** button, and the overlap guard's
+  wording in practice.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
@@ -104,10 +112,10 @@ guards around the second one rather than fixing it.**
   with the `segmentId` change — both alter how audio files are identified, and
   each costs a full re-render of the library. Pay that once.
 
-Also found 09-05, not yet fixed: **two plain-`open` writes of `ir.json`** still
-exist — `scene_attributor.run_scene_pass`'s checkpoint (~335) and `main.py`
-after the scene pass (~305). The E3 brief routes both through
-`write_json_atomic` in its Step 1.
+Fixed 09-05 in E3: the plain-`open` writes of `ir.json` are gone.
+`scene_attributor.run_scene_pass`'s checkpoint, `cast_profiler`'s checkpoint
+and **all five** of `main.py`'s writes now go through `lib.write_json_atomic`,
+and `tests/test_pipeline.py` fails if a plain write of `ir.json` comes back.
 
 ---
 ## Key facts (hard-won — do not relearn)
@@ -188,10 +196,51 @@ picked up as chapter titles rather than read aloud. Cached at
 `books/<stem>_ocr.txt`, reused unless the PDF is newer. A scan that OCRs to
 almost nothing raises rather than producing an empty book.
 
-**Atomic IR writes (new, 09-03).** Every `ir.json` write goes through
+**The pipeline worker (new, 09-05).** `prosecast/pipeline.py` holds
+`run_ai_pass` / `run_align` as callable jobs with an
+`on_progress(stage, detail, done, total)` callback; `server.py` runs them on a
+**second worker** with its own queue — `POST /pipeline/{slug}/ai_pass`,
+`POST /pipeline/{slug}/align`, `GET /pipeline/{slug}` (one call, everything the
+card draws). Jobs share the `_render_jobs` table so `/render_status/{id}`
+serves them with `kind: ai_pass | align`, and the UI reuses `pollRenderStatus`.
+**Never put an LLM or whisper job on the render queue** — that queue is
+one-at-a-time because there is one GPU, and a 40-minute attribution pass must
+not sit in front of an overnight render. Both POSTs **409 with the Setup
+probe's own `fix` text** when their service is down. An aborted pass is a job
+that is *done* with a reason, not a failed one: the breaker only fires after
+everything decided so far is checkpointed. Advisory
+`library/<slug>/pipeline_state.json`, keyed by job kind.
+
+**The overlap guard is blunt on purpose (new, 09-05).** A render under a queued
+or running AI pass is 409, and an AI pass under a render is 409, per book, both
+directions. It exists because of the "correction lost during a render" finding
+above: the render worker writes the whole IR document back from a snapshot, and
+the AI pass read-modify-writes the same file. **When the render worker is fixed
+to merge only `audioVariants` and `cacheKey`, delete the guard** — it is two
+`_live_job()` checks in `server.py`, one in `_enqueue_render` and one in
+`start_ai_pass`. **Alignment is deliberately exempt** in both directions: it
+writes only `renders/chN_blocks/word_timings.json`, which nothing else touches,
+and the auto-chain runs it *during* a render by design.
+
+**`no_blocks` is a real alignment state (new, 09-05).** Per chapter, alignment
+is `fresh` / `stale` / `none` / `no_blocks`. The last one means there are no
+per-block wavs — a chapter rendered on `say`, or not rendered at all. Whisper
+has nothing to hear, so the UI shows **no chip and no button** rather than one
+that would fail. Anything that lists "chapters needing alignment" must exclude
+it. The auto-chain fires after every chapter that renders *without error*, not
+only one that synthesized new audio — an all-cache render of a never-aligned
+chapter still needs timings, and `run_align` skips the ones already fresh.
+
+**Atomic IR writes (new, 09-03, completed 09-05).** Every `ir.json` write goes through
 `lib.write_json_atomic()` (temp + `os.replace`). This closed a real torn-read
 race in the render queue AND a crash-mid-write hole that could have destroyed
 Tyler's attribution labor. Never write `ir.json` with a plain `open(..,'w')`.
+
+**The card's `.hidden` trap, again (09-05).** `.hidden` still has no global CSS
+rule in `static/index.html` — it is scoped to the modals. The Pipeline card uses
+its own `.pipe-hidden { display: none !important; }`. Anything new that hides an
+element must bring its own rule or reuse that one; "hidden" elements that
+render anyway is a bug this repo has shipped before.
 
 **Hermetic tests.** `tests/conftest.py` points every test at an empty tmp
 `config.json` (autouse). Without it the suite depends on the developer's real
@@ -220,10 +269,12 @@ re-run the script; never edit the JSON by hand. Machine-dependent fields
 `tests/synthetic.py` holds the sample novel/play/rulebook text and the PDF/scan
 builders that the tests *and* the generator share.
 
-**Two headless UI checks live in the repo** (not collected by pytest; they need
+**Three headless UI checks live in the repo** (not collected by pytest; they need
 `pip install playwright && playwright install chromium`):
-`tests/ui/check_timeline_and_names.py` and `tests/ui/check_ingest_wizard.py`.
-Run them after touching `static/index.html`. They caught three bugs before Tyler
+`tests/ui/check_timeline_and_names.py`, `tests/ui/check_ingest_wizard.py` and
+`tests/ui/check_pipeline_card.py`. Run all three after touching
+`static/index.html` — Playwright and chromium are installed in the Mac venv now,
+so `.venv/bin/python tests/ui/check_*.py` works without the container. They caught three bugs before Tyler
 saw them, including a `.hidden` class that had no CSS rule outside
 `.modal-overlay`, so every "hidden" section of the wizard was rendering anyway.
 
