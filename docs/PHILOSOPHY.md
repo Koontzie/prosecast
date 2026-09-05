@@ -2,9 +2,7 @@
 
 This page is the long answer to two questions a stranger reasonably asks of a
 tool that clones voices and reads books aloud: *whose books?* and *whose
-voices?* ProseCast is built by one person. This page describes what is true
-as of September 2026; where something is a plan rather than a fact, it says
-so.
+voices?*
 
 ## Your book, your machine
 
