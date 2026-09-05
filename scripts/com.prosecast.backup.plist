@@ -2,8 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   ProseCast nightly library backup → Bolt (Gideon).
-  Install (one-time, on the Mac):
-    cp "$HOME/dev/prosecast/scripts/com.prosecast.backup.plist" ~/Library/LaunchAgents/
+  Install (one-time, on the Mac). launchd does not expand $HOME, so the path
+  below is absolute: replace YOUR_USER with your macOS username (`whoami`),
+  and fix the repo path if it is not ~/dev/prosecast.
+    sed "s#YOUR_USER#$(whoami)#" "$HOME/dev/prosecast/scripts/com.prosecast.backup.plist" > ~/Library/LaunchAgents/com.prosecast.backup.plist
     launchctl load ~/Library/LaunchAgents/com.prosecast.backup.plist
   Verify: launchctl list | grep prosecast   → shows the job
   Logs:   .backup/last_backup.log in the project folder
