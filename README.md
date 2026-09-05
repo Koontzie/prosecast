@@ -296,6 +296,9 @@ Claude Code) and an occasional outside review from Codex:
   stand, what's real and unfixed, the hard-won facts.
 - [`docs/`](docs/) — roadmaps, the PRD, engine contracts, the Claude Code
   briefs, the research behind the voice-sourcing and marketplace decisions.
+- [`docs/ORIGINS.md`](docs/ORIGINS.md) — what the ideas are, when they were
+  made, and what prior art each one joins. [`CITATION.cff`](CITATION.cff) if
+  you build on them.
 
 None of it is needed to *use* ProseCast. It is there for anyone curious how a
 project like this gets made — including the day a whole feature was lost
