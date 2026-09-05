@@ -200,7 +200,44 @@ take long enough to trip proxies.
 
 ---
 
-## E3. Pipeline in the UI (~1 session)
+## E3. Pipeline in the UI — SHIPPED 2026-09-05
+
+**As built, with three deviations.** A **Pipeline card** sits above the chapter
+list showing *Rules → AI pass → Cast → Render → Align → Export* as plaques, with
+a scope selector and **▶ Run AI pass**, an **Align** button, per-chapter
+alignment chips in the chapter list, and progress from the same
+`/render_status` poller the renders use. `prosecast/pipeline.py` holds
+`run_ai_pass` / `run_align` as callable jobs; `server.py` runs them on a second
+worker behind `POST /pipeline/{slug}/ai_pass`, `POST /pipeline/{slug}/align`
+and `GET /pipeline/{slug}`. Both POSTs 409 with the Setup probe's own `fix`
+sentence when the service they need is down. The deviations:
+
+1. **The overlap guard.** The spec did not call for one. Two writers on one
+   `ir.json` (the render worker's whole-document write vs. the AI pass) is a
+   real, unfixed HANDOFF finding, so E3 refuses the overlap in both directions
+   rather than risking it: a render under a running AI pass is 409, and vice
+   versa. Blunt on purpose — the surgical fix (the render worker merging only
+   `audioVariants` and `cacheKey`) stays its own item.
+2. **Alignment is exempt from that guard**, deliberately. It writes only
+   `renders/chN_blocks/word_timings.json`, which nothing else touches, and the
+   auto-chain runs it *during* a render by design.
+3. **`pipeline_state.json` is keyed by job kind** (`ai_pass` / `align`) rather
+   than being one flat document, so a later alignment does not erase the record
+   of the attribution pass before it.
+
+Two smaller notes. A fourth per-chapter alignment state, **`no_blocks`**, was
+needed: a chapter rendered on `say` has no per-block wavs, so there is nothing
+for whisper to hear — the UI shows no chip and offers no button rather than one
+that would fail. And the auto-chain fires after every chapter that renders
+without error, not only one that synthesized new audio, because an all-cache
+render of a never-aligned chapter still needs timings.
+
+Verified against the real Gideon on 2026-09-05 — see the STATUS entry for the
+numbers. `run_scene_pass`'s checkpoint and `main.py`'s five writes of `ir.json`
+went through plain `open(..., "w")` until this phase; they all go through
+`lib.write_json_atomic` now, and a test forbids the plain form outright.
+
+Original spec below.
 
 **Done means:** after ingest, a **Pipeline card** on the book page shows the
 stages with buttons and progress, and the two remaining terminal steps are gone.

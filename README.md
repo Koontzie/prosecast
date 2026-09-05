@@ -21,9 +21,9 @@ It is a public repo you clone and run, not a packaged app. If you already run
 Ollama or a local TTS server, you are the person this was written for.
 
 > **Status (September 2026):** works end to end for novels, plays and
-> rulebooks, including scanned PDFs. Used daily by one person. Two steps —
-> the AI "who's speaking" pass and word-accurate read-along timing — are still
-> terminal commands; everything else is in the browser. See
+> rulebooks, including scanned PDFs. Used daily by one person. Every step is
+> in the browser — adding a book, the AI "who's speaking" pass, casting,
+> rendering, read-along timing, export. See
 > [Where it is](#%EF%B8%8F-where-it-is) before you decide it is for you.
 
 ---
@@ -173,24 +173,19 @@ is what this was built against. Set `"whisper_url"` (default
 `http://localhost:8100`). This one is optional: without it the reader
 highlights by sentence estimate instead of by word.
 
-**How you know it worked:** both rows green on Setup, and the reader's words
-light up individually rather than a sentence at a time.
+**How you know it worked:** open a book and look at the **Pipeline card**
+above the chapter list. *Rules → AI pass → Cast → Render → Align → Export*,
+each one green when it is done. **▶ Run AI pass** is enabled with a scope to
+pick and a count of the lines it would review; **Align** says how many
+chapters need timings, and the card tells you that alignment now happens by
+itself after every render. If either service is down the button is disabled
+and says why, with a link straight to Setup — it never quietly does nothing.
 
-### Where the terminal is still needed
+Per chapter, the list shows **words ✓** once its timings match its audio, and
+the reader lights up words individually rather than a sentence at a time.
 
-Until the next milestone (pipeline-in-UI), two things are commands rather
-than buttons. Both are run from the project folder, after a book is added:
-
-```bash
-# AI attribution pass for the lines the rules couldn't settle
-.venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene
-
-# word-level read-along timings, after rendering (needs the whisper server)
-.venv/bin/python scripts/align_words.py <slug>
-```
-
-The `<slug>` is the book's folder name under `library/`. The app tells you
-which chapters have timings and which are on sentence estimates.
+Both passes are still available from the terminal if you prefer it — see
+`main.py --help` and `scripts/align_words.py` — but nothing requires it.
 
 ---
 
@@ -277,14 +272,14 @@ casting with cloning, resumable whole-book renders, inline correction, the
 reader view, word-level read-along, M4B export, a Setup page that probes every
 service.
 
-Next: the two terminal steps above become jobs in the UI; then cover art and
-the images already inside the book. The full plan is in
+Next: cover art and the images already inside the book, and a way to share a
+finished cast. The full plan is in
 [docs/ROADMAP_PHASE_E_UI.md](docs/ROADMAP_PHASE_E_UI.md).
 
 Known rough edges are listed honestly in [HANDOFF.md](HANDOFF.md) under
 "Known-real, not yet fixed".
 
-Tests: `.venv/bin/pytest tests/ -q` — around 200; the attribution and OCR
+Tests: `.venv/bin/pytest tests/ -q` — around 230; the attribution and OCR
 tests skip themselves when spaCy's model or tesseract is absent, which is
 healthy, not a failure.
 

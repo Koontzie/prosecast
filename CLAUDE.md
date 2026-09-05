@@ -34,15 +34,15 @@ never rename WAVs on the Chatterbox server; never emit `speed` to Chatterbox.
 
 ## Where it stands (2026-09-05)
 
-Phases A–D and E1, E2.1–E2.4, E4.1–E4.3, E5 are shipped: any format in from the
-UI, casting, safe whole-book renders, reader view, Setup page with probes,
-`config.json`, README + install story + `docs/PHILOSOPHY.md`. Git history was
-rewritten on 2026-09-05 to scrub the home-network host (commit hashes quoted in
-older STATUS/HANDOFF entries predate the rewrite). **Next: E3 pipeline-in-UI**
-(the AI attribution pass and `align_words` as jobs behind buttons) — belongs
-in Claude Code on the Mac because it needs Gideon; brief at
-`docs/CC_BRIEF_pipeline_in_ui.md`. After that: the cast exchange (see
-PHILOSOPHY.md), cover art and in-book images (roadmap parking lot).
+Phase E is complete. Any format in from the UI, casting, safe whole-book
+renders, reader view, Setup page with probes, `config.json`, README + install
+story + `docs/PHILOSOPHY.md`, and — as of E3 — the AI attribution pass and
+word alignment as jobs behind buttons on a Pipeline card. **Nothing in the
+product requires a terminal any more.** Git history was rewritten on
+2026-09-05 to scrub the home-network host (commit hashes quoted in older
+STATUS/HANDOFF entries predate the rewrite). **Next: the cast exchange** (see
+PHILOSOPHY.md) and the four HANDOFF findings; then cover art and in-book
+images (roadmap parking lot).
 
 ## Architecture
 
@@ -69,6 +69,7 @@ page. `preflight.py` guards GPU co-residency before renders.
 - **`prosecast/scene_attributor.py`** / **`llm_attributor.py`** — the Ollama passes: scene-batched (v2, preferred) and per-block (v1).
 - **`prosecast/cast_profiler.py`** — gender/age/voice hints per character for blind casting.
 - **`prosecast/tag_generator.py`** / **`tag_mapper.py`** — emotion/tone tags on every block; mapped to engine parameters at render time.
+- **`prosecast/pipeline.py`** — the AI pass and word alignment as callable jobs with progress callbacks; `server.py` runs them on a second worker (`/pipeline/{slug}`), never the render queue. Render and AI pass refuse to overlap on one book.
 - **`prosecast/renderer.py`** — the render queue: one at a time, resumable, per-block cache, atomic IR writes.
 - **`prosecast/tts_engine.py`** — backends: `chatterbox` (primary), `elevenlabs`, `piper`, `say`, `gtts`, `stub`.
 - **`prosecast/word_aligner.py`** — word timings via an OpenAI-compatible `/v1/audio/transcriptions` server (faster-whisper / Speaches).
@@ -78,15 +79,15 @@ page. `preflight.py` guards GPU co-residency before renders.
 
 ### CLI
 
-The UI is the primary surface; the CLI drives the same modules. Until E3 lands, two steps are CLI-only:
+The UI is the primary surface; the CLI drives the same modules. Nothing is CLI-only since E3:
 
 ```bash
 bash SETUP.sh                                           # venv, deps, spaCy model (verified), config.json, tools, smoke test
 .venv/bin/uvicorn server:app --port 8000                # the app; first run lands on Setup
-.venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene   # AI attribution pass (model from config.json)
-.venv/bin/python scripts/align_words.py <slug>          # word timings after a render (whisper server)
+.venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene   # AI attribution pass — also available in the UI (E3)
+.venv/bin/python scripts/align_words.py <slug>          # word timings after a render — also available in the UI (E3)
 .venv/bin/python main.py --sample --tts stub            # silent smoke test
-.venv/bin/pytest tests/ -q                              # ~200 tests; spaCy/tesseract-gated ones skip cleanly
+.venv/bin/pytest tests/ -q                              # ~230 tests; spaCy/tesseract-gated ones skip cleanly
 ```
 
 ## IR Attribution Pipeline (ir_generator.py)
@@ -139,7 +140,7 @@ Live status lives in `HANDOFF.md` (table at the top) and `STATUS.md`. Summary as
 | A–D (2026-07/08) | Chatterbox backend, cast screen, safe whole-book render, word-level read-along | ✓ |
 | E1, E2.1–E2.4, E4.1–E4.3 (2026-09-03/04) | reader view; ingest wizard incl. PDF review + OCR; config.json, probes, Setup page | ✓ |
 | E5 (2026-09-05) | README, SETUP.sh, PHILOSOPHY.md, pre-publish history scrub | ✓ |
-| **E3** | pipeline-in-UI: AI pass + align as jobs behind buttons | **next — Claude Code on the Mac** |
+| E3 (2026-09-05) | pipeline-in-UI: AI pass + align as jobs behind buttons, on a second worker | ✓ |
 | 4b / 4c | tag editing UI; tags actually reaching ElevenLabs | open (4c is one of the Codex findings in HANDOFF) |
 | later | cast exchange (PHILOSOPHY.md), cover art + in-book images (roadmap parking lot), Flutter app | direction |
 
