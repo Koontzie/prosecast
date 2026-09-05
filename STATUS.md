@@ -1,13 +1,85 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E (UI-first): E1 reader, E4 config/probes/Setup,
-E2.1–E2.4 ingest (any format, mode picker, PDF chapter review, OCR for scans)
-all shipped. No terminal step left between a file and a book.** Core goal met (EPUB +
-PDF, novels + plays); any of the three formats can now be added from the UI.
-Next: E3 pipeline-in-UI per `docs/ROADMAP_PHASE_E_UI.md` (wants Claude Code on
-the Mac — it needs Gideon), then E5 README.
-Rulebook render + C4 still open.
-**Updated:** 2026-09-04
+**Status:** ACTIVE — **Phase E complete except E3. E5 shipped 2026-09-05: README,
+SETUP.sh, PHILOSOPHY.md, git history scrubbed and force-pushed — the repo can
+go public.** Core goal met (EPUB/PDF/TXT, novels/plays/rulebooks, scans); every
+step but the AI pass and word alignment is in the UI.
+Next: **E3 pipeline-in-UI** per `docs/CC_BRIEF_pipeline_in_ui.md` (Claude Code
+on the Mac — needs Gideon), then the cast exchange design, then the four
+HANDOFF findings. Rulebook render + C4 still open.
+**Updated:** 2026-09-05
+
+## Session 2026-09-05 (Cowork) — E5: README, install story, philosophy, and the pre-publish scrub
+
+The repo can go public. This chapter was mostly writing, but it opened with a
+history rewrite and found three real bugs on the way.
+
+**Git-history audit → rewrite.** No secrets, keys, EPUBs, `config.json`, `.env`
+or `library/` were ever committed. What *was* in history: the home-network
+Tailscale IP (1,564 occurrences across 59 commits — HANDOFF had understated it),
+the NAS admin `user@host` pair (121), the Mac home path (54), and the gmail
+address as commit author on 21 commits. Scrubbed the current tree with a
+placeholder table (`GIDEON_HOST`, `NAS_USER`, `/Users/YOUR_USER`,
+`192.168.1.50`), then Tyler ran `git filter-repo` from a real terminal with the
+same table as `--replace-text` and `--replace-message` plus a mailmap, verified
+0 hits across every ref, and force-pushed. **Every commit hash before this
+session changed** — hashes quoted in older STATUS/HANDOFF entries are prose
+about the old history. Codex's `refs/codex/*` leftovers were deleted before the
+push. `backup_library.sh` now reads its rsync target from
+`PROSECAST_BACKUP_DEST` or `.backup/dest` (gitignored) instead of a hard-coded
+string; the launchd plist explains its absolute path.
+
+**Shipped:**
+- **`README.md`** (new): banner rendered from the On Air theme tokens, badge
+  row, the ladder (rung 1 system voices → 2 Chatterbox → 3 Ollama + whisper →
+  BYO ElevenLabs), three install paths each ending in "how you know it worked",
+  `config.json` table, "How this was built" (the process files as a feature),
+  Ko-fi, GPL-3.0. Windows: untested natively, WSL2 is the known-good path.
+  **No affiliate tracking link** — the application is pending; the ElevenLabs
+  section carries the trademark attribution and the link lands in one commit
+  after approval.
+- **`docs/PHILOSOPHY.md`** (new): your book/your machine; attribution as the
+  heart of it; the voice-actor question as provenance / consent / direction;
+  the **cast exchange** — how a cast (`voice_map` + `corrections`, never the
+  text) would be shared and imported, voice packs with consent manifests, the
+  order it would happen in, money last if ever. Tyler-edited and approved.
+- **`SETUP.sh`** rewritten: Python 3.11+ check, venv, deps, spaCy model download
+  *and load check*, `config.json` from the example, ffmpeg/tesseract/say/piper
+  checks with per-OS install lines, silent smoke test, ends at the uvicorn line.
+- **`CLAUDE.md`** refreshed — it was the live trap HANDOFF warned about (still
+  said Phase 4b was next). Now: read HANDOFF/STATUS first, the three working
+  rules, current architecture, phase table. Session narrative removed on purpose.
+- **`docs/CC_BRIEF_pipeline_in_ui.md`** — the E3 brief for Claude Code on the Mac.
+- Root tidy: `PRD.md`, `CC_BRIEF_chatterbox.md`, the EL card → `docs/`.
+
+**Three bugs found while writing the install story:**
+1. The Setup page probed for **`pdftotext (poppler)`** and told new users to
+   install it; PDFs have been on PyMuPDF since E2.2. Row, hint and UI slot gone.
+2. `main.py --llm-model` defaulted to `llama3.2` regardless of `config.json`, so
+   a user who pulled `gemma3:12b` as told would have had the CLI pass silently
+   skip itself. Now defaults to `ollama_model`.
+3. On the Mac, `pytest` shows **197 passed, 1 skipped** — `en_core_web_sm` is
+   not in the venv (spaCy is). HANDOFF's "201 on the Mac" was stale. `bash
+   SETUP.sh` fixes it; the new load check is why.
+
+**Verified:** 21/21 setup tests; both `tests/ui/` checks green in the cloud
+container after the one-line `index.html` change; Mac suite 197/1 as above.
+
+**Cowork-session gotchas learned:** the VM's `sed -i` drops the executable bit
+on a mounted file (`backup_library.sh` went 755 → 644 and had to be restored);
+`device_commit_files` reported a write to an existing tracked file as success
+while the repo never saw it — edit tracked files through the device shell, keep
+the commit tool for new binaries; a paste-together block containing a
+`<placeholder>` will be pasted verbatim — that is how a Python package got
+renamed and a nested clone landed inside the repo for ten minutes.
+
+**Still Tyler's:** flip the repo public; submit the ElevenLabs application with
+the URL; test the README on the gaming laptop (rungs 1–2); re-clone CLAIY
+(pull will refuse); a real scanned PDF end to end; delete
+`~/dev/prosecast.bak-20260905` after a week.
+
+**Next:** E3 per `docs/CC_BRIEF_pipeline_in_ui.md`, then the exchange design
+session, then the four HANDOFF findings.
 
 ## Session 2026-09-04 pt5 (Cowork) — E2.4: scanned PDFs read themselves
 

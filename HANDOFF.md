@@ -1,134 +1,131 @@
-# ProseCast — Session Handoff (2026-09-05)
+# ProseCast — Session Handoff (2026-09-05, evening)
 
 For the next Claude/CC session: read this + `STATUS.md`, then pick up at
-**"Where to start"**. Supersedes the 09-04 handoff.
+**"Where to start"**. Supersedes the 09-05 morning handoff.
 
-Repo: `Koontzie/prosecast`, branch `main`, clean and pushed through
-**`1eadf2e`**. **201 tests pass** on the Mac (`.venv/bin/pytest tests/ -q`),
-with spaCy and tesseract both installed. Both are gated, so a leaner box skips
-rather than fails: without spaCy the 4 attribution tests collapse to a single
-module-level skip, and without tesseract 6 OCR tests skip (4 in `test_ocr.py`,
-2 in `test_ingest.py`). A box with neither therefore shows **191 passed,
-7 skipped** — that is healthy, not a regression.
+Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
+2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
+gmail author scrubbed) and force-pushed; every commit hash from before this
+session changed, so hashes quoted in older STATUS entries no longer resolve.
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **197 passed,
+1 skipped** — the skip is `en_core_web_sm` missing from the venv; `bash SETUP.sh`
+installs and verifies it, after which the number is 201. Without tesseract a
+further 6 skip. Skips are healthy, not regressions.
 
 ---
 
 ## Where the project stands
 
-The original goal is **met**: EPUB, TXT and PDF — novels, rulebooks, plays and
-now scans — all narrate end-to-end with multi-voice casting, whole-book
-resumable renders and word-accurate read-along. Phase E ("UI-first") is making
-it usable by someone who isn't Tyler, and **ingest is finished**: there is no
-terminal step left between a file and a book.
+The original goal is **met** and the repo is **publishable**: EPUB, TXT and PDF
+(novels, rulebooks, plays, scans) narrate end-to-end with multi-voice casting,
+whole-book resumable renders and word-accurate read-along, every step in the UI
+except the two E3 covers. Phase E ("UI-first") has one chapter left.
 
 | Phase | What | State |
 |---|---|---|
 | A–D | Chatterbox backend, cast screen, safe whole-book render, read-along | ✓ shipped |
-| E1 | Full-page reader view | ✓ shipped 09-03 |
-| E4.1–E4.3 | `config.json`, `/setup/status` probes, Setup page, EL affiliate compliance | ✓ shipped 09-03 |
-| E2.1 | Upload-as-a-job (two-step API) + mode guess | ✓ shipped 09-04 |
-| E2.2 | PDF ingest on PyMuPDF (chapter detection, generic watermark filter) | ✓ shipped 09-04 |
-| E2.3 | Ingest wizard — mode picker + PDF chapter-split review | ✓ shipped 09-04 |
-| E2.4 | OCR for scanned PDFs | ✓ shipped 09-04 |
-| **E3** | **Pipeline-in-UI (AI passes + auto-align as jobs)** | **not started — wants the Mac** |
-| **E5** | **README / install story / philosophy page** | **not started — unlocks publish** |
+| E1 | Full-page reader view | ✓ 09-03 |
+| E4.1–E4.3 | `config.json`, `/setup/status` probes, Setup page, EL affiliate compliance | ✓ 09-03 |
+| E2.1–E2.4 | Upload-as-job, PDF ingest on PyMuPDF, ingest wizard, OCR for scans | ✓ 09-04 |
+| **E5** | README, `SETUP.sh`, `docs/PHILOSOPHY.md`, history scrub, `CLAUDE.md` refresh | **✓ 09-05** |
+| **E3** | **Pipeline-in-UI (AI pass + align as jobs)** | **next — brief written, needs the Mac** |
 
-Specs for both: **`docs/ROADMAP_PHASE_E_UI.md`**. Post-publish ideas (including
-Tyler's "show the images already in the book", with its cost ladder) live in
-that doc's parking lot.
+Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
+`README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
 
 ---
 
-## What happened on 09-04/05 (four chapters, all pushed)
+## What happened on 09-05 (one long chapter, all committed; push pending Tyler)
 
-1. **`d9ef948` E2.1 rebuilt from spec.** The 09-04 morning Cowork session built
-   it in a cloud container and never committed it; the container was gone by the
-   afternoon. Rebuilt and shipped *with* the UI half so `/books/upload`'s
-   breaking change never left `+ Add Book` broken. **The lesson, since it nearly
-   cost a day: work in a container is not work until it is on the Mac and
-   committed. Commit as you go.**
-2. **`bae3215` Two bugs an external review (Codex) found.** `/timeline` lost its
-   `speaker` field in `30740dc` (2026-08-04) while `text` was being
-   un-truncated, so for a month every line in the reader rendered as NARRATOR
-   while the audio played the right voices. And `esc()` escapes `& < > "` but
-   the Voices/Cast panels interpolate names into *single-quoted* inline
-   handlers, so a character called O'Brien made the preview and delete buttons
-   inert — verified dead in Chromium, not theorised.
-3. **`577837f` E2.3 wizard.** Mode cards, editable title, PDF chapter review,
-   progress card, errors in the modal.
-4. **`507fbe0` E2.4 OCR.** Scans are read rather than refused.
+1. **History audit and rewrite.** Clean of secrets and copyrighted files; not
+   clean of the Tailscale IP (1,564×), the NAS `user@host` pair (121×),
+   the Mac home path (54×), gmail author (21 commits). Current tree scrubbed
+   with a placeholder table, then Tyler ran `filter-repo` + mailmap from a real
+   terminal, Codex's `refs/codex/*` deleted, `gc --prune=now`, force-push.
+   `backup_library.sh` now reads its target from `.backup/dest`.
+2. **README** with banner (rendered from the On Air theme tokens —
+   `docs/assets/prosecast-banner.png`), ladder, three install paths, "How this
+   was built", Ko-fi. **No affiliate tracking link yet** — application pending.
+3. **PHILOSOPHY.md** — the voice-actor answer and the cast exchange as a
+   direction. Tyler-edited; approved.
+4. **SETUP.sh** verifies every step; **CLAUDE.md** is no longer a trap;
+   **poppler row** removed from Setup; **`--llm-model`** now defaults to config.
+5. **`docs/CC_BRIEF_pipeline_in_ui.md`** — E3, ready to run.
 
 ---
 
 ## Where to start
 
-Two candidates, in either order. **E5 is the one that unlocks other things.**
+**The plan Tyler approved, in order:** publish → ElevenLabs application → E3 →
+cast exchange design → the four findings below.
 
-1. **E5 — README + install story.** The last piece before the repo can go
-   public, which in turn is what Tyler is waiting on to finish the **ElevenLabs
-   affiliate application** (he deliberately deferred it until there is a public
-   repo to point at). Mostly writing. Include: the hardware ladder, the
-   config.json story, what actually has to be installed (ffmpeg required;
-   tesseract only for scans; poppler no longer needed at all), and the EL
-   disclosure + trademark attribution verbatim.
-   **Do the git-history audit in the same chapter** — see "Before the repo goes
-   public" below.
-2. **E3 — pipeline in the UI.** The AI attribution passes and `align_words.py`
-   become jobs with a second worker, so a user never opens a terminal.
-   **This one belongs in Claude Code on the Mac**: it needs Gideon reachable
-   (Tailscale), and a Cowork container cannot get there.
+- **If Tyler has not yet flipped the repo public:** nothing for a session to
+  do first — he flips it, submits the application with the URL, and tests the
+  README on the gaming laptop (rungs 1–2). Anything the laptop test turns up
+  is a README/SETUP fix, small and Cowork-able.
+- **When the affiliate application is approved:** one commit adds
+  `https://try.elevenlabs.io/dmylr2z8w3w9` to the README's ElevenLabs section
+  *with the disclosure sentence beside it* (the app and
+  `docs/elevenlabs-setup.md` already carry it). Nothing else changes.
+- **E3** — run `docs/CC_BRIEF_pipeline_in_ui.md` in Claude Code on the Mac
+  with Gideon up. Eight steps, `END OF BRIEF` sentinel, one real run against
+  Ollama in Step 5. It ends by deleting the README's "Where the terminal is
+  still needed" section.
+- **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
+  "Sharing casts and voices" section is the spec-of-record for what it must
+  be; the one code prerequisite it names is re-keying shared corrections by a
+  text hash rather than segment number.
 
 Still open from earlier phases: the **rulebook overnight render**, the **C4
-voice-ref mirror**, the **Voices tab** (`docs/CC_BRIEF_voices_tab.md`), and
-**auditioning the 20 LibriVox US voices** in `librivox_voices/`.
+voice-ref mirror**, the **Voices tab** (`docs/CC_BRIEF_voices_tab.md`),
+**auditioning the 20 LibriVox US voices**, and **a real scanned PDF end to end**.
 
 ---
 
 ## Known-real, not yet fixed (from the 09-04 Codex review)
 
 All six findings were checked against the code; these four survived and are
-worth doing in roughly this order. None is urgent.
+worth doing in roughly this order. None is urgent. **E3's brief deliberately
+guards around the second one rather than fixing it.**
 
 * **ElevenLabs never receives the emotion tags.** `tag_mapper` supports EL, but
   `synthesize()` calls `_synthesize_elevenlabs(text, voice_cfg, out_path)`
-  without `tags`. Phase 4c work — the expressive-delivery feature is
-  disconnected on the premium engine.
+  without `tags`. Phase 4c work.
 * **A correction made during a render can be silently overwritten.** The queue
   loads one IR snapshot per job and `renderer.save_ir()` writes that snapshot
   back after every block, while PATCH endpoints read-modify-write independently.
-  Atomic writes fixed torn reads, not stale writes. **The surgical fix is to
-  have the render worker re-read and merge only the fields it owns
-  (`audioVariants`, `cacheKey`) instead of writing the whole document** — not
-  the full repository-with-locking refactor Codex proposed.
+  **The surgical fix is to have the render worker re-read and merge only the
+  fields it owns (`audioVariants`, `cacheKey`)** — not a repository-with-locking
+  refactor. Until then, E3 makes render and AI pass refuse to overlap on a book.
 * **Audio is keyed by list position, not `segmentId`.** `merge_next` shifts
-  every following block, so the timeline and the word aligner then read
-  `block_{i}.wav` files that belong to different blocks.
-* **The render cache key ignores tags, model and backend** (`text + voice_cfg +
-  engine` only), so re-tagging a block replays the old audio.
-  **Do this one together with the `segmentId` change** — both alter how audio
-  files are identified, and each costs a full re-render of the library. Pay
-  that once, deliberately.
+  every following block, so the timeline and the aligner read `block_{i}.wav`
+  files that belong to different blocks.
+* **The render cache key ignores tags, model and backend.** Do this together
+  with the `segmentId` change — both alter how audio files are identified, and
+  each costs a full re-render of the library. Pay that once.
 
-Also true and cheap: **`CLAUDE.md` is badly stale** (still says Phase 4b is
-next, predates the Chatterbox decision). A fresh Claude Code session reads it
-*first*, so it is a live trap, not a tidiness issue.
-
----
-
-## Before the repo goes public
-
-Going public exposes the whole git history, not just the current tree. One
-confirmed instance: the old `HANDOFF.md` at `13877b2` contains Tyler's Gideon
-Tailscale IP in the command examples. Today's file no longer does, but history
-keeps it. The same question applies to whether `config.json`, `.env` or any
-copyrighted EPUB in `books/` was ever committed *before* the `.gitignore` rules
-landed — they are ignored now, which says nothing about the first commits.
-Fifteen minutes of `git log --all --diff-filter=A --name-only`, cheap before,
-annoying after.
+Also found 09-05, not yet fixed: **two plain-`open` writes of `ir.json`** still
+exist — `scene_attributor.run_scene_pass`'s checkpoint (~335) and `main.py`
+after the scene pass (~305). The E3 brief routes both through
+`write_json_atomic` in its Step 1.
 
 ---
-
 ## Key facts (hard-won — do not relearn)
+
+**Placeholders (09-05).** Tracked files say `GIDEON_HOST`, `NAS_USER`,
+`/Users/YOUR_USER`, `192.168.1.50`. The real values live only in `config.json`
+(gitignored) and `.backup/dest` (gitignored). Never put the real host back into
+a tracked file — the history was rewritten specifically to remove it.
+
+**The README is a contract (09-05).** It promises: ffmpeg required, tesseract
+scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,
+first run lands on Setup, `main.py --llm-model` defaults to the configured
+model. If code changes make any of those false, change the README in the same
+commit.
+
+**ElevenLabs affiliate link is NOT in the README yet** — the application is
+pending. It lands in one commit after approval, with the disclosure sentence
+beside it. The app and `docs/elevenlabs-setup.md` already carry link + disclosure.
 
 **Config (new, 09-03).** `prosecast/config.py` resolves *defaults <
 `config.json` < env vars*. `config.json` is gitignored and holds Tyler's
@@ -265,6 +262,19 @@ voices (was 34).
 
 ## Cowork-session gotchas
 
+* **(09-05) `sed -i` on a mounted file drops the executable bit** — `backup_library.sh`
+  went 755→644 and was committed that way. `git diff --summary` before committing
+  anything touched with sed; `chmod 755` it back.
+* **(09-05) `device_commit_files` can report success on an existing tracked file
+  while the repo never sees the change.** Edit tracked files through the device
+  shell (python/sed heredoc); keep the commit tool for *new* files and binaries.
+* **(09-05) A paste-together block must contain no placeholders.** A
+  `cd <wherever…>` line was pasted verbatim, `cd` failed, and the next two lines
+  renamed the `prosecast/` package and cloned the repo into its place. Anything
+  with a fill-in goes in its own checkpoint block.
+* **(09-05) Delete permission can be requested** (`device_request_delete_permission`)
+  — with it granted, `git commit` cleans its own locks and the lockjunk dance
+  below is unnecessary.
 * The repo mounts read/write; `device_bash` runs on the Mac. **Cloud
   containers cannot reach Gideon (Tailscale)** — live LLM/whisper/render runs
   are Mac-side only; everything else mocks offline.
