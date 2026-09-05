@@ -194,8 +194,10 @@ def test_tools_missing_get_install_hint(cfg, monkeypatch):
     monkeypatch.setattr(sp, "_which", lambda b: "/usr/bin/ffmpeg" if b == "ffmpeg" else None)
     rows = {r["key"]: r for r in sp.probe_tools()}
     assert rows["tool_ffmpeg"]["ok"]
-    assert rows["tool_pdftotext"]["ok"] is False and rows["tool_pdftotext"]["fix"]
-    assert rows["tool_tesseract"]["state"] == "off"
+    assert rows["tool_tesseract"]["state"] == "off" and rows["tool_tesseract"]["fix"]
+    # PDFs are read by PyMuPDF (E2.2) — poppler/pdftotext must not be probed,
+    # or a new user is told to install something nothing uses.
+    assert "tool_pdftotext" not in rows
 
 
 def test_gpu_rows(cfg, monkeypatch):

@@ -224,9 +224,6 @@ def probe_tools() -> list[dict]:
     for binary, label, why, optional, hint in (
         ("ffmpeg", "ffmpeg", "needed for M4B export and voice-clip prep", False,
          _install_hint("ffmpeg", win="Windows: download from ffmpeg.org and add it to PATH")),
-        ("pdftotext", "pdftotext (poppler)", "needed to read PDFs", True,
-         _install_hint("poppler", brew="poppler", apt="poppler-utils",
-                       win="Windows: install poppler (e.g. from the poppler-windows releases) and add its bin/ to PATH")),
         ("tesseract", "tesseract (OCR)", "needed only for scanned PDFs", True,
          _install_hint("tesseract", apt="tesseract-ocr")),
     ):
