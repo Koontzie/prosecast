@@ -10,7 +10,6 @@ phase exists to avoid, so the server must say so in the probe's own words even
 though the UI already disables the button.
 """
 
-import importlib.util
 import json
 import queue
 import threading
@@ -360,20 +359,6 @@ def test_the_guard_is_per_book(client, tmp_path, services_up, frozen):
 # ── keeping the card's fixtures honest ───────────────────────────────────────
 
 FIXTURES = Path(__file__).parent / "fixtures"
-ROOT = Path(__file__).resolve().parent.parent
-
-
-def _generator():
-    """scripts/refresh_ui_fixtures.py, loaded by path (scripts/ is not a package).
-
-    Imported rather than reimplemented so the probe rows this test pins are
-    byte-identical to the ones the fixtures were generated with.
-    """
-    spec = importlib.util.spec_from_file_location(
-        "refresh_ui_fixtures", ROOT / "scripts" / "refresh_ui_fixtures.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
 
 
 @pytest.mark.parametrize("fixture,ollama_ok,whisper_ok", [
@@ -390,15 +375,16 @@ def test_pipeline_fixtures_still_match_this_endpoint(
     The probe verdicts are pinned on both sides — whether this machine happens
     to run Ollama is not something a fixture may depend on.
     """
-    gen = _generator()
     lib.ensure_book_dir("study")
     (tmp_path / "study" / "ir.json").write_text(json.dumps(synthetic.study_ir()))
-    monkeypatch.setattr(sp, "probe_ollama", lambda: gen.probe_row(
+    # synthetic.probe_row is the same helper scripts/refresh_ui_fixtures.py
+    # calls, so the rows pinned here are byte-identical to the generated ones.
+    monkeypatch.setattr(sp, "probe_ollama", lambda: synthetic.probe_row(
         "ollama", "Who\'s speaking (local AI)", ollama_ok,
-        "" if ollama_ok else gen.OLLAMA_FIX))
-    monkeypatch.setattr(sp, "probe_whisper", lambda: gen.probe_row(
+        "" if ollama_ok else synthetic.OLLAMA_FIX))
+    monkeypatch.setattr(sp, "probe_whisper", lambda: synthetic.probe_row(
         "whisper", "Read-along timing (whisper)", whisper_ok,
-        "" if whisper_ok else gen.WHISPER_FIX))
+        "" if whisper_ok else synthetic.WHISPER_FIX))
 
     live = client.get("/pipeline/study").json()
     saved = json.loads((FIXTURES / fixture).read_text())

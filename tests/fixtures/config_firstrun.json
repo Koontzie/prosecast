@@ -1,0 +1,27 @@
+{
+  "path": "MACHINE",
+  "exists": false,
+  "values": {
+    "tts_engine": "auto",
+    "chatterbox_url": "http://localhost:8101",
+    "ollama_url": "http://localhost:11434",
+    "ollama_model": "gemma3:12b",
+    "whisper_url": "http://localhost:8100",
+    "whisper_model": "Systran/faster-whisper-small",
+    "elevenlabs_api_key": "",
+    "comfyui_url": "",
+    "gpu_reclaim_below_gb": 4.0,
+    "elevenlabs_api_key_set": false
+  },
+  "sources": {
+    "tts_engine": "default",
+    "chatterbox_url": "default",
+    "ollama_url": "default",
+    "ollama_model": "default",
+    "whisper_url": "default",
+    "whisper_model": "default",
+    "elevenlabs_api_key": "default",
+    "comfyui_url": "default",
+    "gpu_reclaim_below_gb": "default"
+  }
+}

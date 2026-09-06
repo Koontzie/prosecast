@@ -1,0 +1,64 @@
+{
+  "ready": true,
+  "os": "Darwin",
+  "config_path": "MACHINE",
+  "config_exists": true,
+  "shadowed_by_env": [],
+  "rows": [
+    {
+      "key": "voice_engine",
+      "label": "Voice engine",
+      "ok": true,
+      "state": "ok",
+      "detail": "macOS system voices (say) · no GPU needed",
+      "fix": "Fine for checking that everything works; robotic for a whole book. Chatterbox is the free upgrade.",
+      "optional": false,
+      "engine": "say"
+    },
+    {
+      "key": "ollama",
+      "label": "Who's speaking (local AI)",
+      "ok": true,
+      "state": "ok",
+      "detail": "Who's speaking (local AI) · http://localhost · ready",
+      "fix": "",
+      "optional": true
+    },
+    {
+      "key": "whisper",
+      "label": "Read-along timing (whisper)",
+      "ok": true,
+      "state": "ok",
+      "detail": "Read-along timing (whisper) · http://localhost · ready",
+      "fix": "",
+      "optional": true
+    },
+    {
+      "key": "tool_ffmpeg",
+      "label": "ffmpeg",
+      "ok": true,
+      "state": "ok",
+      "detail": "/usr/local/bin/ffmpeg",
+      "fix": "",
+      "optional": false
+    },
+    {
+      "key": "tool_tesseract",
+      "label": "tesseract (OCR)",
+      "ok": true,
+      "state": "ok",
+      "detail": "/usr/local/bin/tesseract",
+      "fix": "",
+      "optional": true
+    },
+    {
+      "key": "gpu",
+      "label": "GPU headroom",
+      "ok": true,
+      "state": "off",
+      "detail": "no ComfyUI configured — not monitored",
+      "fix": "Optional. If ComfyUI shares the GPU with Chatterbox, set its URL and ProseCast will check free VRAM (and reclaim it) before every render.",
+      "optional": true
+    }
+  ]
+}

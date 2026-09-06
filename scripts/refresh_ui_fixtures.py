@@ -17,6 +17,7 @@ import json
 import os
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -27,10 +28,12 @@ os.environ.setdefault("PROSECAST_CONFIG", str(Path(tempfile.mkdtemp()) / "config
 from fastapi.testclient import TestClient  # noqa: E402
 
 import server  # noqa: E402
+from prosecast import config as config_mod  # noqa: E402
 from prosecast import ingest as ingest_mod  # noqa: E402
 from prosecast import library as lib  # noqa: E402
 from prosecast import setup_probe as setup_probe_mod  # noqa: E402
-from synthetic import PLAY, build_pdf, study_ir  # noqa: E402
+from synthetic import (PLAY, build_pdf, pin_config, pin_machine, pin_probes,  # noqa: E402
+                       pin_status, study_ir)
 
 FIXTURES = ROOT / "tests" / "fixtures"
 
@@ -42,29 +45,22 @@ def build_study_book(root: Path) -> str:
     return "study"
 
 
-# GET /pipeline/{slug} asks Ollama and whisper whether they are up, so on a
-# machine that runs them the answer differs from one that doesn't — the same
-# problem `ocr_available` has. The probe verdicts are pinned to fixed rows here
-# (the two states the card must draw) so the SHAPE still comes from the live
-# endpoint while the fixture stays reproducible anywhere.
-def probe_row(key: str, label: str, ok: bool, fix: str = "") -> dict:
-    return {"key": key, "label": label, "ok": ok, "state": "ok" if ok else "missing",
-            "detail": f"{label} · http://localhost · " + ("ready" if ok else "not responding"),
-            "fix": fix, "optional": True}
+# GET /pipeline/{slug} and GET /setup/status ask Ollama, whisper, the PATH and
+# the OS what is here, so on Tyler's Mac the answer differs from a container's —
+# the same problem `ocr_available` has. The probe *inputs* are pinned (see
+# tests/synthetic.py) so the SHAPE and the wording still come from the live
+# endpoint while the fixture stays reproducible anywhere. The drift tests pin
+# them the same way.
 
-
-OLLAMA_FIX = ("Install Ollama from ollama.com and start it, or point the URL at a machine "
-              "that runs it.")
-WHISPER_FIX = ("Optional. Without it the read-along highlights by sentence (estimated) "
-               "instead of by word.")
-
-
-def pin_probes(ollama_ok: bool, whisper_ok: bool) -> None:
-    setup_probe_mod.probe_ollama = lambda: probe_row(
-        "ollama", "Who's speaking (local AI)", ollama_ok, "" if ollama_ok else OLLAMA_FIX)
-    setup_probe_mod.probe_whisper = lambda: probe_row(
-        "whisper", "Read-along timing (whisper)", whisper_ok,
-        "" if whisper_ok else WHISPER_FIX)
+def wait_for(client, job_id: str, timeout: float = 120.0) -> dict:
+    job = None
+    t0 = time.time()
+    while time.time() - t0 < timeout:
+        job = client.get(f"/render_status/{job_id}").json()
+        if job["status"] not in ("queued", "running"):
+            return job
+        time.sleep(0.05)
+    raise TimeoutError(f"job {job_id} never finished: {job}")
 
 
 def upload(client, name: str, data: bytes) -> dict:
@@ -107,12 +103,37 @@ def main() -> None:
           "POST /books/upload (scanned pdf)")
 
     # The Pipeline card's two states: everything reachable, and nothing is.
-    pin_probes(ollama_ok=True, whisper_ok=True)
+    pin_probes(setup_probe_mod, ollama_ok=True, whisper_ok=True)
     write("pipeline_ready.json", client.get(f"/pipeline/{slug}").json(),
           f"GET /pipeline/{slug} (services up)")
-    pin_probes(ollama_ok=False, whisper_ok=False)
+    pin_probes(setup_probe_mod, ollama_ok=False, whisper_ok=False)
     write("pipeline_offline.json", client.get(f"/pipeline/{slug}").json(),
           f"GET /pipeline/{slug} (services down)")
+
+    # ── The first-run wizard (E6) ───────────────────────────────────────────
+    # Two ends of the same endpoint: a machine that has never been set up
+    # (no config.json, engine still 'auto'), and one where the voice engine
+    # answers. Everything the probe can see about the machine is pinned.
+    pin_machine(setup_probe_mod, os_name="Darwin", ollama_ok=False, whisper_ok=False)
+    write("setup_status_firstrun.json", pin_status(client.get("/setup/status").json()),
+          "GET /setup/status (no config.json yet)")
+    write("config_firstrun.json", pin_config(client.get("/config").json()),
+          "GET /config (no config.json yet)")
+
+    os.environ["PROSECAST_CONFIG"] = str(tmp / "config.json")
+    config_mod.invalidate()
+    client.put("/config", json={"values": {"tts_engine": "say"}})
+    pin_machine(setup_probe_mod, os_name="Darwin", ollama_ok=True, whisper_ok=True)
+    write("setup_status_ready.json", pin_status(client.get("/setup/status").json()),
+          "GET /setup/status (engine picked, everything answering)")
+    write("config_ready.json", pin_config(client.get("/config").json()),
+          "GET /config (engine saved)")
+
+    # The wizard's last step: the built-in sample book, ingested as a job.
+    started = client.post("/books/sample").json()
+    wait_for(client, started["job_id"])
+    started["job_id"] = "FIXTURE"
+    write("sample_book.json", started, "POST /books/sample (first call)")
 
 
 if __name__ == "__main__":

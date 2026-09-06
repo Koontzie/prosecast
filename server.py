@@ -353,11 +353,15 @@ class IngestBody(BaseModel):
     ocr: bool = False                # read a scanned PDF with tesseract first
 
 
-def _run_ingest_job(job_id: str, info: dict, mode: str, title: str,
+def _run_ingest_job(job_id: str, path, mode: str, title: str,
                     chapters, keep_tables: bool, ocr: bool = False) -> None:
     """Background thread target. Deliberately NOT on the render queue: ingest is
     CPU-bound and GPU-free, and a new upload must not sit behind an overnight
-    book render."""
+    book render.
+
+    Takes a plain path, not an upload entry: POST /books/sample writes its file
+    itself and never goes through the in-memory upload table.
+    """
     job = _render_jobs[job_id]
 
     def progress(stage: str, detail: str = "") -> None:
@@ -368,7 +372,7 @@ def _run_ingest_job(job_id: str, info: dict, mode: str, title: str,
                 job["progress"] = ingest_mod.STAGES.index(stage) + 1
 
     try:
-        res = ingest_mod.run(info["path"], mode, slug=job["book_slug"], title=title,
+        res = ingest_mod.run(path, mode, slug=job["book_slug"], title=title,
                              chapters=chapters, keep_tables=keep_tables, ocr=ocr,
                              progress=progress)
         with _jobs_lock:
@@ -423,9 +427,58 @@ def ingest_book(body: IngestBody):
         "error": None, "result": None,
     }
     threading.Thread(target=_run_ingest_job, daemon=True, name=f"ingest-{slug}",
-                     args=(job_id, info, mode, title, chapters, body.keep_tables,
+                     args=(job_id, info["path"], mode, title, chapters, body.keep_tables,
                            body.ocr)).start()
     return {"job_id": job_id, "slug": slug, "mode": mode, "title": title}
+
+
+# ── POST /books/sample → the built-in sample book, as a book (E6.1) ──────────
+
+SAMPLE_SLUG = "sample_book"
+
+
+@app.post("/books/sample")
+def create_sample_book():
+    """Put the built-in sample book in the library, ingesting it if it is new.
+
+    `library/` and `books/` are gitignored, so a fresh clone has no books at
+    all and the first-run wizard has nothing to read. This is the only way the
+    sample book is created — the wizard's last step calls it, and so can
+    anyone who deleted it.
+
+    Idempotent: if `library/sample_book/ir.json` is already there this returns
+    `{exists: true}` and does no work. Otherwise it writes the text and runs
+    the same ingest job `/books/ingest` runs — own daemon thread, rules-only
+    attribution, no LLM — returning a `job_id` to poll at
+    `/render_status/{job_id}` like any other ingest.
+    """
+    ir_path = lib.ir_path(SAMPLE_SLUG)
+    if ir_path.exists():
+        try:
+            chapters = len(_load_ir(ir_path).get("chapters", []))
+        except Exception:
+            chapters = 0
+        return {"slug": SAMPLE_SLUG, "exists": True, "chapters": chapters}
+
+    from prosecast.book_parser import write_sample_book
+    path = BOOKS_DIR / "sample_book.txt"
+    try:
+        write_sample_book(str(path))
+    except OSError as e:
+        raise HTTPException(status_code=500,
+                            detail=f"Could not write the sample book to {path}: {e}")
+
+    job_id = uuid.uuid4().hex[:10]
+    _render_jobs[job_id] = {
+        "job_id": job_id, "kind": "ingest", "book_slug": SAMPLE_SLUG, "mode": "novel",
+        "ocr": False,
+        "status": "running", "progress": 0, "total": len(ingest_mod.STAGES),
+        "stage": "queued", "detail": "preparing the sample book",
+        "error": None, "result": None,
+    }
+    threading.Thread(target=_run_ingest_job, daemon=True, name=f"ingest-{SAMPLE_SLUG}",
+                     args=(job_id, path, "novel", "Sample Book", None, False, False)).start()
+    return {"slug": SAMPLE_SLUG, "exists": False, "job_id": job_id}
 
 
 # ── /ir/{book_slug}/characters ───────────────────────────────────────────────

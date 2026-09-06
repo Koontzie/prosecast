@@ -159,3 +159,59 @@ def build_scanned_pdf(path, *, pages=SCAN_PAGES, blank: bool = False, dpi: int =
     src.close()
     scan.close()
     return path
+
+
+# ── pinned Setup probes (E3 pipeline fixtures, E6 first-run fixtures) ────────
+#
+# /setup/status and /pipeline/{slug} ask the network and the PATH whether
+# things are there, so their answers differ between Tyler's Mac, the device VM
+# and a CI container. The fixtures still have to come from the live endpoint
+# (that is the rule this repo learned the hard way), so what gets pinned is the
+# probe's *inputs* — OS, `which`, and the two network probes — and the row text
+# is whatever the real probe code makes of them. `scripts/refresh_ui_fixtures.py`
+# and the drift tests call this identically, so the two always agree.
+
+OLLAMA_FIX = ("Install Ollama from ollama.com and start it, or point the URL at a machine "
+              "that runs it.")
+WHISPER_FIX = ("Optional. Without it the read-along highlights by sentence (estimated) "
+               "instead of by word.")
+
+
+def probe_row(key: str, label: str, ok: bool, fix: str = "") -> dict:
+    return {"key": key, "label": label, "ok": ok, "state": "ok" if ok else "missing",
+            "detail": f"{label} · http://localhost · " + ("ready" if ok else "not responding"),
+            "fix": fix, "optional": True}
+
+
+def pin_probes(sp, ollama_ok: bool, whisper_ok: bool) -> None:
+    """Pin the two optional service probes to a fixed verdict."""
+    sp.probe_ollama = lambda: probe_row(
+        "ollama", "Who's speaking (local AI)", ollama_ok, "" if ollama_ok else OLLAMA_FIX)
+    sp.probe_whisper = lambda: probe_row(
+        "whisper", "Read-along timing (whisper)", whisper_ok,
+        "" if whisper_ok else WHISPER_FIX)
+
+
+PINNED_TOOLS = ("say", "ffmpeg", "tesseract")
+
+
+def pin_machine(sp, *, os_name: str = "Darwin", have=PINNED_TOOLS,
+                ollama_ok: bool = False, whisper_ok: bool = False) -> None:
+    """Pin everything about the machine that /setup/status can see."""
+    sp._OS = os_name
+    sp._which = lambda binary: (f"/usr/local/bin/{binary}" if binary in have else None)
+    pin_probes(sp, ollama_ok=ollama_ok, whisper_ok=whisper_ok)
+
+
+def pin_status(payload: dict) -> dict:
+    """The one field left that no pinning can fix: where config.json happens to
+    live is a tmp path that differs every run."""
+    out = dict(payload)
+    out["config_path"] = "MACHINE"
+    return out
+
+
+def pin_config(payload: dict) -> dict:
+    out = dict(payload)
+    out["path"] = "MACHINE"
+    return out
