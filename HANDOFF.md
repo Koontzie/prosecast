@@ -125,6 +125,27 @@ and `tests/test_pipeline.py` fails if a plain write of `ir.json` comes back.
 (gitignored) and `.backup/dest` (gitignored). Never put the real host back into
 a tracked file — the history was rewritten specifically to remove it.
 
+**The first-run wizard (new, 09-06).** `#firstrun-modal-overlay` in
+`static/index.html`. The hook is one line in `loadSetupChip()`: no
+`config.json` → `openFirstRun()` instead of the old `openSetupView()`. Four
+steps — engine, "can it speak?", optional brains, hear it — and the last one
+calls **`POST /books/sample`**, which is the ONLY way the sample book is ever
+created (`library/` and `books/` are gitignored, so a fresh clone has none);
+it is idempotent and runs the same ingest job `/books/ingest` runs, on its own
+thread. The engine cards, the field each reveals and the **ElevenLabs
+disclosure** come from shared builders (`engineCardsHTML`, `engineFieldsHTML`,
+`elDisclosureHTML`) that the Setup page and the wizard both call — the
+disclosure is a compliance requirement and a second copy would drift into a
+paraphrase. The Setup page is otherwise untouched and gained one button,
+**↻ Run setup again**. Every step section carries its own `.fr-hidden` rule
+(the `.hidden` trap below, again). The wizard is **fixture-checked, not
+pytest-checked**: `tests/ui/check_first_run.py` drives it in both skins from
+generated fixtures; `tests/test_sample_book.py` covers the endpoint and fails
+if a fixture drifts. **Known gap:** `SETUP.sh` writes a `config.json`, so
+after the documented install the wizard does not open by itself — ↻ Run setup
+again is the way in, and whether SETUP.sh should stop doing that is Tyler's
+call.
+
 **The README is a contract (09-05).** It promises: ffmpeg required, tesseract
 scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,
 first run lands on Setup, `main.py --llm-model` defaults to the configured

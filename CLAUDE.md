@@ -83,7 +83,7 @@ The UI is the primary surface; the CLI drives the same modules. Nothing is CLI-o
 
 ```bash
 bash SETUP.sh                                           # venv, deps, spaCy model (verified), config.json, tools, smoke test
-.venv/bin/uvicorn server:app --port 8000                # the app; first run lands on Setup
+.venv/bin/uvicorn server:app --port 8000                # the app; first run opens the setup wizard
 .venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene   # AI attribution pass — also available in the UI (E3)
 .venv/bin/python scripts/align_words.py <slug>          # word timings after a render — also available in the UI (E3)
 .venv/bin/python main.py --sample --tts stub            # silent smoke test

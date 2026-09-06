@@ -63,13 +63,14 @@ sounds better or thinks harder.
 
 | Rung | Hardware | Voices | "Who's speaking" | What to expect |
 |---|---|---|---|---|
-| **1 — Try it** | Any Mac, or any machine with `piper` | macOS system voices / Piper (CPU) | rules only | Robotic but real multi-voice within ten minutes. The "does this work at all" rung. |
+| **1 — Try it** | Any Mac, or any machine with `piper` | macOS system voices / Piper (CPU) | rules only | Robotic but real multi-voice — the setup wizard ends by reading you the sample book. The "does this work at all" rung. |
 | **2 — Sounds like a book** | A GPU with 8–12 GB of VRAM, in this machine or one across the room | **Chatterbox** (local, free, voice cloning) | rules only, or a small Ollama model | Audiobook-grade narration. Slower on smaller cards. |
 | **3 — Thinks too** | Same GPU with headroom, or a second box | Chatterbox | **Ollama** (`gemma3:12b`) + **faster-whisper** for read-along | The full experience: hard scenes attributed by AI, words lighting up as they are read. This is the reference setup. |
 | **BYO key** | Anything | Your own **ElevenLabs** account for a few hero characters | as above | Premium voices where they earn their cost. A whole book on ElevenLabs is a real bill — see below. |
 
-You do not pick a rung up front. Install rung 1, open the Setup page, and add
-services as you go; each row turns green as its service appears.
+You do not pick a rung up front. Install rung 1, let the setup wizard get you
+listening, and add services as you go; on the Setup page (⚙) each row turns
+green as its service appears.
 
 ---
 
@@ -111,15 +112,24 @@ Then start the app:
 .venv/bin/uvicorn server:app --port 8000
 ```
 
-Open <http://localhost:8000>. On first run it lands on the **Setup page**: one
-row per service, green / amber / red, each with the command that fixes it.
-On a Mac the voice row is already green (system voices). Click **+ Add Book**,
-drop in an EPUB, answer "novel, single narrator, or play?", and render
-chapter 1.
+Open <http://localhost:8000>. On first run it opens a **short setup wizard**:
+pick a voice engine (on a Mac, system voices are already selected and need
+nothing installed), let it check that the engine answers, skip the optional AI
+services, and press **▶ Read me the sample** — it adds the two-chapter sample
+book, renders the first chapter and plays it. That is the whole first run: no
+terminal, no README.
 
-**How you know it worked:** the chapter list shows a rendered duration, play
-works, and the speaker name changes as the voices change. On a Mac all of
-that happens with no other services installed.
+If you already have a `config.json` (`SETUP.sh` writes one), the wizard does
+not open by itself — press **↻ Run setup again** on the Setup page to walk it.
+
+**How you know it worked:** you heard it. After that, click **+ Add Book**,
+drop in an EPUB, answer "novel, single narrator, or play?", and render
+chapter 1: the chapter list shows a rendered duration, play works, and the
+speaker name changes as the voices change. On a Mac all of that happens with
+no other services installed.
+
+The **Setup page** (⚙ in the header) is the full list: one row per service,
+green / amber / red, each with the command that fixes it.
 
 Not on a Mac? Install [Piper](https://github.com/rhasspy/piper), make sure
 `piper` is on your `PATH`, and set `"tts_engine": "piper"` in `config.json`
