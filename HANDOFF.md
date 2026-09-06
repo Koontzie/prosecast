@@ -7,12 +7,12 @@ Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
 2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
 gmail author scrubbed) and force-pushed; every commit hash from before this
 session changed, so hashes quoted in older STATUS entries no longer resolve.
-**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **245 passed,
-1 skipped** (231 before E6, 197 before E3) — the skip is `en_core_web_sm`
-missing from the venv; `bash SETUP.sh` installs and verifies it, after which the
-number is 249. Without tesseract a further 6 skip. Skips are healthy, not
-regressions. There are now **four** `tests/ui/` checks, and Playwright +
-chromium are installed in the Mac venv.
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **297 passed,
+1 skipped** (247 before E7, 231 before E6, 197 before E3) — the skip is
+`en_core_web_sm` missing from the venv; `bash SETUP.sh` installs and verifies
+it, after which the number is 301. Without tesseract a further 6 skip. Skips
+are healthy, not regressions. There are now **five** `tests/ui/` checks, and
+Playwright + chromium are installed in the Mac venv.
 
 ---
 
@@ -21,9 +21,11 @@ chromium are installed in the Mac venv.
 The original goal is **met** and the repo is **publishable**: EPUB, TXT and PDF
 (novels, rulebooks, plays, scans) narrate end-to-end with multi-voice casting,
 whole-book resumable renders and word-accurate read-along — **every step in the
-UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05, and since E6 on
+UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05; since E6 on
 2026-09-06 the first run walks a stranger to the sound of a voice without a
-README. **E3 is pushed; E6's commits are local — Tyler reviews and pushes.**
+README, and since E7 the same day the voice bank is a page you can browse,
+audition and annotate rather than a JSON file. **E3 is pushed; E6's and E7's
+commits are local — Tyler reviews and pushes.**
 
 | Phase | What | State |
 |---|---|---|
@@ -34,6 +36,7 @@ README. **E3 is pushed; E6's commits are local — Tyler reviews and pushes.**
 | **E5** | README, `SETUP.sh`, `docs/PHILOSOPHY.md`, history scrub, `CLAUDE.md` refresh | **✓ 09-05** |
 | **E3** | **Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card** | **✓ 09-05** |
 | **E6** | **First-run wizard: engine → probe → optional brains → hears the sample book** | **✓ 09-06 (local commits)** |
+| **E7** | **Voices tab: voice library + notes/tags/rating, audition + A/B, `hidden`, sourcing catalogue** | **✓ 09-06 (local commits)** |
 
 Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 `README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
@@ -93,14 +96,22 @@ blunt 409, and that guard can be relaxed the moment the merge fix lands.
   **is closed by E6.8**: `config.example.json` leaves `tts_engine` on `auto`
   and the hook asks whether an engine has been chosen, not whether a file
   exists.
+- **E7 is done** (09-06, Claude Code on the Mac — see the STATUS entry).
+  `docs/CC_BRIEF_voices_tab.md` ran end to end. What is left of it is Tyler's,
+  and it is all **ears**: nothing in that view was judged by listening. Open
+  the 🎤 Voices chip, run the audition line through the 20 LibriVox US voices,
+  A/B the candidates for NARRATOR, and hide the ones that do not work — hiding
+  now actually removes a voice from auto-casting, so it is worth doing
+  properly. **Before uploading anything new, read the `librivox_voices/`
+  MANIFEST finding below** — it will bite on the next upload.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
   text hash rather than segment number.
 
 Still open from earlier phases: the **rulebook overnight render**, the **C4
-voice-ref mirror**, the **Voices tab** (`docs/CC_BRIEF_voices_tab.md`),
-**auditioning the 20 LibriVox US voices**, and **a real scanned PDF end to end**.
+voice-ref mirror**, **auditioning the 20 LibriVox US voices** (now a job for
+the Voices tab, not a script), and **a real scanned PDF end to end**.
 
 ---
 
@@ -126,6 +137,20 @@ guards around the second one rather than fixing it.**
   with the `segmentId` change — both alter how audio files are identified, and
   each costs a full re-render of the library. Pay that once.
 
+* **The LibriVox staging script would silently skip 38 of 39 voices on the
+  next upload. (Found 09-06 in E7; named, deliberately not fixed.)**
+  `librivox_voices/` holds **39** WAVs that Tyler renamed after auditioning —
+  the notes are appended to the filenames (`us-kansas-rmb male.wav`,
+  `us-louisiana-south-psc croakish female.wav`). `MANIFEST.json` still lists
+  the original **55** names, and `merge_voice_meta` in
+  `scripts/stage_librivox_dialects.py` (~504–545) keys on the MANIFEST
+  filename. Exactly **one** name on disk still matches the manifest, so an
+  upload today would seed `region`/`license`/`distributable`/`source_url` for
+  that one and quietly nothing for the other 38 — the provenance fields the
+  new Voices view's licence badge reads. The fix is to key on the audio hash
+  or to record the rename back into the manifest; either way it is a decision
+  about Tyler's own filing, so E7 named it rather than guessing.
+
 Fixed 09-05 in E3: the plain-`open` writes of `ir.json` are gone.
 `scene_attributor.run_scene_pass`'s checkpoint, `cast_profiler`'s checkpoint
 and **all five** of `main.py`'s writes now go through `lib.write_json_atomic`,
@@ -138,6 +163,65 @@ and `tests/test_pipeline.py` fails if a plain write of `ir.json` comes back.
 `/Users/YOUR_USER`, `192.168.1.50`. The real values live only in `config.json`
 (gitignored) and `.backup/dest` (gitignored). Never put the real host back into
 a tracked file — the history was rewritten specifically to remove it.
+
+**The Voices view (new, 09-06).** `#voices-view` in `static/index.html`, the
+**fourth** occupant of the main grid cell — `body.voices-open`, mutually
+exclusive with `reader-open` and `setup-open`, reached from a 🎤 chip beside
+`#setup-chip`. Classes are **`vv-*`** because `.voices-btn` already belongs to
+the per-book button in the chapter list, and it brings its own
+`.vv-hidden { display: none !important; }` because `.hidden` still has no
+global rule in this file.
+
+Three endpoints, kept off `/voices` on purpose (the cast drawer and casting
+modal read that shape): **`GET /voices/library`** — every voice for the active
+engine with its whole overlay, plus `orphans`; **`POST /voices/meta/{key}`** —
+patch semantics, one entry, through `lib.write_json_atomic`; and
+**`GET /voices/sources`** — `voice_sources.json`, read-only, 15 corpora tiered
+`ship`/`private`/`never`. That last one **must never shell out, download, or
+POST to the Chatterbox server**: the panel shows a command, a person runs it.
+
+**The key is the STEM** — `Path(id.split(":",1)[-1]).stem`, i.e. `us-nyc-add`
+for `predefined:us-nyc-add.wav`. Every write uses it. The read path still falls
+back to the legacy DISPLAY-name key because the shipped file has both styles
+(`Robert` next to `bright-indian-1`), and note that a clone's display name is
+`Gianna (clone)` whose *stem is itself* — so a first edit resolves the legacy
+entry through the live voice list, copies it onto the stem key, and leaves the
+original alone rather than deleting one of Tyler's lines. The `name` that
+`_apply_voice_meta` returns carries a ♀/♂ glyph and is a **display string,
+never an identifier**.
+
+**`_voice_pool` vs `_voice_pool_assignable`.** `_voice_pool()` returns
+everything and is what `save_voice_map` and `/voice/preview` validate against —
+narrowing it would 400 every book already cast with a now-hidden voice, and the
+failure would look like a UI bug rather than a policy. `_voice_pool_assignable()`
+is that list minus `hidden` and minus the server's test artefacts
+(`cachetest|selftest|scanprobe`, the regex lifted from
+`scripts/audition_voices.py`), and **only `_default_voice_map()` uses it**, with
+a fall back to the full pool if hiding emptied it. Hiding changes what
+ProseCast picks for you; it never changes what you may keep.
+
+**Orphans are Chatterbox-only, and that is deliberate.** Chatterbox is the one
+engine whose voice list lives on a server and can lose a voice; say/piper/
+elevenlabs/gtts have static lists that never shrink, so an unmatched overlay
+entry there is a note about *another* engine. Reporting those cried orphan over
+the whole bank the moment the engine was `say` — the generated fixture caught
+it. **`_readme` is a string, not an object**: preserved verbatim on every write
+and never allowed to reach the page as a voice or an orphan.
+
+**↻ refresh calls `recheckEngine()` first.** `_chatterbox_voice_cache` is
+cached for the process lifetime, so a voice uploaded five minutes ago is not in
+it and a bare re-GET of `/voices/library` would show the same stale list and
+look like the upload failed. `POST /engine_status/recheck` is what drops it.
+
+**`POST /voices/meta` stamps `edited`** (ISO, UTC) so the "recently edited"
+sort is real. Never written by hand; absent on every entry that predates the
+view. **`playPreview(btn, url, onDone)`** gained that third argument so the A/B
+bar chains two clips through the one `#preview-audio-el`; existing callers pass
+two and behave exactly as before. Fixture-checked, not pytest-checked, like the
+wizard: `tests/ui/check_voices.py` in both skins from
+`tests/fixtures/voices_library*.json` + `voices_sources.json`, generated
+against the fixed bank in `tests/synthetic.py` (`VOICE_BANK`,
+`pin_voice_bank`), with four drift tests in `tests/test_voices_library.py`.
 
 **The first-run wizard (new, 09-06).** `#firstrun-modal-overlay` in
 `static/index.html`. The hook is one line in `loadSetupChip()`: no

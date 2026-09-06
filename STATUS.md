@@ -1,14 +1,111 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E is complete, and as of E6 (2026-09-06) the
-first run is a wizard that ends by reading you the sample book.** Core goal met
-(EPUB/PDF/TXT, novels/plays/rulebooks, scans); **nothing in the product
-requires a terminal any more** — and now nothing requires the README either.
-Next: the **cast exchange** design (PHILOSOPHY.md is the spec-of-record), then
-the four HANDOFF findings — the render worker's whole-document write first, now
-that E3 is guarding around it rather than fixing it. Rulebook render + C4 still
-open. E6's commits are LOCAL — Tyler reviews and pushes.
+**Status:** ACTIVE — **Phase E is complete; E6 (2026-09-06) made the first run
+a wizard that ends by reading you the sample book, and E7 (same day) made the
+voice bank something you can browse, audition, A/B and annotate instead of
+hand-editing `voice_meta.json`.** Core goal met (EPUB/PDF/TXT,
+novels/plays/rulebooks, scans); **nothing in the product requires a terminal
+any more** — and nothing requires the README either. Next: the **cast
+exchange** design (PHILOSOPHY.md is the spec-of-record), then the four HANDOFF
+findings — the render worker's whole-document write first, now that E3 is
+guarding around it rather than fixing it. Rulebook render + C4 still open.
+E6's and E7's commits are LOCAL — Tyler reviews and pushes.
 **Updated:** 2026-09-06
+
+## Session 2026-09-06 (Claude Code, Mac) — E7: the Voices tab
+
+Ran `docs/CC_BRIEF_voices_tab.md` end to end. The only way to record what a
+voice sounded like was to hand-edit `voice_meta.json` in an editor, and the
+only way to find out was to render something and listen. Now the voice bank is
+a view you can browse, audition, A/B, annotate, filter and retire.
+**Tests 247 → 297 passed, 1 skipped. Five `tests/ui/` checks now, all green in
+both skins.**
+
+**Shipped:**
+- **The schema grew, backwards compatibly.** `voice_meta.json` entries gain
+  `tags`, `rating`, `hidden` alongside the `region`/`accent_label`/`license`/
+  `distributable`/`source_url` that `stage_librivox_dialects.py` already wrote.
+  `_apply_voice_meta` passes all of it through; entries carrying only
+  `gender`/`notes` — which is every hand-written one in the shipped file — keep
+  working untouched, and the ♀/♂ glyph behaviour is unchanged so the cast
+  drawer is unaffected.
+- **Three endpoints**, deliberately *not* an extension of `/voices` (the cast
+  drawer and the casting modal read that shape): `GET /voices/library` (every
+  voice with its full overlay, keyed on the **stem**, plus `orphans`),
+  `POST /voices/meta/{key}` (patch semantics, `lib.write_json_atomic`,
+  400-with-a-sentence on bad input), and `GET /voices/sources` (a new
+  `voice_sources.json`, read-only, 15 corpora tiered ship/private/never from
+  `docs/voice-sources.md`).
+- **`hidden` means something, in exactly one place.** `_voice_pool()` still
+  returns everything and validation is unchanged; the new
+  `_voice_pool_assignable()` is that list minus retired voices and minus the
+  Chatterbox server's own test artefacts, and only `_default_voice_map()` uses
+  it. A book already cast with a hidden voice still saves — there is a test for
+  precisely that.
+- **The Voices view** (`#voices-view`, `vv-*` classes, body-class switch like
+  the reader and Setup views, reached from a 🎤 chip in the header): search over
+  name/notes/tags/region, filters for gender/region/rating/safe-to-ship/show-
+  hidden, four sorts, a shared audition line, per-row inline notes and tags
+  (debounced 600 ms, save on blur and Enter), a 5-star rating, a licence badge
+  that is green when `distributable` and amber when not, a ⋯ menu with
+  Hide/Unhide and Copy voice id, and an A/B bar that caches each slot's clip so
+  only the first play waits on a render.
+- **"Find more voices"** — the catalogue with a **copy** button and no run
+  button, under the standing note that a CC licence is a copyright licence, not
+  voice consent.
+- **`tests/ui/check_voices.py`** — ~60 checks per skin against **generated**
+  fixtures (`voices_library.json`, `voices_library_say.json`,
+  `voices_sources.json`), with four drift tests in `tests/test_voices_library.py`
+  and the shared voice bank in `tests/synthetic.py`.
+
+**Things the code showed, which the brief could not have known:**
+1. **Orphans had to be scoped to Chatterbox.** The first generated `say`
+   fixture reported **eight** orphans — every Chatterbox-keyed note in the
+   overlay — because none of them matches a macOS voice. Chatterbox is the only
+   engine whose voice list lives on a server and can actually lose a voice;
+   say/piper/elevenlabs/gtts have static lists that never shrink, so an
+   unmatched entry there is a note about *another* engine, not a stranded one.
+   `/voices/library` now reports orphans for Chatterbox only. The generated
+   fixture is what caught this — a hand-written mock would have been kinder.
+2. **The stem-vs-display-name key is worse than "two styles".** A clone's
+   legacy key is `Gianna (clone)`, whose *stem* is `Gianna (clone)` — the
+   display name is not derivable from the key. So a first edit to such a voice
+   resolves the legacy entry through the live voice list, copies it forward
+   onto the stem key and leaves the original in place. Deleting one of Tyler's
+   lines to tidy up is not that endpoint's call.
+3. **"Recently edited" had nothing to sort on**, so `POST /voices/meta` now
+   stamps an `edited` timestamp. Without it that control would have been
+   decorative. Absent on every entry predating the view; never hand-written.
+4. **The count line had to stop calling the resting state a filter.** Hiding
+   retired voices is the default, so an untouched page was reading *"showing 7
+   of 8"*. It now reads `8 voices · 3 American · 1 hidden`, and only says
+   "showing N of" when a search or filter actually narrowed it.
+5. **`playPreview` grew a third argument** (an optional completion callback) so
+   the A/B bar can chain two clips through the one `#preview-audio-el` without
+   a second element fighting it over what is playing. Existing callers are
+   untouched.
+6. **`.voices-btn` really is taken** (the per-book 🎤 button), and `.hidden`
+   really has no global rule — the view brings its own `.vv-hidden`, the same
+   trap the wizard hit in E6.
+
+**One deviation from the brief, on purpose:** the sources panel names
+`docs/voice-sources.md` as a code path rather than a hyperlink. `docs/` is not
+served by `server.py`, and a link that 404s is worse than a path you can find.
+
+**Still Tyler's to verify:** every audio judgement — the audition path and the
+A/B comparison were driven headlessly against a one-block stub wav, and **no
+audio was listened to**. Also: whether the tag vocabulary wants to be free-form
+at all, and whether "safe to ship" is the right label for `distributable`.
+**Nothing was uploaded to the Chatterbox server and nothing POSTed to it; the
+only calls were the ones the app already makes.** All commits are local.
+
+**A finding for Tyler, named and deliberately not fixed** (it is in HANDOFF
+too): `librivox_voices/` holds **39** WAVs that were renamed after auditioning
+(the notes are in the filenames — `us-kansas-rmb male.wav`), while
+`MANIFEST.json` still lists the original **55** names. `merge_voice_meta` keys
+on the MANIFEST filename, so an upload today would seed metadata for **1** of
+them and silently skip 38. Naming it was the brief's instruction; fixing
+`stage_librivox_dialects.py` was not.
 
 ## Session 2026-09-06 (Claude Code, Mac) — E6: the first-run wizard
 
