@@ -941,6 +941,43 @@
     }
     #cast-skip-btn:hover { color: #aaa; border-color: #555; }
 
+    /* ── First-run wizard (E6) ──
+       Built out of .casting-modal + the su-* vocabulary so both skins come for
+       free. `.hidden` is scoped to .modal-overlay in this file, so every step
+       section carries its own rule — the E2.3 lesson, in writing. */
+    .firstrun-modal { width: 720px; }
+    .firstrun-modal .fr-hidden { display: none !important; }
+    .fr-stepper { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+    .fr-dot {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px; border-radius: 50%; font-size: .7rem;
+      border: 1px solid #2a2a2a; background: #141414; color: #666;
+    }
+    .fr-dot.done { color: #7fd6bf; border-color: #24463d; background: #12201c; }
+    .fr-dot.current { color: #fff; border-color: #7c6dfa; background: #16152a; }
+    .fr-dot-line { flex: 1; height: 1px; background: #242424; max-width: 34px; }
+    .fr-body { flex: 1; overflow-y: auto; padding: 18px 22px; }
+    .fr-body h3 { font-size: 1rem; color: #eee; font-weight: 600; margin-bottom: 4px; }
+    .fr-lead { font-size: .82rem; color: #888; line-height: 1.55; margin-bottom: 14px; }
+    .fr-group { background: #161616; border: 1px solid #242424; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+    .fr-group .fr-pitch { font-size: .78rem; color: #888; line-height: 1.5; margin-bottom: 6px; }
+    .fr-group .fr-pitch b { color: #ddd; }
+    .fr-say { font-size: .84rem; color: #bbb; line-height: 1.6; min-height: 1.4em; }
+    .fr-say.err { color: #e07070; }
+    .fr-hear {
+      background: #7c6dfa; border: none; color: #fff; font-size: .95rem; font-weight: 500;
+      padding: 12px 26px; border-radius: 8px; cursor: pointer;
+    }
+    .fr-hear:hover { background: #9585ff; }
+    .fr-hear:disabled { background: #2a2a2a; color: #555; cursor: default; }
+    .fr-cost { background: #221a0c; border: 1px solid #4a3a1a; color: #e0b25c; font-size: .8rem;
+      padding: 9px 12px; border-radius: 6px; margin-bottom: 12px; line-height: 1.5; }
+    .fr-foot { padding: 14px 20px; border-top: 1px solid #242424; display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .fr-skip { background: none; border: none; color: #666; font-size: .76rem; cursor: pointer; text-decoration: underline; padding: 4px 6px; }
+    .fr-skip:hover { color: #aaa; }
+    .fr-spacer { flex: 1; }
+    .fr-why { font-size: .76rem; color: #c9b27a; line-height: 1.5; margin-top: 8px; }
+
     /* ── Ingest wizard (E2.3) ── */
     .ingest-modal { width: 680px; }
     /* `.hidden` only had a rule for .modal-overlay, so every hidden section
@@ -1438,6 +1475,23 @@ html[data-theme="onair"] {
 [data-theme="onair"] .casting-char-count { color: var(--oa-mut); font-family: var(--oa-mono); }
 [data-theme="onair"] .casting-char-sample { color: var(--oa-mut); }
 [data-theme="onair"] .casting-modal-footer { border-top-color: var(--oa-line); }
+[data-theme="onair"] .fr-dot { background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] .fr-dot.done { color: var(--oa-teal); border-color: #2c4a41; background: #101c19; }
+[data-theme="onair"] .fr-dot.current { color: var(--oa-cream); border-color: var(--oa-gold); background: var(--oa-gold-bg); }
+[data-theme="onair"] .fr-dot-line { background: var(--oa-line); }
+[data-theme="onair"] .fr-body h3 { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .fr-lead, [data-theme="onair"] .fr-group .fr-pitch { color: var(--oa-mut); }
+[data-theme="onair"] .fr-group { background: var(--oa-bg2); border-color: var(--oa-line); border-radius: 4px; }
+[data-theme="onair"] .fr-group .fr-pitch b { color: var(--oa-cream); }
+[data-theme="onair"] .fr-say { color: var(--oa-cream2); font-family: var(--oa-mono); }
+[data-theme="onair"] .fr-say.err { color: #ffb0a0; }
+[data-theme="onair"] .fr-hear { background: var(--oa-gold); color: #241a11; border-radius: 3px; }
+[data-theme="onair"] .fr-hear:hover { background: var(--oa-gold-hi); }
+[data-theme="onair"] .fr-cost { background: var(--oa-gold-bg); border-color: var(--oa-gold-dim); color: var(--oa-amber); }
+[data-theme="onair"] .fr-foot { border-top-color: var(--oa-line); }
+[data-theme="onair"] .fr-skip { color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] .fr-skip:hover { color: var(--oa-gold); }
+[data-theme="onair"] .fr-why { color: var(--oa-amber); }
 [data-theme="onair"] .ingest-mode { background: var(--oa-bg2); border-color: var(--oa-line); }
 [data-theme="onair"] .ingest-mode:hover { border-color: var(--oa-line2); }
 [data-theme="onair"] .ingest-mode.selected { border-color: var(--oa-gold-dim); background: var(--oa-gold-bg); }
@@ -1536,6 +1590,7 @@ html[data-theme="onair"] {
     <h2>Setup</h2>
     <span class="su-ready" id="su-ready">checking…</span>
     <button class="rv-btn" id="su-reprobe" onclick="loadSetup(true)" title="Probe every service again">↻ re-check</button>
+    <button class="rv-btn" id="su-rerun-wizard" onclick="openFirstRun()" title="Walk through setup one step at a time, ending in the sample book">↻ Run setup again</button>
     <button class="su-btn primary" id="su-save-top" onclick="saveSetup()" disabled>Save &amp; re-check</button>
   </div>
   <div class="su-scroll">
@@ -1606,6 +1661,73 @@ html[data-theme="onair"] {
     <div class="casting-modal-footer">
       <button id="cast-save-btn" onclick="saveCastAndContinue()">Cast the book →</button>
       <button id="cast-skip-btn" onclick="skipCasting()">Skip for now</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── First-run wizard (E6): one decision at a time, ending in sound ── -->
+<div id="firstrun-modal-overlay" class="modal-overlay hidden">
+  <div class="casting-modal firstrun-modal">
+    <div class="casting-modal-header">
+      <h2 id="fr-title">Let's get you listening</h2>
+      <p id="fr-sub">Four short steps. The last one reads you a chapter.</p>
+      <div class="fr-stepper" id="fr-stepper"></div>
+    </div>
+
+    <div class="fr-body" id="fr-body">
+
+      <section class="fr-step fr-hidden" id="fr-step-1">
+        <h3>How should ProseCast speak?</h3>
+        <p class="fr-lead">Pick the voices. You can change this later, and nothing you pick sends your book anywhere
+          except ElevenLabs, if you choose it.</p>
+        <p class="su-err fr-hidden" id="fr-step1-err"></p>
+        <div class="su-engines" id="fr-engines"></div>
+        <div id="fr-el-disclosure"></div>
+        <div class="su-fields fr-hidden" id="fr-engine-fields"></div>
+      </section>
+
+      <section class="fr-step fr-hidden" id="fr-step-2">
+        <h3>Can it speak?</h3>
+        <p class="fr-lead">ProseCast just asked. These are its own words about what it found.</p>
+        <div id="fr-probe-rows"></div>
+        <p class="fr-why fr-hidden" id="fr-why"></p>
+        <div class="su-actions">
+          <button class="su-btn" id="fr-recheck" onclick="frRecheck()">↻ Check again</button>
+          <button class="fr-skip" id="fr-full-list" onclick="frSkip()">the full list is on the Setup page</button>
+        </div>
+      </section>
+
+      <section class="fr-step fr-hidden" id="fr-step-3">
+        <h3>Optional: give it a brain</h3>
+        <p class="fr-lead">None of this is required. Skip it and ProseCast still reads your book — it just does the
+          hard 5% of "who said that?" by rules alone, and highlights by sentence instead of by word.</p>
+        <div id="fr-brains"></div>
+        <div class="su-actions">
+          <button class="su-btn" id="fr-save-check" onclick="frSaveBrains()">Save &amp; check</button>
+          <span id="fr-brains-msg"></span>
+        </div>
+      </section>
+
+      <section class="fr-step fr-hidden" id="fr-step-4">
+        <h3>Hear it.</h3>
+        <p class="fr-lead">ProseCast ships with two chapters of Pride and Prejudice. This adds them to your library,
+          renders the first chapter with the voices you picked, and plays it.</p>
+        <div class="fr-cost fr-hidden" id="fr-cost"></div>
+        <p><button class="fr-hear" id="fr-hear-btn" onclick="frHear()">▶ Read me the sample</button></p>
+        <p class="fr-say" id="fr-say"></p>
+        <div class="su-actions fr-hidden" id="fr-recover">
+          <button class="su-btn" onclick="frHear()">Try again</button>
+          <button class="su-btn" onclick="frSkip()">Open Setup</button>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="fr-foot">
+      <button class="su-btn" id="fr-back" onclick="frBack()">← Back</button>
+      <button class="su-btn primary" id="fr-next" onclick="frNext()">Continue</button>
+      <span class="fr-spacer"></span>
+      <button class="fr-skip" id="fr-skip" onclick="frSkip()">Skip — take me to Setup</button>
     </div>
   </div>
 </div>
@@ -2424,7 +2546,7 @@ async function loadSetupChip() {
     const st = await fetchJSON('/setup/status');
     setupStatus = st;
     paintSetupChip(st);
-    if (!st.config_exists && !isSetupOpen()) openSetupView();   // first run → walk them through
+    if (!st.config_exists && !isSetupOpen() && !isFirstRunOpen()) openFirstRun();   // first run → the wizard, not the table
   } catch (e) { /* server may be starting; the engine plaque already shows NO SERVER */ }
 }
 
@@ -2499,33 +2621,55 @@ function paintSaveButtons() {
   }
 }
 
-function renderSetup() {
-  const st = setupStatus, cfg = setupConfig;
-  const rows = Object.fromEntries((st.rows || []).map(r => [r.key, r]));
-  const readyEl = document.getElementById('su-ready');
-  readyEl.textContent = st.ready ? 'ready' : 'needs you';
-  readyEl.className = 'su-ready ' + (st.ready ? 'ok' : 'warn');
+// ── The engine choice, in one place (E6) ───────────────────────────────────
+// The Setup page and the first-run wizard offer exactly the same cards, the
+// same revealed field per engine, and — this part is a compliance requirement,
+// not a style choice — the same ElevenLabs disclosure, word for word. Two
+// copies of that block is how one of them ends up a paraphrase.
 
-  const engine = suValue('tts_engine');
-  const isMac = st.os === 'Darwin';
-  const sysEngine = isMac ? 'say' : 'piper';
-  const engineCard = (id, name, tag, tagCls, desc) =>
-    `<button class="su-engine ${engine === id ? 'selected' : ''}" onclick="suPickEngine('${id}')">
-       <div class="su-en-name">${esc(name)} <span class="su-en-tag ${tagCls}">${tag}</span></div>
-       <div class="su-en-desc">${desc}</div></button>`;
+function defaultEngineFor(os) { return os === 'Darwin' ? 'say' : 'piper'; }
 
-  const intro = cfg.exists
-    ? `Everything ProseCast talks to, probed just now. <b>Green means connected.</b> Amber and red rows say what to do.
-       Settings save to <code>${esc(cfg.path)}</code>; environment variables, if set, still win.`
-    : `<b>First run.</b> ProseCast narrates books with voices that run on <b>your</b> machine — nothing leaves it.
-       Pick a voice engine below, save, and the rows will tell you what (if anything) is still missing.
-       You can come back here any time from the <b>⚙ setup</b> chip in the header.`;
+function engineChoices(os) {
+  const isMac = os === 'Darwin';
+  return [
+    { id: isMac ? 'say' : 'piper', name: isMac ? 'System voices' : 'Piper',
+      tag: 'free', tagCls: 'free',
+      desc: isMac ? 'macOS built-in voices. No setup, no GPU. Robotic for a whole book, perfect for checking everything works.'
+                  : 'Local, CPU-only, any OS. Needs the piper binary and one voice model.' },
+    { id: 'chatterbox', name: 'Chatterbox', tag: 'free · local', tagCls: 'free',
+      desc: 'Expressive multi-voice narration on your own GPU (or a machine you run). The engine ProseCast is built around.' },
+    { id: 'elevenlabs', name: 'ElevenLabs', tag: 'your account', tagCls: 'paid',
+      desc: 'Cloud voices, best quality, pay-per-character on your own ElevenLabs plan.' },
+  ];
+}
 
-  const shadow = (st.shadowed_by_env || []).length
-    ? `<div class="su-warnenv">Heads up: <b>${st.shadowed_by_env.map(esc).join(', ')}</b> ${st.shadowed_by_env.length > 1 ? 'are' : 'is'} set by
-       environment variables right now, so the value in config.json is ignored until you unset ${st.shadowed_by_env.length > 1 ? 'them' : 'it'}.</div>` : '';
+function engineCardsHTML(os, selected, pickFn) {
+  return engineChoices(os).map(c =>
+    `<button type="button" class="su-engine ${selected === c.id ? 'selected' : ''}"
+             data-engine="${c.id}" onclick="${pickFn}('${c.id}')">
+       <div class="su-en-name">${esc(c.name)} <span class="su-en-tag ${c.tagCls}">${c.tag}</span></div>
+       <div class="su-en-desc">${esc(c.desc)}</div></button>`).join('');
+}
 
-  const elCard = engine === 'elevenlabs' ? `<div class="su-el">
+// The field an engine reveals when it is picked, or nothing.
+function engineFieldsHTML(engine) {
+  if (engine === 'chatterbox')
+    return suField('chatterbox_url', 'Chatterbox URL',
+      'The Chatterbox TTS server — this machine, or another one you can reach (e.g. http://192.168.1.50:8101).');
+  if (engine === 'elevenlabs')
+    return suField('elevenlabs_api_key', 'ElevenLabs API key',
+      setupConfig.values.elevenlabs_api_key_set
+        ? 'A key is saved. Paste a new one to replace it.'
+        : 'Paste your key; it is stored in config.json (chmod 600), never sent anywhere but ElevenLabs.',
+      'password');
+  return '';
+}
+
+// REQUIRED wherever the ElevenLabs link or name appears (affiliate program
+// terms): the disclosure sentence and the verbatim trademark attribution,
+// beside the link. See docs/elevenlabs-setup.md.
+function elDisclosureHTML() {
+  return `<div class="su-el">
       <b>The honest part.</b> ElevenLabs is <b>your</b> account: you sign up with them, you pay them directly for credits,
       and ProseCast never marks anything up. <b>Disclosure:</b> ProseCast is an independent affiliate of ElevenLabs and may
       receive compensation for referrals — if you sign up through
@@ -2540,12 +2684,31 @@ function renderSetup() {
       <b>The sane pattern:</b> render the whole book on local Chatterbox for free and reserve ElevenLabs for a few hero characters.
       Your key: ElevenLabs → profile → <b>API Keys</b> → create → paste below. Treat it like a password.
       <div class="su-attr">${esc(EL_ATTRIBUTION)}</div>
-    </div>` : '';
+    </div>`;
+}
 
-  const engineFields = {
-    chatterbox: suField('chatterbox_url', 'Chatterbox URL', 'The Chatterbox TTS server — this machine, or another one you can reach (e.g. http://192.168.1.50:8101).'),
-    elevenlabs: suField('elevenlabs_api_key', 'ElevenLabs API key', cfg.values.elevenlabs_api_key_set ? 'A key is saved. Paste a new one to replace it.' : 'Paste your key; it is stored in config.json (chmod 600), never sent anywhere but ElevenLabs.', 'password'),
-  }[engine] || '';
+function renderSetup() {
+  const st = setupStatus, cfg = setupConfig;
+  const rows = Object.fromEntries((st.rows || []).map(r => [r.key, r]));
+  const readyEl = document.getElementById('su-ready');
+  readyEl.textContent = st.ready ? 'ready' : 'needs you';
+  readyEl.className = 'su-ready ' + (st.ready ? 'ok' : 'warn');
+
+  const engine = suValue('tts_engine');
+
+  const intro = cfg.exists
+    ? `Everything ProseCast talks to, probed just now. <b>Green means connected.</b> Amber and red rows say what to do.
+       Settings save to <code>${esc(cfg.path)}</code>; environment variables, if set, still win.`
+    : `<b>First run.</b> ProseCast narrates books with voices that run on <b>your</b> machine — nothing leaves it.
+       Pick a voice engine below, save, and the rows will tell you what (if anything) is still missing.
+       You can come back here any time from the <b>⚙ setup</b> chip in the header.`;
+
+  const shadow = (st.shadowed_by_env || []).length
+    ? `<div class="su-warnenv">Heads up: <b>${st.shadowed_by_env.map(esc).join(', ')}</b> ${st.shadowed_by_env.length > 1 ? 'are' : 'is'} set by
+       environment variables right now, so the value in config.json is ignored until you unset ${st.shadowed_by_env.length > 1 ? 'them' : 'it'}.</div>` : '';
+
+  const elCard = engine === 'elevenlabs' ? elDisclosureHTML() : '';
+  const engineFields = engineFieldsHTML(engine);
 
   const html = `
     <p class="su-intro">${intro}</p>
@@ -2553,15 +2716,7 @@ function renderSetup() {
 
     <div class="su-section">
       <h3>1 · Voices</h3>
-      <div class="su-engines">
-        ${engineCard(sysEngine, isMac ? 'System voices' : 'Piper', 'free', 'free',
-          isMac ? 'macOS built-in voices. No setup, no GPU. Robotic for a whole book, perfect for checking everything works.'
-                : 'Local, CPU-only, any OS. Needs the piper binary and one voice model.')}
-        ${engineCard('chatterbox', 'Chatterbox', 'free · local', 'free',
-          'Expressive multi-voice narration on your own GPU (or a machine you run). The engine ProseCast is built around.')}
-        ${engineCard('elevenlabs', 'ElevenLabs', 'your account', 'paid',
-          'Cloud voices, best quality, pay-per-character on your own ElevenLabs plan.')}
-      </div>
+      <div class="su-engines">${engineCardsHTML(st.os, engine, 'suPickEngine')}</div>
       ${engine === 'auto' ? `<p class="su-note">Currently on <b>auto-detect</b> — pick one so ProseCast never guesses (auto picks ElevenLabs whenever a key exists, which makes every preview cost credits).</p>` : ''}
       ${elCard}
       ${engineFields ? `<div class="su-fields">${engineFields}</div>` : ''}
@@ -2639,6 +2794,325 @@ async function saveSetup() {
     paintSaveButtons();
   }
 }
+
+
+// ── First-run wizard (E6) ──────────────────────────────────────────────────
+//
+// The Setup page is the power-user probe table and stays exactly that. This is
+// the other thing a stranger needs: one decision at a time, ending with a voice
+// actually reading to them. It opens itself when there is no config.json, and
+// the Setup page's "↻ Run setup again" opens it pre-filled.
+//
+// It must never trap anyone: Skip and Esc both land on the Setup page, from any
+// step, at any time.
+
+// Chapter 1 of the built-in sample. A constant of the shipped text, quoted so
+// the ElevenLabs warning can say what a click will cost before it happens.
+const FR_SAMPLE_CH1_CHARS = 1500;
+const FR_STEPS = 4;
+
+const fr = { step: 1, engine: '', busy: false, costAck: false, brainsChecked: false };
+
+function frOverlay() { return document.getElementById('firstrun-modal-overlay'); }
+
+function isFirstRunOpen() { return !frOverlay().classList.contains('hidden'); }
+
+async function openFirstRun() {
+  fr.step = 1; fr.busy = false; fr.costAck = false; fr.brainsChecked = false;
+  setupDirty = {};
+  try {
+    const [cfg, st] = await Promise.all([fetchJSON('/config'), fetchJSON('/setup/status')]);
+    if (!cfg || !cfg.values || !st || !st.rows) throw new Error('unexpected /config or /setup/status');
+    setupConfig = cfg; setupStatus = st;
+  } catch (e) {
+    // Can't ask the server what it has, so there is nothing to walk anyone
+    // through. The Setup page says what went wrong in its own words.
+    console.warn('[firstrun] falling back to Setup:', e);
+    openSetupView();
+    return;
+  }
+  // Pre-filled: whatever is configured, or the OS default (never 'auto').
+  const saved = setupConfig.values.tts_engine;
+  fr.engine = (saved && saved !== 'auto') ? saved : defaultEngineFor(setupStatus.os);
+  paintSetupChip(setupStatus);
+  frStep1Error('');
+  frOverlay().classList.remove('hidden');
+  frGo(1);
+}
+
+function closeFirstRun() {
+  if (fr.busy) return;                       // don't abandon a render mid-flight
+  frOverlay().classList.add('hidden');
+  setupDirty = {};
+}
+
+// Skip, Esc and "Open Setup" are all the same door, on purpose.
+function frSkip() {
+  fr.busy = false;
+  closeFirstRun();
+  openSetupView();
+}
+
+function frGo(step) {
+  fr.step = Math.min(FR_STEPS, Math.max(1, step));
+  for (let i = 1; i <= FR_STEPS; i++)
+    document.getElementById(`fr-step-${i}`).classList.toggle('fr-hidden', i !== fr.step);
+  document.getElementById('fr-stepper').innerHTML = frStepperHTML();
+  ({ 1: frRenderStep1, 2: frRenderStep2, 3: frRenderStep3, 4: frRenderStep4 })[fr.step]();
+  frPaintFooter();
+}
+
+function frStepperHTML() {
+  const bits = [];
+  for (let i = 1; i <= FR_STEPS; i++) {
+    const cls = i === fr.step ? 'current' : (i < fr.step ? 'done' : '');
+    bits.push(`<span class="fr-dot ${cls}" id="fr-dot-${i}">${i < fr.step ? '✓' : i}</span>`);
+    if (i < FR_STEPS) bits.push('<span class="fr-dot-line"></span>');
+  }
+  return bits.join('');
+}
+
+function frPaintFooter() {
+  const back = document.getElementById('fr-back');
+  const next = document.getElementById('fr-next');
+  back.disabled = fr.step === 1 || fr.busy;
+  next.classList.toggle('fr-hidden', fr.step === FR_STEPS);
+  next.disabled = fr.busy;
+  next.title = '';
+  if (fr.step === 2) {
+    const row = frRow('voice_engine');
+    next.disabled = !(row && row.ok);
+    if (next.disabled) next.title = (row && row.fix) || 'The voice engine is not answering yet.';
+  }
+  if (fr.step === 3) next.textContent = frBrainsAllAbsent() ? 'Skip →' : 'Continue';
+  else if (fr.step < FR_STEPS) next.textContent = 'Continue';
+  document.getElementById('fr-skip').disabled = fr.busy;
+}
+
+function frRow(key) {
+  return ((setupStatus && setupStatus.rows) || []).find(r => r.key === key);
+}
+
+// ── step 1: how should ProseCast speak? ──
+function frRenderStep1() {
+  document.getElementById('fr-engines').innerHTML =
+    engineCardsHTML(setupStatus.os, fr.engine, 'frPickEngine');
+  document.getElementById('fr-el-disclosure').innerHTML =
+    fr.engine === 'elevenlabs' ? elDisclosureHTML() : '';
+  const fields = document.getElementById('fr-engine-fields');
+  const html = engineFieldsHTML(fr.engine);
+  fields.innerHTML = html;
+  fields.classList.toggle('fr-hidden', !html);
+}
+
+function frPickEngine(id) { fr.engine = id; frStep1Error(''); frRenderStep1(); }
+
+// Just the keys this step owns. tts_engine always goes, so config.json exists
+// from here on even if the pre-filled engine was already the right one.
+async function frSaveEngine() {
+  const values = { tts_engine: fr.engine };
+  for (const k of ['chatterbox_url', 'elevenlabs_api_key'])
+    if (k in setupDirty) values[k] = setupDirty[k];
+  setupConfig = await frPutConfig(values);
+}
+
+async function frPutConfig(values) {
+  const r = await fetch('/config', { method: 'PUT', headers: { 'Content-Type': 'application/json' },
+                                     body: JSON.stringify({ values }) });
+  if (!r.ok) {
+    let detail = `HTTP ${r.status}`;
+    try { detail = (await r.json()).detail || detail; } catch {}
+    throw new Error(detail);
+  }
+  for (const k of Object.keys(values)) delete setupDirty[k];
+  return r.json();
+}
+
+// ── step 2: can it speak? ──
+function frRenderStep2() {
+  const engineRow = frRow('voice_engine'), ffmpegRow = frRow('tool_ffmpeg');
+  document.getElementById('fr-probe-rows').innerHTML =
+    suRow(engineRow) + suRow(ffmpegRow);
+  const why = document.getElementById('fr-why');
+  const blocked = !(engineRow && engineRow.ok);
+  why.classList.toggle('fr-hidden', !blocked);
+  why.textContent = blocked ? ((engineRow && engineRow.fix) || 'The voice engine is not answering yet.') : '';
+}
+
+async function frRecheck() {
+  const btn = document.getElementById('fr-recheck');
+  btn.disabled = true; btn.textContent = '↻ checking…';
+  try {
+    setupStatus = await fetchJSON('/setup/status');
+    paintSetupChip(setupStatus);
+  } catch (e) { console.error('[firstrun]', e); }
+  btn.disabled = false; btn.textContent = '↻ Check again';
+  frRenderStep2();
+  frPaintFooter();
+}
+
+// ── step 3: optional brains ──
+const FR_BRAIN_KEYS = ['ollama_url', 'ollama_model', 'whisper_url', 'elevenlabs_api_key'];
+
+function frBrainsAllAbsent() {
+  const o = frRow('ollama'), w = frRow('whisper');
+  const haveKey = !!(setupConfig && setupConfig.values.elevenlabs_api_key_set);
+  return !(o && o.ok) && !(w && w.ok) && !haveKey;
+}
+
+function frRenderStep3() {
+  const rows = fr.brainsChecked;
+  document.getElementById('fr-brains').innerHTML = `
+    <div class="fr-group">
+      <div class="fr-pitch"><b>Ollama</b> — works out who's speaking in the hard scenes, the ones no rule gets right.</div>
+      ${rows ? suRow(frRow('ollama')) : ''}
+      <div class="su-fields">
+        ${suField('ollama_url', 'Ollama URL')}
+        ${suField('ollama_model', 'Model')}
+      </div>
+    </div>
+    <div class="fr-group">
+      <div class="fr-pitch"><b>whisper</b> — words light up as they're read, instead of a sentence at a time.</div>
+      ${rows ? suRow(frRow('whisper')) : ''}
+      <div class="su-fields">${suField('whisper_url', 'Whisper URL')}</div>
+    </div>
+    <div class="fr-group">
+      <div class="fr-pitch"><b>An ElevenLabs key</b> — a few premium voices for the characters you care most about,
+        billed to your own account.</div>
+      <div class="su-fields">${suField('elevenlabs_api_key', 'ElevenLabs API key',
+        setupConfig.values.elevenlabs_api_key_set ? 'A key is saved. Paste a new one to replace it.' : '', 'password')}</div>
+    </div>`;
+}
+
+async function frSaveBrains() {
+  const btn = document.getElementById('fr-save-check');
+  const msg = document.getElementById('fr-brains-msg');
+  btn.disabled = true; btn.textContent = 'saving…';
+  msg.className = ''; msg.textContent = '';
+  try {
+    const values = {};
+    for (const k of FR_BRAIN_KEYS) if (k in setupDirty) values[k] = setupDirty[k];
+    if (Object.keys(values).length) setupConfig = await frPutConfig(values);
+    setupStatus = await fetchJSON('/setup/status');
+    paintSetupChip(setupStatus);
+    fr.brainsChecked = true;
+    msg.className = 'su-saved'; msg.textContent = 'checked';
+  } catch (e) {
+    msg.className = 'su-err'; msg.textContent = `not saved: ${e.message || e}`;
+  }
+  btn.disabled = false; btn.textContent = 'Save & check';
+  frRenderStep3();
+  frPaintFooter();
+}
+
+// ── step 4: hear it ──
+function frRenderStep4() {
+  const cost = document.getElementById('fr-cost');
+  const paid = fr.engine === 'elevenlabs';
+  cost.classList.toggle('fr-hidden', !paid);
+  if (paid) {
+    cost.innerHTML = `<b>This one costs you money.</b> You picked ElevenLabs, so rendering this chapter spends
+      about ${FR_SAMPLE_CH1_CHARS.toLocaleString()} characters of your ElevenLabs credits. Click again to go ahead,
+      or go back a step and pick a free engine for the test.`;
+  }
+  document.getElementById('fr-hear-btn').textContent =
+    (paid && !fr.costAck) ? '▶ Read me the sample (uses credits)' : '▶ Read me the sample';
+  document.getElementById('fr-recover').classList.add('fr-hidden');
+  frSay('');
+}
+
+function frSay(text, isErr) {
+  const el = document.getElementById('fr-say');
+  el.textContent = text || '';
+  el.className = 'fr-say' + (isErr ? ' err' : '');
+}
+
+async function frHear() {
+  if (fr.busy) return;
+  // Spending someone's ElevenLabs credits takes a second, deliberate click.
+  if (fr.engine === 'elevenlabs' && !fr.costAck) {
+    fr.costAck = true;
+    document.getElementById('fr-hear-btn').textContent = '▶ Yes — render it on ElevenLabs';
+    frSay(`That will use about ${FR_SAMPLE_CH1_CHARS.toLocaleString()} characters of your credits.`);
+    return;
+  }
+  const btn = document.getElementById('fr-hear-btn');
+  fr.busy = true; btn.disabled = true;
+  document.getElementById('fr-recover').classList.add('fr-hidden');
+  frPaintFooter();
+  try {
+    frSay('preparing the sample book…');
+    const sample = await postJSON('/books/sample', {});
+    if (sample.job_id)
+      await pollIngest(sample.job_id, j => frSay(`reading it… ${j.detail || j.stage || ''}`));
+
+    frSay('rendering chapter 1…');
+    const started = await postJSON(`/render/${sample.slug}/0`, {});
+    await pollRenderStatus(started.job_id, j => frSay(frRenderLine(j)));
+
+    frSay('almost there…');
+    const books = await fetchJSON('/books');
+    state.books = books;
+    renderBookList(books);
+    await loadBook(sample.slug);
+    fr.busy = false;
+    closeFirstRun();
+    playChapter(sample.slug, 0);
+  } catch (e) {
+    console.error('[firstrun]', e);
+    fr.busy = false;
+    frSay(String(e.message || e), true);
+    document.getElementById('fr-recover').classList.remove('fr-hidden');
+  } finally {
+    fr.busy = false;
+    btn.disabled = false;
+    frPaintFooter();
+  }
+}
+
+// The job's own numbers, in a sentence: "rendering chapter 1 · 12 of 31 blocks…"
+function frRenderLine(j) {
+  if (j.status === 'queued')
+    return `waiting for the render queue (position ${(j.queue_position || 0) + 1})…`;
+  const bp = j.block_progress || 0, bt = j.block_total || 0;
+  return `rendering chapter 1${bt ? ` · ${bp} of ${bt} blocks` : ''}…`;
+}
+
+// ── footer ──
+async function frNext() {
+  const next = document.getElementById('fr-next');
+  if (fr.busy || next.disabled) return;
+  if (fr.step === 1) {
+    fr.busy = true; next.disabled = true; next.textContent = 'saving…';
+    try {
+      await frSaveEngine();
+      setupStatus = await fetchJSON('/setup/status');
+      paintSetupChip(setupStatus);
+      fr.busy = false;
+      frGo(2);
+    } catch (e) {
+      fr.busy = false;
+      console.error('[firstrun]', e);
+      frGo(1);
+      frStep1Error(`Couldn't save that: ${e.message || e}`);
+    }
+    return;
+  }
+  frGo(fr.step + 1);
+}
+
+// A save that fails says so in the wizard, never in a blocking dialog.
+function frStep1Error(text) {
+  const el = document.getElementById('fr-step1-err');
+  el.textContent = text || '';
+  el.classList.toggle('fr-hidden', !text);
+}
+
+function frBack() { if (!fr.busy) frGo(fr.step - 1); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && isFirstRunOpen()) { e.stopImmediatePropagation(); frSkip(); }
+});
 
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape' && isSetupOpen()) closeSetupView();
