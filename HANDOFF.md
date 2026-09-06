@@ -157,6 +157,11 @@ pytest-checked**: `tests/ui/check_first_run.py` drives it in both skins from
 generated fixtures; `tests/test_sample_book.py` covers the endpoint and fails
 if a fixture drifts.
 
+Tests that start a background job (ingest, sample, render, pipeline) must wait
+for it to finish — monkeypatch restores LIBRARY_DIR the instant the test
+returns, and a thread that resolves its paths late will write into the real
+library. This happened once on 09-06 and rewrote library/sample_book.
+
 **What "first run" means (E6.8, 09-06).** Not `!config_exists` — `SETUP.sh`
 copies `config.example.json`, so a `config.json` exists before the user has
 made a single choice, and the wizard never greeted the documented install path
