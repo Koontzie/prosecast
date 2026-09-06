@@ -439,6 +439,175 @@
     .su-saved { font-size: .76rem; color: #7fd6bf; }
     .su-err { font-size: .76rem; color: #e07070; }
 
+    /* ── Voices view (E7) ──
+       Fourth occupant of the main grid cell, with #main, #reader-view and
+       #setup-view. body.voices-open swaps it in, exactly like the other two —
+       no router, no URL change, and the chapter-list DOM underneath is never
+       destroyed. Classes are vv-* because .voices-btn already belongs to the
+       per-book "🎤 Voices" button in the chapter list. */
+    #voices-view {
+      grid-area: main; display: none; flex-direction: column; min-height: 0;
+      background: #0f0f0f; position: relative;
+    }
+    body.voices-open #voices-view { display: flex; }
+    body.voices-open #main,
+    body.voices-open #reader-view,
+    body.voices-open #setup-view { display: none; }
+    body.voices-open #expand-btn { display: none; }
+
+    /* This view's own hidden rule. `.hidden` in this file is scoped per modal
+       and there is no global one — that is how every "hidden" section of the
+       first-run wizard rendered anyway until .fr-hidden existed. Same trap,
+       same cure. */
+    .vv-hidden { display: none !important; }
+
+    #voices-chip {
+      background: none; border: 1px solid #2a2a2a; color: #666; padding: 3px 10px;
+      border-radius: 11px; cursor: pointer; font-size: .68rem; white-space: nowrap;
+    }
+    #voices-chip:hover { color: #ccc; border-color: #555; }
+    body.voices-open #voices-chip { color: #c9c1ff; border-color: #4a3f8a; }
+
+    .vv-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+    #vv-search {
+      background: #111; border: 1px solid #2a2a2a; color: #ddd; padding: 7px 11px;
+      border-radius: 6px; font-size: .84rem; flex: 1; min-width: 200px;
+    }
+    #vv-search:focus { outline: none; border-color: #7c6dfa; }
+    .vv-chip {
+      background: none; border: 1px solid #2a2a2a; color: #777; padding: 4px 10px;
+      border-radius: 12px; cursor: pointer; font-size: .72rem; white-space: nowrap;
+    }
+    .vv-chip:hover { color: #ddd; border-color: #555; }
+    .vv-chip.on { color: #c9c1ff; border-color: #4a3f8a; background: #1e1c33; }
+    .vv-sel {
+      background: #111; border: 1px solid #2a2a2a; color: #bbb; padding: 5px 8px;
+      border-radius: 6px; font-size: .74rem; max-width: 170px;
+    }
+    .vv-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 12px; }
+
+    .vv-line { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .vv-line label { font-size: .72rem; color: #777; white-space: nowrap; }
+    #vv-line-input {
+      flex: 1; min-width: 0; background: #111; border: 1px solid #2a2a2a; color: #ccc;
+      padding: 6px 10px; border-radius: 6px; font-size: .78rem;
+    }
+    #vv-line-input:focus { outline: none; border-color: #7c6dfa; }
+
+    .vv-note {
+      font-size: .78rem; color: #8a8a8a; background: #161616; border: 1px solid #242424;
+      border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; line-height: 1.55;
+    }
+    .vv-note b { color: #ddd; }
+    .vv-note a { color: #a89bff; }
+    .vv-note.err { color: #e07070; border-color: #4a2a2a; background: #241212; }
+
+    .vv-row {
+      display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px;
+      align-items: start; background: #161616; border: 1px solid #242424;
+      border-radius: 10px; padding: 11px 14px; margin-bottom: 8px;
+    }
+    .vv-row.retired { opacity: .5; }
+    .vv-row.retired .vv-name { text-decoration: line-through; }
+    .vv-head { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 9px; }
+    .vv-name { font-size: .92rem; color: #e8e8e8; font-weight: 600; word-break: break-word; }
+    .vv-kind {
+      font-size: .58rem; letter-spacing: .1em; text-transform: uppercase; color: #7a6fd0;
+      border: 1px solid #35305c; border-radius: 3px; padding: 1px 5px;
+    }
+    .vv-region { font-size: .74rem; color: #6f6f6f; word-break: break-word; }
+    .vv-actions { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+    .vv-stars { cursor: pointer; font-size: .84rem; letter-spacing: 1px; color: #3a3a3a; user-select: none; }
+    .vv-stars .on { color: #e0b25c; }
+    .vv-lic {
+      display: inline-block; font-size: .58rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+      border: 1px solid #2a2a2a; background: #1a1a1a; color: #666; cursor: help;
+    }
+    .vv-lic-ok { color: #7fd6bf; border-color: #24463d; background: #12201c; }
+    .vv-lic-no { color: #e0b25c; border-color: #4a3a1a; background: #221a0c; }
+    .vv-btn {
+      background: none; border: 1px solid #2a2a2a; color: #888; border-radius: 6px;
+      cursor: pointer; font-size: .72rem; padding: 4px 9px; white-space: nowrap;
+    }
+    .vv-btn:hover { color: #eee; border-color: #555; background: #1c1c1c; }
+    .vv-btn.playing { color: #ffd9d0; border-color: #d8503a; background: #2c1410; }
+    .vv-btn.slotted { color: #c9c1ff; border-color: #4a3f8a; background: #1e1c33; }
+    .vv-menuwrap { position: relative; }
+    .vv-pop {
+      position: absolute; right: 0; top: calc(100% + 4px); z-index: 12; min-width: 156px;
+      background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.6);
+    }
+    .vv-pop button {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      color: #bbb; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-size: .76rem;
+    }
+    .vv-pop button:hover { background: #262626; color: #fff; }
+    .vv-fields { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+    .vv-fields input {
+      background: #111; border: 1px solid #232323; color: #bbb; padding: 5px 9px;
+      border-radius: 6px; font-size: .76rem; min-width: 0;
+    }
+    .vv-fields input:focus { outline: none; border-color: #7c6dfa; color: #ddd; }
+    .vv-notes { flex: 2 1 260px; }
+    .vv-tags  { flex: 1 1 180px; }
+    .vv-saved { font-size: .68rem; color: #63b3a0; min-width: 74px; }
+    .vv-saved.err { color: #e07070; }
+    .vv-saved.busy { color: #666; }
+
+    .vv-empty { color: #555; font-size: .84rem; padding: 26px 0; text-align: center; }
+
+    /* A/B compare — sticky, because the whole point is switching between two
+       voices without hunting for the bar. Clips are cached per slot: a render
+       is slow and re-playing the same one must be instant. */
+    .vv-ab {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 14;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      padding: 10px 20px; background: #17161f; border-top: 1px solid #302c50;
+      box-shadow: 0 -8px 24px rgba(0,0,0,.5);
+    }
+    .vv-ab .vv-slot { font-size: .76rem; color: #9d95d8; white-space: nowrap; }
+    .vv-ab .vv-slot b { color: #e8e8e8; font-weight: 600; }
+    .vv-ab .vv-slot.empty { color: #555; }
+    .vv-ab .spacer { flex: 1; }
+
+    /* Find more voices — a catalogue with copyable commands. There is no run
+       button on purpose: pulling a corpus is a person's decision. */
+    .vv-sources {
+      position: absolute; top: 0; right: 0; bottom: 0; width: min(560px, 92%); z-index: 16;
+      background: #121212; border-left: 1px solid #2a2a2a; display: flex; flex-direction: column;
+      box-shadow: -12px 0 32px rgba(0,0,0,.6);
+    }
+    .vv-src-top {
+      display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+      border-bottom: 1px solid #222; background: #161616; flex-shrink: 0;
+    }
+    .vv-src-top h3 { font-size: .92rem; color: #fff; flex: 1; font-weight: 600; }
+    .vv-src-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 40px; }
+    .vv-src-warn {
+      font-size: .76rem; color: #e0b25c; background: #221a0c; border: 1px solid #4a3a1a;
+      border-radius: 8px; padding: 10px 12px; line-height: 1.55; margin-bottom: 16px;
+    }
+    .vv-src-warn a { color: #f0cb8a; }
+    .vv-tier { font-size: .68rem; text-transform: uppercase; letter-spacing: .12em; color: #777;
+      margin: 18px 0 8px; border-bottom: 1px solid #222; padding-bottom: 5px; }
+    .vv-tier:first-child { margin-top: 0; }
+    .vv-src {
+      background: #171717; border: 1px solid #242424; border-radius: 8px;
+      padding: 11px 13px; margin-bottom: 8px;
+    }
+    .vv-src h4 { font-size: .84rem; color: #e6e6e6; font-weight: 600; margin-bottom: 4px; }
+    .vv-src .vv-src-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+    .vv-src p { font-size: .76rem; color: #888; line-height: 1.55; margin-bottom: 7px; }
+    .vv-src a { color: #a89bff; font-size: .74rem; }
+    .vv-cmd { display: flex; align-items: center; gap: 6px; margin-top: 7px; }
+    .vv-cmd code {
+      flex: 1; min-width: 0; background: #0d0d0d; border: 1px solid #262626; color: #cfcfcf;
+      padding: 6px 9px; border-radius: 6px; font-size: .72rem; overflow-x: auto;
+      white-space: nowrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
     .player-controls {
       display: flex; align-items: center; gap: 12px;
     }
@@ -1280,6 +1449,59 @@ html[data-theme="onair"] {
 [data-theme="onair"] .su-engine .su-en-name { color: var(--oa-cream); font-weight: 500; }
 [data-theme="onair"] .su-engine .su-en-desc { color: var(--oa-mut); }
 [data-theme="onair"] .su-engine .su-en-tag { font-family: var(--oa-mono); background: var(--oa-raised); color: var(--oa-mut); }
+
+/* ── Voices view (E7), On Air ── */
+[data-theme="onair"] #voices-view { background: var(--oa-bg); }
+[data-theme="onair"] #voices-chip { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] #voices-chip:hover { color: var(--oa-gold); border-color: var(--oa-gold-dim); }
+[data-theme="onair"] body.voices-open #voices-chip { color: var(--oa-gold); border-color: var(--oa-gold); }
+[data-theme="onair"] #vv-search, [data-theme="onair"] #vv-line-input, [data-theme="onair"] .vv-fields input {
+  background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-cream2); border-radius: 3px; }
+[data-theme="onair"] #vv-search:focus, [data-theme="onair"] #vv-line-input:focus, [data-theme="onair"] .vv-fields input:focus { border-color: var(--oa-gold); color: var(--oa-cream); }
+[data-theme="onair"] .vv-line label { color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] .vv-chip { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); border-radius: 2px; }
+[data-theme="onair"] .vv-chip:hover { color: var(--oa-cream2); border-color: var(--oa-mut); }
+[data-theme="onair"] .vv-chip.on { color: var(--oa-gold); border-color: var(--oa-gold); background: var(--oa-gold-bg); }
+[data-theme="onair"] .vv-sel { background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-cream2); font-family: var(--oa-mono); border-radius: 3px; }
+[data-theme="onair"] .vv-note { background: var(--oa-panel); border-color: var(--oa-line2); color: var(--oa-cream2); border-radius: 4px; }
+[data-theme="onair"] .vv-note b { color: var(--oa-cream); }
+[data-theme="onair"] .vv-note a { color: var(--oa-gold-hi); }
+[data-theme="onair"] .vv-note.err { color: #ffd9d0; border-color: var(--oa-red); background: var(--oa-red-bg); }
+[data-theme="onair"] .vv-row { background: var(--oa-panel); border-color: var(--oa-line2); border-radius: 4px; }
+[data-theme="onair"] .vv-name { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .vv-kind { color: var(--oa-gold); border-color: var(--oa-gold-dim); font-family: var(--oa-mono); border-radius: 2px; }
+[data-theme="onair"] .vv-region { color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] .vv-stars { color: var(--oa-line2); }
+[data-theme="onair"] .vv-stars .on { color: var(--oa-gold); }
+[data-theme="onair"] .vv-lic { font-family: var(--oa-mono); border-radius: 2px; background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-mut); }
+[data-theme="onair"] .vv-lic-ok { color: var(--oa-teal); border-color: #2c4a41; background: #101c19; }
+[data-theme="onair"] .vv-lic-no { color: var(--oa-amber); border-color: var(--oa-gold-dim); background: var(--oa-gold-bg); }
+[data-theme="onair"] .vv-btn { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); border-radius: 2px; }
+[data-theme="onair"] .vv-btn:hover { color: var(--oa-cream); border-color: var(--oa-mut); background: var(--oa-raised); }
+[data-theme="onair"] .vv-btn.playing { color: #ffd9d0; border-color: var(--oa-red); background: var(--oa-red-bg); }
+[data-theme="onair"] .vv-btn.slotted { color: var(--oa-gold); border-color: var(--oa-gold); background: var(--oa-gold-bg); }
+[data-theme="onair"] .vv-pop { background: var(--oa-raised); border-color: var(--oa-line2); border-radius: 4px; }
+[data-theme="onair"] .vv-pop button { color: var(--oa-cream2); font-family: var(--oa-mono); }
+[data-theme="onair"] .vv-pop button:hover { background: var(--oa-panel); color: var(--oa-cream); }
+[data-theme="onair"] .vv-saved { color: var(--oa-teal); font-family: var(--oa-mono); }
+[data-theme="onair"] .vv-saved.err { color: var(--oa-red); }
+[data-theme="onair"] .vv-saved.busy { color: var(--oa-dim); }
+[data-theme="onair"] .vv-empty { color: var(--oa-dim); }
+[data-theme="onair"] .vv-ab { background: linear-gradient(#241a0e, #1d1510); border-top-color: var(--oa-gold-dim); }
+[data-theme="onair"] .vv-ab .vv-slot { color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] .vv-ab .vv-slot b { color: var(--oa-cream); }
+[data-theme="onair"] .vv-ab .vv-slot.empty { color: var(--oa-dim); }
+[data-theme="onair"] .vv-sources { background: var(--oa-bg); border-left-color: var(--oa-line2); }
+[data-theme="onair"] .vv-src-top { background: linear-gradient(#1e1710, #181109); border-bottom-color: var(--oa-line); }
+[data-theme="onair"] .vv-src-top h3 { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .vv-src-warn { background: var(--oa-gold-bg); border-color: var(--oa-gold-dim); color: var(--oa-amber); border-radius: 4px; }
+[data-theme="onair"] .vv-src-warn a { color: var(--oa-gold-hi); }
+[data-theme="onair"] .vv-tier { color: var(--oa-mut); font-family: var(--oa-mono); border-bottom-color: var(--oa-line); }
+[data-theme="onair"] .vv-src { background: var(--oa-panel); border-color: var(--oa-line2); border-radius: 4px; }
+[data-theme="onair"] .vv-src h4 { color: var(--oa-cream); font-weight: 500; }
+[data-theme="onair"] .vv-src p { color: var(--oa-cream2); }
+[data-theme="onair"] .vv-src a { color: var(--oa-gold-hi); }
+[data-theme="onair"] .vv-cmd code { background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-cream2); font-family: var(--oa-mono); border-radius: 2px; }
 [data-theme="onair"] .su-engine .su-en-tag.free { color: var(--oa-teal); background: #101c19; }
 [data-theme="onair"] .su-engine .su-en-tag.paid { color: var(--oa-amber); background: var(--oa-gold-bg); }
 [data-theme="onair"] .su-el { background: var(--oa-input); border-color: var(--oa-line2); color: var(--oa-cream2); border-radius: 4px; }
@@ -1542,6 +1764,7 @@ html[data-theme="onair"] {
     <button id="engine-recheck" onclick="recheckEngine()" title="Re-probe the TTS server and refresh the voice list (no restart needed)">↻ re-check</button>
   </div>
   <button id="setup-chip" onclick="toggleSetupView()" title="Setup: what's connected, what's missing, and how to fix it"><span class="dot"></span>⚙ setup</button>
+  <button id="voices-chip" onclick="toggleVoicesView()" title="The voice bank: browse, audition, annotate and retire voices">🎤 Voices</button>
   <button id="theme-toggle" title="Switch between the On Air and classic skins"
           style="background:none;border:1px solid #2a2a2a;color:#666;padding:3px 10px;border-radius:11px;cursor:pointer;font-size:.68rem;"></button>
 </header>
@@ -1598,6 +1821,84 @@ html[data-theme="onair"] {
       <p class="su-intro" id="su-intro">Checking what's connected…</p>
     </div>
   </div>
+</section>
+
+<!-- Voices view (E7): the voice bank as something you can browse, audition,
+     annotate and retire — instead of hand-editing voice_meta.json and
+     rendering a chapter to find out what a voice sounds like. Reads
+     /voices/library and /voices/sources; writes POST /voices/meta/{key}. -->
+<section id="voices-view" aria-label="Voices">
+  <div class="su-top">
+    <button class="rv-btn" onclick="closeVoicesView()" title="Back (Esc)">← Back</button>
+    <h2>Voices</h2>
+    <span class="su-ready" id="vv-count">loading…</span>
+    <button class="rv-btn" id="vv-refresh" onclick="voicesRefresh()"
+            title="Re-probe the TTS server and reload the list — newly uploaded voices only appear after this">↻ refresh</button>
+    <button class="su-btn" id="vv-sources-btn" onclick="toggleVoiceSources()">Find more voices</button>
+  </div>
+  <div class="su-scroll" id="vv-scroll">
+    <div class="su-page">
+      <div class="vv-toolbar">
+        <input id="vv-search" type="search" placeholder="Search name, notes, tags, region…"
+               autocomplete="off" oninput="vvPaint()">
+        <select class="vv-sel" id="vv-sort" onchange="vvPaint()" title="Sort">
+          <option value="name">Name</option>
+          <option value="rating">Rating</option>
+          <option value="region">Region</option>
+          <option value="edited">Recently edited</option>
+        </select>
+      </div>
+      <div class="vv-filters" id="vv-filters">
+        <select class="vv-sel" id="vv-f-gender" onchange="vvPaint()">
+          <option value="">Any gender</option>
+          <option value="f">♀ female</option>
+          <option value="m">♂ male</option>
+          <option value="-">unlabeled</option>
+        </select>
+        <select class="vv-sel" id="vv-f-region" onchange="vvPaint()">
+          <option value="">Any region</option>
+        </select>
+        <select class="vv-sel" id="vv-f-rating" onchange="vvPaint()">
+          <option value="0">Any rating</option>
+          <option value="3">★★★ and up</option>
+          <option value="4">★★★★ and up</option>
+          <option value="5">★★★★★ only</option>
+        </select>
+        <button class="vv-chip" id="vv-f-dist" onclick="vvToggle(this)" data-on="0"
+                title="Only voices whose licence allows shipping them in a release or a voice pack">safe to ship</button>
+        <button class="vv-chip" id="vv-f-hidden" onclick="vvToggle(this)" data-on="0"
+                title="Hidden voices are excluded from auto-assignment but never from a saved cast">show hidden</button>
+        <button class="vv-chip" id="vv-f-clear" onclick="vvClearFilters()">clear</button>
+      </div>
+      <div class="vv-line">
+        <label for="vv-line-input">Audition line</label>
+        <input id="vv-line-input" maxlength="300" oninput="vvLineChanged()">
+      </div>
+      <div class="vv-note vv-hidden" id="vv-engine-note"></div>
+      <div class="vv-note vv-hidden" id="vv-orphans"></div>
+      <div id="vv-rows"></div>
+      <p class="vv-empty vv-hidden" id="vv-empty"></p>
+    </div>
+  </div>
+
+  <div class="vv-ab vv-hidden" id="vv-ab">
+    <span class="vv-slot empty" id="vv-slot-A">A — <b>empty</b></span>
+    <span class="vv-slot empty" id="vv-slot-B">B — <b>empty</b></span>
+    <button class="vv-btn" id="vv-play-a" onclick="vvPlaySlot('A')">▶ A</button>
+    <button class="vv-btn" id="vv-play-b" onclick="vvPlaySlot('B')">▶ B</button>
+    <button class="vv-btn" id="vv-play-ab" onclick="vvPlayBoth()">▶ A then B</button>
+    <span class="vv-slot" id="vv-ab-status"></span>
+    <span class="spacer"></span>
+    <button class="vv-btn" onclick="vvClearSlots()">clear</button>
+  </div>
+
+  <aside class="vv-sources vv-hidden" id="vv-sources" aria-label="Find more voices">
+    <div class="vv-src-top">
+      <h3>Find more voices</h3>
+      <button class="rv-btn" onclick="closeVoiceSources()">✕ close</button>
+    </div>
+    <div class="vv-src-body" id="vv-src-body"><p class="vv-empty">Loading…</p></div>
+  </aside>
 </section>
 
 <!-- Inline correction popup (anchored above player bar) -->
@@ -3363,7 +3664,7 @@ function stopPreview() {
   }
 }
 
-async function playPreview(btn, url) {
+async function playPreview(btn, url, onDone) {
   if (activePreviewBtn === btn) {          // toggle: stop this one
     stopPreview();
     return;
@@ -3373,7 +3674,9 @@ async function playPreview(btn, url) {
   btn.classList.add('playing');
   btn.textContent = '■';
   previewAudioEl.src = url;
-  previewAudioEl.onended = stopPreview;
+  // onDone lets the A/B bar chain two clips through the same element without a
+  // second one fighting it for "what is playing right now".
+  previewAudioEl.onended = onDone || stopPreview;
   previewAudioEl.onerror = stopPreview;
   try {
     await previewAudioEl.play();
@@ -3948,6 +4251,565 @@ function escAttr(str) {
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// ── Voices view (E7) ───────────────────────────────────────────────────────
+// The voice bank as a first-class thing: browse, audition, A/B, annotate,
+// retire. Before this, the only way to record what a voice sounds like was to
+// hand-edit voice_meta.json, and the only way to find out was to render a
+// chapter and listen.
+//
+// Fourth occupant of the main grid cell — same body-class switch as the reader
+// and Setup views, mutually exclusive with both. Reads /voices/library, writes
+// POST /voices/meta/{key} keyed on the STEM (never on the glyphed display
+// name). Refresh goes through recheckEngine() because the Chatterbox voice
+// list is cached for the process lifetime and a newly uploaded voice will not
+// appear on a mere reload.
+
+// audition_voices.py's own line — phonetically varied, and the one Tyler has
+// already heard every staged voice say.
+const VV_DEFAULT_LINE = 'The rain had stopped by the time she reached the crossroads, ' +
+                        'and somewhere beyond the hills, a bell began to ring.';
+
+let vvData = null;        // last /voices/library payload
+let vvShown = [];         // the rows currently painted, in painted order
+let vvSlots = { A: null, B: null };   // { key, name, id, url } — url is a cached blob
+let vvSaveTimers = {};    // key → debounce handle
+let vvSourcesData = null;
+
+function isVoicesOpen() { return document.body.classList.contains('voices-open'); }
+
+function toggleVoicesView() { isVoicesOpen() ? closeVoicesView() : openVoicesView(); }
+
+function openVoicesView() {
+  document.body.classList.remove('reader-open', 'setup-open');
+  rvResumeEl.classList.remove('show');
+  document.body.classList.add('voices-open');
+  const line = document.getElementById('vv-line-input');
+  if (line && !line.value) line.value = VV_DEFAULT_LINE;
+  loadVoices();
+}
+
+function closeVoicesView() {
+  if (!isVoicesOpen()) return;
+  document.body.classList.remove('voices-open');
+  closeVoiceSources();
+  stopPreview();
+  // Came here mid-listen? Go back to the reader, not the chapter list —
+  // exactly what closeSetupView does.
+  if (!audioEl.paused && state.timeline.length) openReaderView();
+}
+
+async function loadVoices() {
+  const rows = document.getElementById('vv-rows');
+  const note = document.getElementById('vv-engine-note');
+  rows.innerHTML = '<p class="vv-empty">Loading the voice bank…</p>';
+  try {
+    vvData = await fetchJSON('/voices/library');
+  } catch (e) {
+    vvData = null;
+    rows.innerHTML = '';
+    document.getElementById('vv-empty').classList.add('vv-hidden');
+    document.getElementById('vv-count').textContent = 'unavailable';
+    note.className = 'vv-note err';
+    note.innerHTML = `Could not read the voice list: <b>${esc(e.message)}</b>. ` +
+      `The TTS server may be down — try <b>↻ refresh</b>, or open ⚙ Setup to see what it says.`;
+    return;                                   // toolbar stays usable on purpose
+  }
+  vvFillRegions();
+  vvPaint();
+}
+
+// The Chatterbox voice list is cached for the process lifetime, so a voice
+// uploaded five minutes ago is NOT in it. POST /engine_status/recheck is what
+// drops that cache; a plain re-GET of /voices/library would show the same
+// stale list and look like the upload failed.
+async function voicesRefresh() {
+  const btn = document.getElementById('vv-refresh');
+  btn.disabled = true; btn.textContent = '↻ checking…';
+  try { await recheckEngine(); } catch (e) { /* paint stays as-is */ }
+  try { await loadVoices(); } finally {
+    btn.disabled = false; btn.textContent = '↻ refresh';
+  }
+}
+
+function vvFillRegions() {
+  const sel = document.getElementById('vv-f-region');
+  const keep = sel.value;
+  const regions = [...new Set((vvData.voices || [])
+    .map(v => v.region).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Any region</option>' +
+    regions.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  sel.value = regions.includes(keep) ? keep : '';
+}
+
+function vvToggle(btn) {
+  btn.dataset.on = btn.dataset.on === '1' ? '0' : '1';
+  btn.classList.toggle('on', btn.dataset.on === '1');
+  vvPaint();
+}
+
+function vvClearFilters() {
+  document.getElementById('vv-search').value = '';
+  document.getElementById('vv-f-gender').value = '';
+  document.getElementById('vv-f-region').value = '';
+  document.getElementById('vv-f-rating').value = '0';
+  for (const id of ['vv-f-dist', 'vv-f-hidden']) {
+    const b = document.getElementById(id);
+    b.dataset.on = '0'; b.classList.remove('on');
+  }
+  vvPaint();
+}
+
+function vvIsAmerican(v) {
+  return /american/i.test(v.accent_label || '') || /^us[-_]/i.test(v.key || '');
+}
+
+function vvMatches(v, q) {
+  if (!q) return true;
+  const hay = [v.name, v.key, v.notes, v.region, v.accent_label, (v.tags || []).join(' ')]
+    .join(' ').toLowerCase();
+  return q.split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+}
+
+function vvPaint() {
+  if (!vvData) return;
+  const all = vvData.voices || [];
+  const q = (document.getElementById('vv-search').value || '').trim().toLowerCase();
+  const g = document.getElementById('vv-f-gender').value;
+  const region = document.getElementById('vv-f-region').value;
+  const minRating = parseInt(document.getElementById('vv-f-rating').value, 10) || 0;
+  const distOnly = document.getElementById('vv-f-dist').dataset.on === '1';
+  const showHidden = document.getElementById('vv-f-hidden').dataset.on === '1';
+
+  let list = all.filter(v => {
+    if (!showHidden && v.hidden) return false;
+    if (g === '-' ? v.gender !== '' : (g && v.gender !== g)) return false;
+    if (region && v.region !== region) return false;
+    if (minRating && (v.rating || 0) < minRating) return false;
+    if (distOnly && !v.distributable) return false;
+    return vvMatches(v, q);
+  });
+
+  const sort = document.getElementById('vv-sort').value;
+  const byName = (a, b) => a.name.localeCompare(b.name);
+  list.sort(sort === 'rating' ? ((a, b) => (b.rating || 0) - (a.rating || 0) || byName(a, b))
+          : sort === 'region' ? ((a, b) => (a.region || '~').localeCompare(b.region || '~') || byName(a, b))
+          : sort === 'edited' ? ((a, b) => (b.edited || '').localeCompare(a.edited || '') || byName(a, b))
+          : byName);
+  vvShown = list;
+
+  // The count line. "38 voices · 20 American · 3 hidden" — the American count
+  // is the one that says whether the VCTK problem has actually been fixed.
+  // Hiding retired voices is the resting state, not a filter, so it must not
+  // make an untouched page read as "showing 7 of 8".
+  const hidden = all.filter(v => v.hidden).length;
+  const american = all.filter(vvIsAmerican).length;
+  const base = showHidden ? all.length : all.length - hidden;
+  const bits = [`${all.length} voice${all.length === 1 ? '' : 's'}`, `${american} American`];
+  if (hidden) bits.push(`${hidden} hidden`);
+  document.getElementById('vv-count').textContent =
+    (list.length !== base ? `showing ${list.length} of ` : '') + bits.join(' · ');
+
+  vvPaintEngineNote();
+  vvPaintOrphans();
+
+  const rowsEl = document.getElementById('vv-rows');
+  const emptyEl = document.getElementById('vv-empty');
+  rowsEl.innerHTML = list.map((v, i) => vvRowHTML(v, i)).join('');
+  if (!all.length) {
+    emptyEl.textContent = 'This engine reports no voices at all.';
+    emptyEl.classList.remove('vv-hidden');
+  } else if (!list.length) {
+    emptyEl.textContent = hidden && !showHidden
+      ? `Nothing matches. ${hidden} hidden voice${hidden === 1 ? ' is' : 's are'} out of view — try “show hidden”.`
+      : 'Nothing matches those filters.';
+    emptyEl.classList.remove('vv-hidden');
+  } else {
+    emptyEl.classList.add('vv-hidden');
+  }
+  vvPaintSlots();
+}
+
+function vvPaintEngineNote() {
+  const note = document.getElementById('vv-engine-note');
+  const engine = vvData.engine;
+  if (engine === 'chatterbox') { note.classList.add('vv-hidden'); return; }
+  note.className = 'vv-note';
+  note.innerHTML = `These are <b>${esc(engine)}</b>'s own voices. Auditioning, notes, ` +
+    `tags and retiring all work here — but <b>cloning a voice and adding new ones needs ` +
+    `Chatterbox</b>, so “Find more voices” is about a bank this engine cannot use yet. ` +
+    `Pick Chatterbox in ⚙ Setup to grow the bank.`;
+}
+
+function vvPaintOrphans() {
+  const el = document.getElementById('vv-orphans');
+  const orphans = vvData.orphans || [];
+  if (!orphans.length) { el.classList.add('vv-hidden'); return; }
+  el.className = 'vv-note';
+  el.innerHTML = `<b>${orphans.length} note${orphans.length === 1 ? '' : 's'} with no voice ` +
+    `behind ${orphans.length === 1 ? 'it' : 'them'}:</b> ${orphans.map(esc).join(', ')}. ` +
+    `Either the voice was removed from the server or it was annotated before being uploaded. ` +
+    `Nothing has been deleted.`;
+}
+
+function vvStarsHTML(rating) {
+  return [1, 2, 3, 4, 5].map(n =>
+    `<span class="${n <= rating ? 'on' : ''}" data-star="${n}">★</span>`).join('');
+}
+
+function vvRowHTML(v, i) {
+  const lic = v.license || '';
+  const licClass = v.distributable ? 'vv-lic-ok' : 'vv-lic-no';
+  const licText = lic ? lic.split('-')[0] + (lic.startsWith('CC-BY') ? ' BY' : '') : 'unknown';
+  const licTitle = (lic || 'licence not recorded') + ' — ' +
+    (v.distributable ? 'safe to ship in a release or a voice pack'
+                     : 'NOT cleared for a release; your own machine only');
+  return `
+    <div class="vv-row${v.hidden ? ' retired' : ''}" data-key="${esc(v.key)}" id="vv-row-${i}">
+      <div class="vv-head">
+        <span class="vv-name">${esc(v.name)}${v.gender === 'f' ? ' ♀' : v.gender === 'm' ? ' ♂' : ''}</span>
+        ${v.kind === 'clone' ? '<span class="vv-kind">clone</span>' : ''}
+        ${v.region || v.accent_label
+          ? `<span class="vv-region">${esc([v.region, v.accent_label].filter(Boolean).join(' · '))}</span>`
+          : ''}
+      </div>
+      <div class="vv-actions">
+        <span class="vv-stars" id="vv-stars-${i}" onclick="vvStarClick(${i}, event)"
+              title="Rate this voice (click the same star again to unrate)">${vvStarsHTML(v.rating || 0)}</span>
+        <span class="vv-lic ${licClass}" title="${esc(licTitle)}">${esc(licText)}</span>
+        <button class="vv-btn" id="vv-play-${i}" onclick="vvAudition(${i})"
+                title="Read the audition line in this voice">▶</button>
+        <button class="vv-btn" id="vv-ab-${i}" onclick="vvSlot(${i})"
+                title="Put this voice in the next free A/B slot">A/B</button>
+        <div class="vv-menuwrap">
+          <button class="vv-btn" id="vv-menu-${i}" onclick="vvMenu(${i}, event)" title="More">⋯</button>
+          <div class="vv-pop vv-hidden" id="vv-pop-${i}">
+            <button onclick="vvHide(${i}, ${v.hidden ? 'false' : 'true'})">
+              ${v.hidden ? 'Unhide — back into auto-casting' : 'Hide — out of auto-casting'}</button>
+            <button onclick="vvCopyId(${i})">Copy voice id</button>
+          </div>
+        </div>
+      </div>
+      <div class="vv-fields">
+        <input class="vv-tags" id="vv-tags-${i}" value="${esc((v.tags || []).join(', '))}"
+               placeholder="tags, comma separated" autocomplete="off"
+               onblur="vvSaveTags(${i})" onkeydown="vvFieldKey(event, ${i}, 'tags')">
+        <input class="vv-notes" id="vv-notes-${i}" value="${esc(v.notes || '')}"
+               placeholder="what does it sound like?" autocomplete="off" maxlength="2000"
+               oninput="vvNoteTyped(${i})" onblur="vvSaveNotes(${i})"
+               onkeydown="vvFieldKey(event, ${i}, 'notes')">
+        <span class="vv-saved" id="vv-saved-${i}"></span>
+      </div>
+    </div>`;
+}
+
+// ── Editing ────────────────────────────────────────────────────────────────
+// Never block on a save, and never lose what was typed. If a save fails the
+// text stays in the box and the row says so — losing a typed note is the worst
+// bug this screen could have.
+
+function vvSay(i, text, cls) {
+  const el = document.getElementById(`vv-saved-${i}`);
+  if (el) { el.className = 'vv-saved' + (cls ? ' ' + cls : ''); el.textContent = text; }
+}
+
+async function vvSave(i, patch, label) {
+  const v = vvShown[i];
+  if (!v) return false;
+  vvSay(i, 'saving…', 'busy');
+  try {
+    const res = await fetchJSON(`/voices/meta/${encodeURIComponent(v.key)}`, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(patch),
+    });
+    Object.assign(v, res.entry);
+    const master = (vvData.voices || []).find(x => x.key === v.key);
+    if (master) Object.assign(master, res.entry);
+    vvSay(i, label || 'saved', '');
+    setTimeout(() => vvSay(i, ''), 2200);
+    return true;
+  } catch (e) {
+    vvSay(i, 'not saved — ' + e.message, 'err');
+    return false;
+  }
+}
+
+function vvNoteTyped(i) {
+  clearTimeout(vvSaveTimers['n' + i]);
+  vvSay(i, 'editing…', 'busy');
+  vvSaveTimers['n' + i] = setTimeout(() => vvSaveNotes(i), 600);
+}
+
+function vvSaveNotes(i) {
+  clearTimeout(vvSaveTimers['n' + i]);
+  const el = document.getElementById(`vv-notes-${i}`);
+  if (!el || !vvShown[i]) return;
+  if (el.value === (vvShown[i].notes || '')) { vvSay(i, ''); return; }
+  return vvSave(i, { notes: el.value });
+}
+
+function vvSaveTags(i) {
+  const el = document.getElementById(`vv-tags-${i}`);
+  if (!el || !vvShown[i]) return;
+  const tags = el.value.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+  const seen = [];
+  for (const t of tags) if (!seen.includes(t)) seen.push(t);
+  if (seen.join(',') === (vvShown[i].tags || []).join(',')) return;
+  if (seen.length > 12) { vvSay(i, 'at most 12 tags', 'err'); return; }
+  return vvSave(i, { tags: seen }).then(ok => {
+    if (ok) el.value = (vvShown[i].tags || []).join(', ');
+  });
+}
+
+function vvFieldKey(e, i, which) {
+  if (e.key === 'Enter' || ((e.metaKey || e.ctrlKey) && e.key === 'Enter')) {
+    e.preventDefault();
+    which === 'tags' ? vvSaveTags(i) : vvSaveNotes(i);
+  }
+}
+
+async function vvStarClick(i, e) {
+  const star = e.target.closest('[data-star]');
+  if (!star) return;
+  const n = parseInt(star.dataset.star, 10);
+  const next = (vvShown[i].rating === n) ? 0 : n;      // click the same star to unrate
+  const el = document.getElementById(`vv-stars-${i}`);
+  if (el) el.innerHTML = vvStarsHTML(next);            // optimistic; corrected on failure
+  const ok = await vvSave(i, { rating: next });
+  if (!ok && el) el.innerHTML = vvStarsHTML(vvShown[i].rating || 0);
+}
+
+function vvMenu(i, e) {
+  e.stopPropagation();
+  const pop = document.getElementById(`vv-pop-${i}`);
+  const wasOpen = !pop.classList.contains('vv-hidden');
+  document.querySelectorAll('.vv-pop').forEach(p => p.classList.add('vv-hidden'));
+  if (!wasOpen) pop.classList.remove('vv-hidden');
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.vv-pop').forEach(p => p.classList.add('vv-hidden'));
+});
+
+async function vvHide(i, hidden) {
+  document.querySelectorAll('.vv-pop').forEach(p => p.classList.add('vv-hidden'));
+  if (await vvSave(i, { hidden }, hidden ? 'hidden' : 'back in the pool')) vvPaint();
+}
+
+function vvCopyId(i) {
+  document.querySelectorAll('.vv-pop').forEach(p => p.classList.add('vv-hidden'));
+  const v = vvShown[i];
+  if (!v) return;
+  vvCopy(v.id);
+  vvSay(i, 'id copied', '');
+  setTimeout(() => vvSay(i, ''), 1600);
+}
+
+function vvCopy(text) {
+  try {
+    if (navigator.clipboard) { navigator.clipboard.writeText(text); return; }
+  } catch (e) { /* fall through */ }
+  const ta = document.createElement('textarea');
+  ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  document.body.removeChild(ta);
+}
+
+// ── Audition + A/B ─────────────────────────────────────────────────────────
+
+function vvLine() {
+  return (document.getElementById('vv-line-input').value || VV_DEFAULT_LINE).slice(0, 300);
+}
+
+function vvPreviewURL(id) {
+  return `/voice/preview/${encodeURIComponent(id)}?text=${encodeURIComponent(vvLine())}`;
+}
+
+function vvAudition(i) {
+  const v = vvShown[i];
+  if (!v) return;
+  return playPreview(document.getElementById(`vv-play-${i}`), vvPreviewURL(v.id));
+}
+
+// Changing the line invalidates the cached A/B clips — otherwise the bar would
+// keep replaying the old sentence and quietly lie about what it is comparing.
+function vvLineChanged() {
+  for (const slot of ['A', 'B']) {
+    const s = vvSlots[slot];
+    if (s && s.url) { try { URL.revokeObjectURL(s.url); } catch (e) {} s.url = null; }
+  }
+}
+
+function vvSlot(i) {
+  const v = vvShown[i];
+  if (!v) return;
+  const slot = (!vvSlots.A || vvSlots.A.key === v.key) ? 'A'
+             : (!vvSlots.B || vvSlots.B.key === v.key) ? 'B'
+             : 'A';                                   // both full → rotate through A
+  if (vvSlots[slot] && vvSlots[slot].url) {
+    try { URL.revokeObjectURL(vvSlots[slot].url); } catch (e) {}
+  }
+  vvSlots[slot] = { key: v.key, name: v.name, id: v.id, url: null };
+  vvPaintSlots();
+}
+
+function vvClearSlots() {
+  for (const slot of ['A', 'B']) {
+    if (vvSlots[slot] && vvSlots[slot].url) {
+      try { URL.revokeObjectURL(vvSlots[slot].url); } catch (e) {}
+    }
+    vvSlots[slot] = null;
+  }
+  vvPaintSlots();
+}
+
+function vvPaintSlots() {
+  const bar = document.getElementById('vv-ab');
+  const any = vvSlots.A || vvSlots.B;
+  bar.classList.toggle('vv-hidden', !any);
+  for (const slot of ['A', 'B']) {
+    const el = document.getElementById(`vv-slot-${slot}`);
+    const s = vvSlots[slot];
+    el.className = 'vv-slot' + (s ? '' : ' empty');
+    el.innerHTML = `${slot} — <b>${s ? esc(s.name) : 'empty'}</b>`;
+  }
+  document.getElementById('vv-play-a').disabled = !vvSlots.A;
+  document.getElementById('vv-play-b').disabled = !vvSlots.B;
+  document.getElementById('vv-play-ab').disabled = !(vvSlots.A && vvSlots.B);
+  document.querySelectorAll('.vv-row').forEach(row => {
+    const btn = row.querySelector('[id^="vv-ab-"]');
+    if (!btn) return;
+    const key = row.dataset.key;
+    const inA = vvSlots.A && vvSlots.A.key === key;
+    const inB = vvSlots.B && vvSlots.B.key === key;
+    btn.classList.toggle('slotted', !!(inA || inB));
+    btn.textContent = inA ? 'A' : inB ? 'B' : 'A/B';
+  });
+}
+
+// A render is slow. Fetch each slot's clip once, keep the blob, and every
+// replay after that is instant — which is what makes "which of these two is my
+// narrator" answerable instead of exhausting.
+async function vvClip(slot) {
+  const s = vvSlots[slot];
+  if (!s) return null;
+  if (s.url) return s.url;
+  const status = document.getElementById('vv-ab-status');
+  status.textContent = `rendering ${slot}…`;
+  try {
+    const r = await fetch(vvPreviewURL(s.id));
+    if (!r.ok) throw new Error(`${r.status}`);
+    s.url = URL.createObjectURL(await r.blob());
+    status.textContent = '';
+    return s.url;
+  } catch (e) {
+    status.textContent = `${slot} would not render (${e.message})`;
+    return null;
+  }
+}
+
+async function vvPlaySlot(slot) {
+  const url = await vvClip(slot);
+  if (!url) return;
+  await playPreview(document.getElementById(`vv-play-${slot.toLowerCase()}`), url);
+}
+
+async function vvPlayBoth() {
+  const a = await vvClip('A');
+  const b = await vvClip('B');
+  if (!a || !b) return;
+  const btn = document.getElementById('vv-play-ab');
+  await playPreview(btn, a, () => {
+    // ~400 ms of silence between them: long enough to hear the seam, short
+    // enough that you are still holding the first one in your head.
+    setTimeout(() => {
+      if (activePreviewBtn !== btn) return;      // something else took over
+      previewAudioEl.src = b;
+      previewAudioEl.onended = stopPreview;
+      previewAudioEl.play().catch(() => stopPreview());
+    }, 400);
+  });
+}
+
+// ── Find more voices ───────────────────────────────────────────────────────
+// A catalogue with copyable commands. There is no run button, and that is
+// deliberate: pulling a corpus is a person's decision, not a page's.
+
+const VV_TIERS = [
+  ['ship', 'Safe to ship', 'Public domain, CC0 or CC BY — fine in a release or a voice pack.'],
+  ['private', 'Your machine only', 'NonCommercial or ShareAlike. Never in a release, never in a public voice pack.'],
+  ['never', 'Do not build on these', 'Listed with reasons so nobody researches them twice.'],
+];
+
+function isVoiceSourcesOpen() {
+  return !document.getElementById('vv-sources').classList.contains('vv-hidden');
+}
+
+function toggleVoiceSources() {
+  isVoiceSourcesOpen() ? closeVoiceSources() : openVoiceSources();
+}
+
+function closeVoiceSources() {
+  document.getElementById('vv-sources').classList.add('vv-hidden');
+}
+
+async function openVoiceSources() {
+  document.getElementById('vv-sources').classList.remove('vv-hidden');
+  const body = document.getElementById('vv-src-body');
+  if (!vvSourcesData) {
+    body.innerHTML = '<p class="vv-empty">Loading…</p>';
+    try {
+      vvSourcesData = await fetchJSON('/voices/sources');
+    } catch (e) {
+      body.innerHTML = `<div class="vv-note err">Could not read the catalogue: ${esc(e.message)}</div>`;
+      return;
+    }
+  }
+  vvPaintSources();
+}
+
+function vvPaintSources() {
+  const d = vvSourcesData;
+  const parts = [`<div class="vv-src-warn"><b>${esc(d.note || '')}</b>
+    <div style="margin-top:6px">The full reasoning — the licence tiering, the case law
+    behind it and the Chatterbox clip recipe — is in
+    <code>${esc(d.doc || 'docs/voice-sources.md')}</code> in this repo.</div></div>`];
+  for (const [tier, title, blurb] of VV_TIERS) {
+    const list = (d.sources || []).filter(s => s.tier === tier);
+    if (!list.length) continue;
+    parts.push(`<div class="vv-tier">${esc(title)} — <span style="text-transform:none;letter-spacing:0">${esc(blurb)}</span></div>`);
+    for (const s of list) parts.push(vvSourceHTML(s));
+  }
+  document.getElementById('vv-src-body').innerHTML = parts.join('');
+}
+
+function vvSourceHTML(s) {
+  const badges = [
+    `<span class="vv-lic ${s.tier === 'ship' ? 'vv-lic-ok' : 'vv-lic-no'}"
+           title="${esc(s.license)}">${esc(s.license)}</span>`,
+    s.us_regional ? '<span class="vv-kind">US regional</span>' : '',
+    s.speakers ? `<span class="vv-region">${s.speakers} speakers</span>` : '',
+  ].filter(Boolean).join('');
+  const cmd = s.command
+    ? `<div class="vv-cmd"><code>${esc(s.command)}</code>
+         <button class="vv-btn" onclick="vvCopy('${escAttr(s.command)}')"
+                 title="Copy — you run it, not the app. Pulling a corpus is your call.">copy</button></div>`
+    : '';
+  return `<div class="vv-src" data-source="${esc(s.id)}">
+      <h4>${esc(s.name)}</h4>
+      <div class="vv-src-meta">${badges}</div>
+      <p>${esc(s.blurb)}</p>
+      <a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">${esc(s.url)}</a>
+      ${cmd}
+    </div>`;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !isVoicesOpen()) return;
+  if (isVoiceSourcesOpen()) { closeVoiceSources(); return; }
+  closeVoicesView();
+});
 
 // Close panels on Escape
 document.addEventListener('keydown', e => {
