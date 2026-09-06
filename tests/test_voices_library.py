@@ -245,6 +245,59 @@ def test_the_write_really_goes_through_the_atomic_helper(client, meta_file, cb, 
     assert seen == [meta_file]
 
 
+# ── hidden: assignment only, never validation (Step 3's trap) ────────────────
+
+def test_hidden_leaves_assignment_but_stays_in_the_pool(meta_file, cb, monkeypatch):
+    monkeypatch.setattr(server, "VOICE_META_PATH", meta_file)
+    data = json.loads(meta_file.read_text())
+    data["us-nyc-add"]["hidden"] = True
+    meta_file.write_text(json.dumps(data), encoding="utf-8")
+
+    pool = server._voice_pool("chatterbox")
+    assignable = server._voice_pool_assignable("chatterbox")
+    assert "predefined:us-nyc-add.wav" in pool, "validation must not narrow"
+    assert "predefined:us-nyc-add.wav" not in assignable
+    # The artefacts are gone from the assignable pool too, but not from the
+    # validation pool — a map that already names one must still save.
+    assert "predefined:cachetest_1.wav" in pool
+    assert "predefined:cachetest_1.wav" not in assignable
+
+
+def test_retiring_everything_falls_back_rather_than_casting_nothing(meta_file, cb, monkeypatch):
+    monkeypatch.setattr(server, "VOICE_META_PATH", meta_file)
+    meta_file.write_text(json.dumps(
+        {k: {"hidden": True} for k in ("us-nyc-add", "x-irish-padraig", "Gianna (clone)",
+                                       "Gianna", "cachetest_1", "voice_selftest", "scanprobe")}),
+        encoding="utf-8")
+    assert server._voice_pool_assignable("chatterbox") == []
+    vm = server._default_voice_map(["NARRATOR", "Elizabeth"], "chatterbox")
+    assert all(v for v in vm.values()), "an empty pool must not cast '' at everyone"
+
+
+def test_a_book_cast_with_a_hidden_voice_still_saves(client, meta_file, cb, tmp_path):
+    """The trap, end to end: hiding is a policy about what we PICK, never about
+    what you may keep. Reopening an old book must not lose its cast."""
+    slug = "study"
+    d = tmp_path / "library" / slug
+    d.mkdir(parents=True)
+    (d / "ir.json").write_text(json.dumps({
+        "book_title": "The Study", "unresolved_count": 0, "characters": ["Elizabeth"],
+        "chapters": [{"index": 0, "title": "One", "blocks": [
+            {"segmentId": "ch0_seg_0000", "type": "dialogue", "text": "Hello.",
+             "speaker": "Elizabeth", "confidence": 0.9, "unresolved": False}]}]}))
+
+    r = client.post("/voices/meta/us-nyc-add", json={"hidden": True})
+    assert r.status_code == 200, r.text
+    r = client.post(f"/voice_map/{slug}",
+                    json={"map": {"NARRATOR": "predefined:us-nyc-add.wav"}})
+    assert r.status_code == 200, r.text
+    assert r.json()["map"]["NARRATOR"] == "predefined:us-nyc-add.wav"
+
+    # …and nothing new is auto-assigned to it.
+    assert "predefined:us-nyc-add.wav" not in \
+        server._default_voice_map(["NARRATOR", "Elizabeth"], "chatterbox").values()
+
+
 # ── GET /voices/sources ──────────────────────────────────────────────────────
 
 TIERS = {"ship", "private", "never"}

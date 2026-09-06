@@ -328,9 +328,33 @@ def _test_artefact_re():
         return re.compile(r"cachetest|selftest|scanprobe", re.IGNORECASE)
 
 
+def _voice_pool_assignable(engine: str) -> list[str]:
+    """The pool ProseCast may auto-assign FROM: everything, minus retired
+    voices and minus the Chatterbox server's own test artefacts.
+
+    Deliberately NOT the same list `_voice_pool` returns. That one validates
+    saved voice maps, and narrowing it would 400 every book that already has a
+    hidden voice cast — a policy decision that would look exactly like a UI bug.
+    Hiding changes what we pick for you; it never changes what you may keep.
+    """
+    skip = _test_artefact_re()
+    meta = _voice_meta()
+    out = []
+    for v in _raw_voices(engine):
+        if skip.search(str(v["id"])):
+            continue
+        if _lookup_meta(meta, v["id"], v["name"])["hidden"]:
+            continue
+        out.append(v["id"])
+    return out
+
+
 def _default_voice_map(characters: list[str], engine: str) -> dict[str, str]:
     """Replicate VoiceAssigner round-robin without synthesizing anything."""
-    pool = _voice_pool(engine)
+    # Hidden voices are excluded here and nowhere else. If retiring left
+    # nothing to cast with, fall back to the full pool rather than handing
+    # every character an empty voice.
+    pool = _voice_pool_assignable(engine) or _voice_pool(engine)
     if not pool:
         return {c: '' for c in characters}
     result = {}
