@@ -1,18 +1,18 @@
-# ProseCast — Session Handoff (2026-09-05, evening)
+# ProseCast — Session Handoff (2026-09-06)
 
 For the next Claude/CC session: read this + `STATUS.md`, then pick up at
-**"Where to start"**. Supersedes the 09-05 morning handoff.
+**"Where to start"**. Supersedes the 09-05 handoffs.
 
 Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
 2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
 gmail author scrubbed) and force-pushed; every commit hash from before this
 session changed, so hashes quoted in older STATUS entries no longer resolve.
-**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **231 passed,
-1 skipped** (was 197 before E3) — the skip is `en_core_web_sm` missing from the
-venv; `bash SETUP.sh` installs and verifies it, after which the number is 235.
-Without tesseract a further 6 skip. Skips are healthy, not regressions. There
-are now **three** `tests/ui/` checks, and Playwright + chromium are installed in
-the Mac venv.
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **245 passed,
+1 skipped** (231 before E6, 197 before E3) — the skip is `en_core_web_sm`
+missing from the venv; `bash SETUP.sh` installs and verifies it, after which the
+number is 249. Without tesseract a further 6 skip. Skips are healthy, not
+regressions. There are now **four** `tests/ui/` checks, and Playwright +
+chromium are installed in the Mac venv.
 
 ---
 
@@ -21,8 +21,9 @@ the Mac venv.
 The original goal is **met** and the repo is **publishable**: EPUB, TXT and PDF
 (novels, rulebooks, plays, scans) narrate end-to-end with multi-voice casting,
 whole-book resumable renders and word-accurate read-along — **every step in the
-UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05. **E3's commits
-are local; Tyler reviews and pushes.**
+UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05, and since E6 on
+2026-09-06 the first run walks a stranger to the sound of a voice without a
+README. **E3 is pushed; E6's commits are local — Tyler reviews and pushes.**
 
 | Phase | What | State |
 |---|---|---|
@@ -31,7 +32,8 @@ are local; Tyler reviews and pushes.**
 | E4.1–E4.3 | `config.json`, `/setup/status` probes, Setup page, EL affiliate compliance | ✓ 09-03 |
 | E2.1–E2.4 | Upload-as-job, PDF ingest on PyMuPDF, ingest wizard, OCR for scans | ✓ 09-04 |
 | **E5** | README, `SETUP.sh`, `docs/PHILOSOPHY.md`, history scrub, `CLAUDE.md` refresh | **✓ 09-05** |
-| **E3** | **Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card** | **✓ 09-05 (local commits)** |
+| **E3** | **Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card** | **✓ 09-05** |
+| **E6** | **First-run wizard: engine → probe → optional brains → hears the sample book** | **✓ 09-06 (local commits)** |
 
 Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 `README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
@@ -60,8 +62,9 @@ Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 ## Where to start
 
 **The plan Tyler approved, in order:** publish → ElevenLabs application → E3 →
-cast exchange design → the four findings below. The first three are done; the
-cast exchange is next. Of the four findings, **the render worker's
+cast exchange design → the four findings below. The first three are done, and
+E6 (the first-run wizard, 09-06) is done on top of them; **the cast exchange is
+next**. Of the four findings, **the render worker's
 whole-document write is now the one to do first** — E3 guards around it with a
 blunt 409, and that guard can be relaxed the moment the merge fix lands.
 
@@ -79,6 +82,17 @@ blunt 409, and that guard can be relaxed the moment the merge fix lands.
   book has one scene and cannot exercise a long run), whether a pass that runs
   for tens of minutes wants a **cancel** button, and the overlap guard's
   wording in practice.
+- **E6 is done** (09-06, Claude Code on the Mac — see the STATUS entry). The
+  first run opens a wizard that ends by playing the sample book: 15.7 s from
+  the button to audio, on `say`, on a library that had never existed. What is
+  left of it is Tyler's: the wizard on a **non-Mac** (Piper), the **ElevenLabs**
+  path end to end (its two-click cost warning was checked; no credit was spent),
+  and the one real gap — **`SETUP.sh` writes a `config.json`, so on the
+  documented install path the wizard never fires by itself**. ↻ Run setup again
+  is the way in and the README says so, but if the wizard is meant to greet
+  every new user, `SETUP.sh` should stop writing that file (or write it without
+  a `tts_engine`). `SETUP.sh` was outside the brief's green list, so it was left
+  alone.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
@@ -290,10 +304,10 @@ re-run the script; never edit the JSON by hand. Machine-dependent fields
 `tests/synthetic.py` holds the sample novel/play/rulebook text and the PDF/scan
 builders that the tests *and* the generator share.
 
-**Three headless UI checks live in the repo** (not collected by pytest; they need
+**Four headless UI checks live in the repo** (not collected by pytest; they need
 `pip install playwright && playwright install chromium`):
-`tests/ui/check_timeline_and_names.py`, `tests/ui/check_ingest_wizard.py` and
-`tests/ui/check_pipeline_card.py`. Run all three after touching
+`tests/ui/check_timeline_and_names.py`, `tests/ui/check_ingest_wizard.py`,
+`tests/ui/check_pipeline_card.py` and `tests/ui/check_first_run.py`. Run all four after touching
 `static/index.html` — Playwright and chromium are installed in the Mac venv now,
 so `.venv/bin/python tests/ui/check_*.py` works without the container. They caught three bugs before Tyler
 saw them, including a `.hidden` class that had no CSS rule outside

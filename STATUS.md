@@ -1,14 +1,118 @@
 # PROSECAST — STATUS
 
-**Status:** ACTIVE — **Phase E is complete. E3 shipped 2026-09-05: the AI
-attribution pass and word alignment are jobs behind buttons on a Pipeline
-card.** Core goal met (EPUB/PDF/TXT, novels/plays/rulebooks, scans); **nothing
-in the product requires a terminal any more.**
+**Status:** ACTIVE — **Phase E is complete, and as of E6 (2026-09-06) the
+first run is a wizard that ends by reading you the sample book.** Core goal met
+(EPUB/PDF/TXT, novels/plays/rulebooks, scans); **nothing in the product
+requires a terminal any more** — and now nothing requires the README either.
 Next: the **cast exchange** design (PHILOSOPHY.md is the spec-of-record), then
 the four HANDOFF findings — the render worker's whole-document write first, now
 that E3 is guarding around it rather than fixing it. Rulebook render + C4 still
-open. E3's commits are LOCAL — Tyler reviews and pushes.
-**Updated:** 2026-09-05
+open. E6's commits are LOCAL — Tyler reviews and pushes.
+**Updated:** 2026-09-06
+
+## Session 2026-09-06 (Claude Code, Mac) — E6: the first-run wizard
+
+Ran `docs/CC_BRIEF_first_run_wizard.md` end to end. A new user's first run used
+to land on the probe table — honest, complete, and still a table; nobody heard
+anything until they found "+ Add Book" on their own. Now it opens a four-step
+wizard that ends with a voice. **Tests 231 → 245 passed, 1 skipped. Four
+`tests/ui/` checks, all green.**
+
+**Shipped:**
+- **`POST /books/sample`** — the built-in sample book as a book. `library/` and
+  `books/` are gitignored, so a fresh clone has none, and the sample was
+  reachable only from `main.py --sample`. Idempotent; on a new book it runs the
+  same ingest job `/books/ingest` runs (own daemon thread, never the render
+  queue, mode novel, rules-only so rung 1 works with nothing but `say`).
+  `_run_ingest_job` now takes a plain path instead of an upload-table entry —
+  it only ever used `info["path"]` — and `/books/ingest` is unchanged.
+- **The wizard** (`#firstrun-modal-overlay` in `static/index.html`): engine →
+  "can it speak?" → optional brains → hear it. One step visible at a time,
+  Back/Continue, and **Skip and Esc are the same door from every step**, landing
+  on Setup. The Setup page is untouched except for one new button,
+  **↻ Run setup again**, which re-opens the overlay pre-filled.
+- **The engine cards are now built once.** `engineCardsHTML`,
+  `engineFieldsHTML` and `elDisclosureHTML` are shared by the Setup page and the
+  wizard. The ElevenLabs disclosure is a compliance requirement — a second copy
+  of that block is how one of them becomes a paraphrase.
+- **Step 2 quotes the probe, never itself.** It shows only `voice_engine` and
+  `tool_ffmpeg`, with their own `detail` and `fix`; Continue is disabled until
+  `voice_engine.ok` and the reason it gives *is* that row's `fix`, verbatim.
+- **Step 4** drives `POST /books/sample` → poll → `POST /render/sample_book/0`
+  → poll → open the book → play, with one progress sentence built from the
+  job's own numbers. On `elevenlabs` it states the cost (~1,500 characters) and
+  needs a second click. A failure turns the sentence into the error and offers
+  **Try again** / **Open Setup** — never a silent stop.
+- **`tests/ui/check_first_run.py`** — 40+ checks per skin against generated
+  fixtures (`setup_status_firstrun/ready`, `config_firstrun/ready`,
+  `sample_book`), with drift assertions in `tests/test_sample_book.py`. The
+  probes' machine-dependent *inputs* (OS, `which`, the two network probes) are
+  pinned in `tests/synthetic.py` so the generator and the tests pin them
+  identically; the Pipeline card's pinning moved to the same place and its
+  fixtures came out byte-identical.
+
+**The real run (a browser against a real server, on a library that had never
+existed):** the wizard opened by itself, `say` was pre-selected, Continue was
+enabled the moment step 2 painted, step 3's primary button read *Skip →*, and
+**15.7 seconds from ▶ to 77 seconds of multi-voice audio playing**. The
+progress sentence never went blank (0 blank polls): *preparing the sample
+book… → reading it… finding who speaks each line → rendering chapter 1 · 6 of
+31 blocks… → almost there…*. No console or page errors. **↻ Run setup again**
+re-opened at step 1 pre-filled; Esc landed on Setup. Nothing about the run
+required knowing anything — no terminal, no README, no file to edit.
+
+**Two things only the real run showed, both fixed:**
+1. **The wizard as specified could not make a sound.** The render preflight
+   aborts on a book with no `voice_map.json`, and again on one whose map was
+   made for another engine — both correct for a real book, both dead ends for a
+   wizard with no casting step. A fresh clone got *"No voice_map.json for
+   'sample_book'"*; a machine that had run `main.py --sample` (which `SETUP.sh`
+   does) got *"voice_map entries not in the say pool"*. `POST /books/sample`
+   now casts **the sample book, and only the sample book**, for the active
+   engine — reusing `_default_voice_map`, the same round-robin the cast drawer
+   pre-fills — and returns `recast`. The wizard renders with `force=true` when
+   `recast` is true, because audio left over from another engine is not the
+   audio it just promised.
+2. **The casting ran after the ingest job said `done`.** A poller that sees
+   `done` posts the render next, and could beat the voice map to disk.
+   `_run_ingest_job` grew a `finish` callback that runs inside the try, before
+   the job flips to done; `/books/ingest` passes nothing and is byte-identical.
+
+**How the second bug announced itself, which is the part worth remembering:**
+a test posted `/books/sample` without waiting, returned while its daemon thread
+was still running, `monkeypatch` put `LIBRARY_DIR` back to the *real* library,
+and the thread finished by re-ingesting and re-casting **the real
+`library/sample_book`**. Its `ir.json` is now a fresh rules-only ingest of the
+same built-in text (regenerable; that book is the shipped sample) and `ch0.wav`
+is `say` audio from the run. **`voice_map.json` has been restored to its exact
+original contents.** No other book in `library/` was touched — checked by
+mtime across every `ir.json`, `voice_map.json` and `corrections.jsonl`. The
+fix is in three places: the test waits, the sandbox fixture joins any live
+`ingest-*` thread on teardown, and the sandbox resets `server._active_engine`
+(a module global `PUT /config` clears in the app but nothing cleared between
+tests — an earlier file's engine was deciding how this one cast).
+
+**Things that were true and are worth knowing:**
+- **`SETUP.sh` writes a `config.json`**, so after the documented install the
+  wizard does **not** open by itself — `config_exists` is true from the first
+  boot, and the engine it writes is `chatterbox`, which a rung-1 user does not
+  have. ↻ Run setup again is the way in, and the README now says so. Whether
+  `SETUP.sh` should stop creating the file (or write no `tts_engine`) is
+  Tyler's call — `SETUP.sh` was outside this brief's green list.
+- The brief says "the four engine cards"; the Setup page has **three** (system
+  voices/Piper, Chatterbox, ElevenLabs) and the wizard reuses exactly those, as
+  the same sentence instructs. Nothing was invented to make four.
+- **YELLOW step done as written:** `config.json` was copied to
+  `config.json.e6bak`, moved aside, and restored — `diff` empty, backup
+  deleted. Tyler's own server on :8000 was left running and untouched; the run
+  used :8123 and :8124.
+
+**Still Tyler's to verify:** the wizard on a non-Mac (the Piper card is
+pre-selected and the probe wording is right, but no Piper machine was
+available); the ElevenLabs path end to end, which was checked for its two-click
+warning but deliberately never spent a credit; and whether `SETUP.sh` should
+stop writing `config.json` so the wizard fires on the documented install path.
+**All commits are local — nothing pushed.**
 
 ## Session 2026-09-05 (Claude Code, Mac) — E3: the pipeline in the UI
 

@@ -25,20 +25,23 @@ covers but does not track session state — HANDOFF and STATUS do.
 2. **Never hand-write a UI fixture or mock.** `tests/fixtures/*.json` come from
    the live endpoints via `scripts/refresh_ui_fixtures.py`, and tests fail if
    they drift.
-3. **After touching `static/index.html`, run both checks in `tests/ui/`.** They
-   need Playwright (cloud container, not the device VM).
+3. **After touching `static/index.html`, run all four checks in `tests/ui/`.**
+   They need Playwright — installed in the Mac venv now, not in the device VM.
 
 Also: every `ir.json` write goes through `lib.write_json_atomic()`; all book
 paths go through `prosecast/library.py`; `corrections.jsonl` is append-only;
 never rename WAVs on the Chatterbox server; never emit `speed` to Chatterbox.
 
-## Where it stands (2026-09-05)
+## Where it stands (2026-09-06)
 
 Phase E is complete. Any format in from the UI, casting, safe whole-book
 renders, reader view, Setup page with probes, `config.json`, README + install
 story + `docs/PHILOSOPHY.md`, and — as of E3 — the AI attribution pass and
 word alignment as jobs behind buttons on a Pipeline card. **Nothing in the
-product requires a terminal any more.** Git history was rewritten on
+product requires a terminal any more.** As of **E6 (09-06)** the first run
+opens a **four-step wizard that ends by reading you the sample book** —
+`POST /books/sample` plus `#firstrun-modal-overlay`; the Setup page is
+unchanged apart from a ↻ Run setup again button. Git history was rewritten on
 2026-09-05 to scrub the home-network host (commit hashes quoted in older
 STATUS/HANDOFF entries predate the rewrite). **Next: the cast exchange** (see
 PHILOSOPHY.md) and the four HANDOFF findings; then cover art and in-book
@@ -87,7 +90,7 @@ bash SETUP.sh                                           # venv, deps, spaCy mode
 .venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene   # AI attribution pass — also available in the UI (E3)
 .venv/bin/python scripts/align_words.py <slug>          # word timings after a render — also available in the UI (E3)
 .venv/bin/python main.py --sample --tts stub            # silent smoke test
-.venv/bin/pytest tests/ -q                              # ~230 tests; spaCy/tesseract-gated ones skip cleanly
+.venv/bin/pytest tests/ -q                              # ~245 tests; spaCy/tesseract-gated ones skip cleanly
 ```
 
 ## IR Attribution Pipeline (ir_generator.py)
@@ -141,6 +144,7 @@ Live status lives in `HANDOFF.md` (table at the top) and `STATUS.md`. Summary as
 | E1, E2.1–E2.4, E4.1–E4.3 (2026-09-03/04) | reader view; ingest wizard incl. PDF review + OCR; config.json, probes, Setup page | ✓ |
 | E5 (2026-09-05) | README, SETUP.sh, PHILOSOPHY.md, pre-publish history scrub | ✓ |
 | E3 (2026-09-05) | pipeline-in-UI: AI pass + align as jobs behind buttons, on a second worker | ✓ |
+| E6 (2026-09-06) | first-run wizard: engine → probe → optional brains → hears the sample book | ✓ |
 | 4b / 4c | tag editing UI; tags actually reaching ElevenLabs | open (4c is one of the Codex findings in HANDOFF) |
 | later | cast exchange (PHILOSOPHY.md), cover art + in-book images (roadmap parking lot), Flutter app | direction |
 
