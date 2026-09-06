@@ -43,6 +43,7 @@ import threading
 import uuid
 from pathlib import Path
 import re
+from typing import Any
 import shutil
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
 from fastapi.background import BackgroundTasks
@@ -289,21 +290,42 @@ def _apply_voice_meta(voices: list[dict]) -> list[dict]:
     return out
 
 
-def _voice_labels(engine: str) -> list[dict]:
-    """Return [{id, name, gender}] for the given engine.
+def _raw_voices(engine: str) -> list[dict]:
+    """[{id, name}] for the given engine, before any overlay is applied.
 
-    For engines where id == name (say, piper, gtts), both fields are the same string.
-    For ElevenLabs, id is the opaque API identifier and name is the human-readable label.
-    gender comes from the hand-edited voice_meta.json overlay ('' when unlabeled).
+    For engines where id == name (say, piper, gtts), both fields are the same
+    string. For ElevenLabs, id is the opaque API identifier and name is the
+    human-readable label. The Voices view wants these clean names — the glyph
+    `_apply_voice_meta` appends is display only (see `_voice_key`).
     """
     from prosecast.tts_engine import VoiceAssigner
     if engine == 'elevenlabs':
-        return _apply_voice_meta(
-            [{'id': v['id'], 'name': v['name']} for v in VoiceAssigner.ELEVENLABS_VOICES])
-    elif engine == 'chatterbox':
-        return _apply_voice_meta(_chatterbox_voices())
-    ids = _voice_pool(engine)
-    return _apply_voice_meta([{'id': v, 'name': v} for v in ids])
+        return [{'id': v['id'], 'name': v['name']} for v in VoiceAssigner.ELEVENLABS_VOICES]
+    if engine == 'chatterbox':
+        return list(_chatterbox_voices())
+    return [{'id': v, 'name': v} for v in _voice_pool(engine)]
+
+
+def _voice_labels(engine: str) -> list[dict]:
+    """Return [{id, name, gender, ...overlay}] for the given engine.
+
+    gender comes from the hand-edited voice_meta.json overlay ('' when
+    unlabeled) and the name carries its ♀/♂ glyph; `hidden` rides along so the
+    cast drawer can grey out a retired voice without dropping it (a voice
+    already cast must stay selectable).
+    """
+    return _apply_voice_meta(_raw_voices(engine))
+
+
+# Server-side test artefacts, not real voices. One definition, shared with
+# scripts/audition_voices.py — see _test_artefact_re().
+def _test_artefact_re():
+    try:
+        from scripts.audition_voices import _SKIP
+        return _SKIP
+    except Exception:                      # scripts/ missing from a slim deploy
+        import re
+        return re.compile(r"cachetest|selftest|scanprobe", re.IGNORECASE)
 
 
 def _default_voice_map(characters: list[str], engine: str) -> dict[str, str]:
@@ -1366,6 +1388,140 @@ def list_voices():
     """Return available voices for the active TTS engine as [{id, name}] pairs."""
     engine = _get_active_engine()
     return {"engine": engine, "voices": _voice_labels(engine)}
+
+
+# ── /voices/library, /voices/meta, /voices/sources (Phase E7) ────────────────
+#
+# The Voices view's own endpoints. Deliberately NOT an extension of /voices:
+# the cast drawer and the casting modal read that shape, and growing it to
+# carry provenance and orphans would make every drawer open pay for the
+# Voices page. `key` here is the canonical overlay key — the filename stem —
+# and it is what the UI writes back with.
+
+VOICE_SOURCES_PATH = Path(__file__).parent / "voice_sources.json"
+
+_META_FIELDS = ("gender", "notes", "tags", "rating", "hidden")
+
+
+@app.get("/voices/library")
+def voices_library():
+    """Every voice the active engine has, with its full overlay, plus orphans."""
+    engine = _get_active_engine()
+    skip = _test_artefact_re()
+    meta = _voice_meta()
+
+    voices, seen = [], set()
+    for v in _raw_voices(engine):
+        vid = str(v["id"])
+        if skip.search(vid):
+            continue                       # cachetest/selftest/scanprobe — not voices
+        key = _voice_key(vid)
+        seen.add(key)
+        seen.add(v["name"])                # legacy display-name keys count as matched
+        voices.append({
+            "id": vid,
+            "name": v["name"],             # clean: the glyph is the drawer's business
+            "key": key,
+            "kind": "clone" if (engine == "chatterbox"
+                                and not vid.startswith("predefined:")) else "predefined",
+            **_lookup_meta(meta, vid, v["name"]),
+        })
+
+    # Overlay entries with no live voice behind them. A voice deleted on the
+    # server must not silently take Tyler's notes with it, so they are surfaced
+    # rather than cleaned up.
+    orphans = [k for k in meta
+               if k != "_readme" and k not in seen and isinstance(meta[k], dict)]
+
+    return {"engine": engine, "voices": voices, "orphans": sorted(orphans)}
+
+
+class VoiceMetaPatch(BaseModel):
+    """Every field is typed loosely on purpose: a wrong type should come back
+    as a 400 with a sentence a person can act on, not pydantic's 422."""
+    gender: Any = None
+    notes: Any = None
+    tags: Any = None
+    rating: Any = None
+    hidden: Any = None
+
+
+@app.post("/voices/meta/{key}")
+def save_voice_meta(key: str, body: VoiceMetaPatch):
+    """Patch one voice's overlay entry. Absent fields are left alone.
+
+    Unknown keys are accepted on purpose: a voice can be annotated before it
+    exists on the server, and the alternative is losing the note.
+    """
+    patch = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not patch:
+        raise HTTPException(status_code=400, detail="Nothing to change.")
+
+    def bad(msg):
+        return HTTPException(status_code=400, detail=msg)
+
+    if "gender" in patch:
+        g = patch["gender"]
+        if not isinstance(g, str) or g.strip().lower() not in ("f", "m", ""):
+            raise bad(f"gender must be 'f', 'm' or '' (empty for unlabeled), not {g!r}.")
+        patch["gender"] = g.strip().lower()
+    if "rating" in patch:
+        r = patch["rating"]
+        if isinstance(r, bool) or not isinstance(r, int) or not 0 <= r <= 5:
+            raise bad("rating must be a whole number from 0 to 5 (0 = unrated).")
+    if "hidden" in patch and not isinstance(patch["hidden"], bool):
+        raise bad("hidden must be true or false.")
+    if "tags" in patch:
+        raw = patch["tags"]
+        if not isinstance(raw, list) or any(not isinstance(t, str) for t in raw):
+            raise bad("tags must be a list of strings.")
+        if len(raw) > 12:
+            raise bad(f"at most 12 tags per voice (got {len(raw)}).")
+        if any(len(t.strip()) > 40 for t in raw):
+            raise bad("a tag may be at most 40 characters.")
+        patch["tags"] = _clean_tags(raw)
+    if "notes" in patch:
+        if not isinstance(patch["notes"], str):
+            raise bad("notes must be text.")
+        if len(patch["notes"]) > 2000:
+            raise bad(f"notes may be at most 2000 characters (got {len(patch['notes'])}).")
+
+    data = _voice_meta()
+    entry = dict(data.get(key) or {})
+    # No stem entry yet, but this voice may already be annotated under the
+    # legacy DISPLAY-name key ('Gianna (clone)' for stem 'Gianna'). Carry that
+    # content forward so a first edit does not read as wiping the old note.
+    # The legacy entry is left in place — the read path prefers the stem, and
+    # deleting one of Tyler's lines to tidy up is not this endpoint's call.
+    if not entry:
+        try:
+            for v in _raw_voices(_get_active_engine()):
+                if _voice_key(v["id"]) == key and isinstance(data.get(v["name"]), dict):
+                    entry = dict(data[v["name"]])
+                    break
+        except Exception:
+            pass          # engine unreachable — saving the note still matters more
+    entry.update(patch)
+    data[key] = entry
+
+    # write_json_atomic, not open(..,'w'): _voice_meta() swallows JSONDecodeError
+    # and returns {}, so a half-written file is a SILENT total loss of every
+    # note in it — the failure would not even look like a failure.
+    lib.write_json_atomic(VOICE_META_PATH, data)
+    return {"key": key, "entry": _norm_meta(entry)}
+
+
+@app.get("/voices/sources")
+def voices_sources():
+    """The vetted voice-corpus catalogue. Read-only: it shells out to nothing,
+    downloads nothing, and never POSTs to the Chatterbox server. The panel
+    shows a command; a human runs it."""
+    try:
+        data = json.loads(VOICE_SOURCES_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise HTTPException(status_code=500,
+                            detail=f"Could not read voice_sources.json: {e}")
+    return data
 
 
 # ── /voice_map/{book_slug} ────────────────────────────────────────────────────
