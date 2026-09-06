@@ -1,6 +1,6 @@
 {
-  "_comment": "Copy to config.json (gitignored). Every key is optional; env vars override. tts_engine: auto|chatterbox|elevenlabs|piper|say|gtts",
-  "tts_engine": "chatterbox",
+  "_comment": "Copy to config.json (gitignored). Every key is optional; env vars override. Leave tts_engine on 'auto' and the app's setup wizard will ask you to pick one: auto|chatterbox|elevenlabs|piper|say|gtts",
+  "tts_engine": "auto",
   "chatterbox_url": "http://localhost:8101",
   "ollama_url": "http://localhost:11434",
   "ollama_model": "gemma3:12b",

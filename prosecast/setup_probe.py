@@ -80,6 +80,19 @@ def _install_hint(pkg: str, brew: str | None = None, apt: str | None = None,
 # ── probes ───────────────────────────────────────────────────────────────────
 
 def probe_voice_engine() -> dict:
+    """The voice-engine row, plus where the choice came from.
+
+    `source` is "env" | "file" | "default", and it is the difference between
+    "nobody has picked an engine yet" and "one is picked and it is broken" —
+    which is what the first-run wizard fires on. `config_exists` cannot answer
+    that: SETUP.sh writes a config.json before anyone has chosen anything.
+    """
+    row = _voice_engine_row()
+    row["source"] = config.source("tts_engine")
+    return row
+
+
+def _voice_engine_row() -> dict:
     engine = config.get("tts_engine")
     src = config.source("tts_engine")
     where = {"env": "set by environment variable", "file": "set in config.json",
@@ -90,7 +103,7 @@ def probe_voice_engine() -> dict:
                     "auto-detect (" + where + ")",
                     "Pick an engine below. Auto-detect picks ElevenLabs whenever a key is "
                     "present — which makes every preview cost credits — so ProseCast asks "
-                    "you to choose on purpose.")
+                    "you to choose on purpose.", engine=engine)
 
     if engine == "chatterbox":
         base = config.get("chatterbox_url")

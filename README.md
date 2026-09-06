@@ -148,8 +148,10 @@ services, and press **▶ Read me the sample** — it adds the two-chapter sampl
 book, renders the first chapter and plays it. That is the whole first run: no
 terminal, no README.
 
-If you already have a `config.json` (`SETUP.sh` writes one), the wizard does
-not open by itself — press **↻ Run setup again** on the Setup page to walk it.
+The wizard appears until you have picked an engine — having a `config.json`
+is not the test, because `SETUP.sh` writes one before you have chosen
+anything. Once an engine is chosen it stays out of your way; press
+**↻ Run setup again** on the Setup page any time you want it back.
 
 **How you know it worked:** you heard it. After that, click **+ Add Book**,
 drop in an EPUB, answer "novel, single narrator, or play?", and render
@@ -237,7 +239,7 @@ Setup page edits the same file; environment variables
 
 | Key | What it is | Default |
 |---|---|---|
-| `tts_engine` | `chatterbox` · `piper` · `say` · `elevenlabs` · `gtts` · `stub` | `chatterbox` in the example |
+| `tts_engine` | `auto` · `chatterbox` · `piper` · `say` · `elevenlabs` · `gtts` · `stub` | `auto` — nothing chosen, so the setup wizard asks |
 | `chatterbox_url` | Chatterbox-TTS-Server base URL | `http://localhost:8101` |
 | `ollama_url` / `ollama_model` | Ollama server and the model for attribution | `http://localhost:11434` / `gemma3:12b` |
 | `whisper_url` / `whisper_model` | Transcription server for read-along timing | `http://localhost:8100` / `Systran/faster-whisper-small` |

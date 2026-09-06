@@ -162,6 +162,8 @@ def main() -> int:
     serve(INDEX.parent)
     firstrun = fixture("setup_status_firstrun.json")
     ready = fixture("setup_status_ready.json")
+    setup_sh = fixture("setup_status_setup_sh.json")
+    chatterbox = fixture("setup_status_chatterbox.json")
     cfg_first = fixture("config_firstrun.json")
     cfg_ready = fixture("config_ready.json")
 
@@ -239,11 +241,36 @@ def main() -> int:
             check("Skip lands on the Setup page",
                   page.evaluate("document.body.classList.contains('setup-open')"))
 
-            print("--- it does NOT open for a machine that is already set up ---")
+            print("--- it opens after SETUP.sh too, config.json and all ---")
+            # The case E6.8 exists for: SETUP.sh copies config.example.json, so
+            # config_exists is true before anyone has chosen anything. Firing on
+            # !config_exists meant the wizard never greeted the documented
+            # install path at all.
+            calls.clear()
+            boot(page, calls=calls, status=setup_sh, config=cfg_ready)
+            check("a config.json with nothing chosen still counts as a first run",
+                  setup_sh["config_exists"] is True)
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            check("the wizard opened anyway",
+                  not page.locator("#firstrun-modal-overlay").is_hidden())
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(150)
+
+            print("--- it does NOT open once an engine has been chosen ---")
             calls.clear()
             boot(page, calls=calls, status=ready, config=cfg_ready)
-            check("no wizard when config.json exists",
+            check("no wizard when `say` is chosen",
                   page.locator("#firstrun-modal-overlay").is_hidden())
+
+            calls.clear()
+            boot(page, calls=calls, status=chatterbox, config=cfg_ready)
+            engine_row = next(r for r in chatterbox["rows"] if r["key"] == "voice_engine")
+            check("the chatterbox fixture really is a deliberate choice",
+                  engine_row["engine"] == "chatterbox" and engine_row["source"] == "file")
+            check("no wizard for someone who picked Chatterbox and moved on",
+                  page.locator("#firstrun-modal-overlay").is_hidden())
+            check("and it did not open the Setup table at them either",
+                  not page.evaluate("document.body.classList.contains('setup-open')"))
 
             print("--- step 1 pre-selects piper when this is not a Mac ---")
             linux = json.loads(json.dumps(firstrun))

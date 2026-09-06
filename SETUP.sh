@@ -58,7 +58,7 @@ if [ -f config.json ]; then
   ok "config.json exists (left untouched)"
 else
   cp config.example.json config.json
-  ok "created config.json from config.example.json — edit it, or use the Setup page in the app"
+  ok "created config.json from config.example.json — no engine chosen yet, so the app opens its setup wizard on first run"
 fi
 
 echo ""

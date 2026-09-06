@@ -2541,12 +2541,25 @@ function paintSetupChip(st) {
                     : 'Setup: something needs you — click to see what';
 }
 
+// What "first run" actually means. NOT `!config_exists`: SETUP.sh writes a
+// config.json before the user has made a single choice, so on the documented
+// install path that test was false from the very first boot and the wizard
+// never greeted anyone. The honest question is whether an engine has been
+// chosen — `source: "default"` (no config.json, or the key absent from it) or
+// the value still `auto` (what config.example.json ships).
+function nobodyHasPickedAnEngine(st) {
+  const row = ((st && st.rows) || []).find(r => r.key === 'voice_engine');
+  if (!row) return false;
+  return row.source === 'default' || row.engine === 'auto';
+}
+
 async function loadSetupChip() {
   try {
     const st = await fetchJSON('/setup/status');
     setupStatus = st;
     paintSetupChip(st);
-    if (!st.config_exists && !isSetupOpen() && !isFirstRunOpen()) openFirstRun();   // first run → the wizard, not the table
+    if (nobodyHasPickedAnEngine(st) && !isSetupOpen() && !isFirstRunOpen())
+      openFirstRun();                                          // first run → the wizard, not the table
   } catch (e) { /* server may be starting; the engine plaque already shows NO SERVER */ }
 }
 

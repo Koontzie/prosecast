@@ -41,7 +41,10 @@ word alignment as jobs behind buttons on a Pipeline card. **Nothing in the
 product requires a terminal any more.** As of **E6 (09-06)** the first run
 opens a **four-step wizard that ends by reading you the sample book** —
 `POST /books/sample` plus `#firstrun-modal-overlay`; the Setup page is
-unchanged apart from a ↻ Run setup again button. Git history was rewritten on
+unchanged apart from a ↻ Run setup again button. It fires while **no engine
+has been chosen** (`voice_engine.source == "default"` or the value is still
+`auto`), not on a missing `config.json` — `SETUP.sh` writes one, and since
+E6.8 `config.example.json` leaves `tts_engine` on `auto`. Git history was rewritten on
 2026-09-05 to scrub the home-network host (commit hashes quoted in older
 STATUS/HANDOFF entries predate the rewrite). **Next: the cast exchange** (see
 PHILOSOPHY.md) and the four HANDOFF findings; then cover art and in-book

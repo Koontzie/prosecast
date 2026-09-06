@@ -261,6 +261,44 @@ def test_ready_fixtures_still_match_these_endpoints(client, sandbox, pinned):
         "config_ready.json has drifted from /config — regenerate it"
 
 
+def test_setup_sh_fixture_still_matches_this_endpoint(client, sandbox, pinned):
+    """The case that made E6.8 necessary: SETUP.sh copies config.example.json,
+    so a config.json exists before anyone has chosen an engine. `config_exists`
+    is true and `source` is "file" — only the value being "auto" says nobody
+    has picked yet, which is what the wizard now fires on."""
+    from prosecast import config as cfg_mod
+    example = json.loads((Path(__file__).resolve().parent.parent / "config.example.json").read_text())
+    assert example["tts_engine"] == "auto", "config.example.json must not pre-choose an engine"
+    cfg_mod.config_path().write_text(json.dumps(example))
+    cfg_mod.invalidate()
+
+    pinned(_sp, os_name="Darwin", ollama_ok=False, whisper_ok=False)
+    live = pin_status(client.get("/setup/status").json())
+    assert live == json.loads((FIXTURES / "setup_status_setup_sh.json").read_text()), \
+        "setup_status_setup_sh.json has drifted from /setup/status — regenerate it"
+    assert live["config_exists"] is True
+    engine_row = next(r for r in live["rows"] if r["key"] == "voice_engine")
+    assert engine_row["engine"] == "auto" and engine_row["source"] == "file"
+
+
+def test_chatterbox_fixture_still_matches_this_endpoint(client, sandbox, pinned):
+    """An engine deliberately chosen and answering — the wizard must leave this
+    person alone."""
+    from synthetic import pin_chatterbox
+    real_get = _sp._get_json
+    try:
+        client.put("/config", json={"values": {"tts_engine": "chatterbox"}})
+        pinned(_sp, os_name="Darwin", ollama_ok=True, whisper_ok=True)
+        pin_chatterbox(_sp)
+        live = pin_status(client.get("/setup/status").json())
+    finally:
+        _sp._get_json = real_get
+    assert live == json.loads((FIXTURES / "setup_status_chatterbox.json").read_text()), \
+        "setup_status_chatterbox.json has drifted from /setup/status — regenerate it"
+    engine_row = next(r for r in live["rows"] if r["key"] == "voice_engine")
+    assert engine_row["engine"] == "chatterbox" and engine_row["source"] == "file"
+
+
 def test_sample_fixture_still_matches_this_endpoint(client, sandbox):
     live = client.post("/books/sample").json()
     live["job_id"] = "FIXTURE"

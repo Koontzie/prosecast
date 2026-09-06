@@ -13,7 +13,8 @@
       "detail": "macOS system voices (say) · no GPU needed",
       "fix": "Fine for checking that everything works; robotic for a whole book. Chatterbox is the free upgrade.",
       "optional": false,
-      "engine": "say"
+      "engine": "say",
+      "source": "file"
     },
     {
       "key": "ollama",

@@ -87,12 +87,12 @@ blunt 409, and that guard can be relaxed the moment the merge fix lands.
   the button to audio, on `say`, on a library that had never existed. What is
   left of it is Tyler's: the wizard on a **non-Mac** (Piper), the **ElevenLabs**
   path end to end (its two-click cost warning was checked; no credit was spent),
-  and the one real gap — **`SETUP.sh` writes a `config.json`, so on the
-  documented install path the wizard never fires by itself**. ↻ Run setup again
-  is the way in and the README says so, but if the wizard is meant to greet
-  every new user, `SETUP.sh` should stop writing that file (or write it without
-  a `tts_engine`). `SETUP.sh` was outside the brief's green list, so it was left
-  alone.
+  path end to end (its two-click cost warning was checked; no credit was spent).
+  The `SETUP.sh` gap E6 found — a `config.json` written before anyone had
+  chosen anything, so the wizard never fired on the documented install path —
+  **is closed by E6.8**: `config.example.json` leaves `tts_engine` on `auto`
+  and the hook asks whether an engine has been chosen, not whether a file
+  exists.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
@@ -155,10 +155,18 @@ paraphrase. The Setup page is otherwise untouched and gained one button,
 (the `.hidden` trap below, again). The wizard is **fixture-checked, not
 pytest-checked**: `tests/ui/check_first_run.py` drives it in both skins from
 generated fixtures; `tests/test_sample_book.py` covers the endpoint and fails
-if a fixture drifts. **Known gap:** `SETUP.sh` writes a `config.json`, so
-after the documented install the wizard does not open by itself — ↻ Run setup
-again is the way in, and whether SETUP.sh should stop doing that is Tyler's
-call.
+if a fixture drifts.
+
+**What "first run" means (E6.8, 09-06).** Not `!config_exists` — `SETUP.sh`
+copies `config.example.json`, so a `config.json` exists before the user has
+made a single choice, and the wizard never greeted the documented install path
+at all. The hook fires while **nobody has chosen an engine**: the
+`voice_engine` row's `source` is `"default"`, or its `engine` is still `auto`.
+`probe_voice_engine` carries both fields for exactly this, and
+`config.example.json` now ships `"tts_engine": "auto"`. Two generated fixtures
+hold the two sides — `setup_status_setup_sh.json` (a config.json, nothing
+chosen → fires) and `setup_status_chatterbox.json` (chosen and answering →
+must not fire).
 
 **The README is a contract (09-05).** It promises: ffmpeg required, tesseract
 scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,

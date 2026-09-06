@@ -215,3 +215,16 @@ def pin_config(payload: dict) -> dict:
     out = dict(payload)
     out["path"] = "MACHINE"
     return out
+
+
+# Chatterbox is the one engine whose probe talks to a server. `_get_json` is
+# the documented mock point, so pinning it gives a real probe row for "an
+# engine is chosen and answering" without a Chatterbox anywhere.
+def pin_chatterbox(sp, *, device: str = "cuda", voices: int = 40) -> None:
+    def fake(url, timeout=4.0, headers=None):
+        if url.endswith("/api/model-info"):
+            return {"class_name": "ChatterboxTTS", "type": "original", "device": device}
+        if url.endswith("/get_predefined_voices"):
+            return [{"name": f"voice-{i}.wav"} for i in range(voices)]
+        return None
+    sp._get_json = fake

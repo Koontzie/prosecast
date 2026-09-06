@@ -32,8 +32,8 @@ from prosecast import config as config_mod  # noqa: E402
 from prosecast import ingest as ingest_mod  # noqa: E402
 from prosecast import library as lib  # noqa: E402
 from prosecast import setup_probe as setup_probe_mod  # noqa: E402
-from synthetic import (PLAY, build_pdf, pin_config, pin_machine, pin_probes,  # noqa: E402
-                       pin_status, study_ir)
+from synthetic import (PLAY, build_pdf, pin_chatterbox, pin_config,  # noqa: E402
+                       pin_machine, pin_probes, pin_status, study_ir)
 
 FIXTURES = ROOT / "tests" / "fixtures"
 
@@ -128,6 +128,24 @@ def main() -> None:
           "GET /setup/status (engine picked, everything answering)")
     write("config_ready.json", pin_config(client.get("/config").json()),
           "GET /config (engine saved)")
+
+    # The two shapes that decide whether the wizard greets someone. `SETUP.sh`
+    # copies config.example.json, so a config.json exists before anyone has
+    # chosen anything — that must still open the wizard. An engine actually
+    # picked (and answering) must not.
+    (tmp / "config.json").write_text(
+        json.dumps(json.loads((ROOT / "config.example.json").read_text())))
+    config_mod.invalidate()
+    pin_machine(setup_probe_mod, os_name="Darwin", ollama_ok=False, whisper_ok=False)
+    write("setup_status_setup_sh.json", pin_status(client.get("/setup/status").json()),
+          "GET /setup/status (config.json from SETUP.sh, no engine chosen)")
+
+    client.put("/config", json={"values": {"tts_engine": "chatterbox"}})
+    pin_machine(setup_probe_mod, os_name="Darwin", ollama_ok=True, whisper_ok=True)
+    pin_chatterbox(setup_probe_mod)
+    write("setup_status_chatterbox.json", pin_status(client.get("/setup/status").json()),
+          "GET /setup/status (an engine chosen and answering)")
+    client.put("/config", json={"values": {"tts_engine": "say"}})
 
     # The wizard's last step: the built-in sample book, ingested as a job.
     started = client.post("/books/sample").json()

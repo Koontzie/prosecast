@@ -2,7 +2,7 @@
   "ready": false,
   "os": "Darwin",
   "config_path": "MACHINE",
-  "config_exists": false,
+  "config_exists": true,
   "shadowed_by_env": [],
   "rows": [
     {
@@ -10,11 +10,11 @@
       "label": "Voice engine",
       "ok": false,
       "state": "warn",
-      "detail": "auto-detect (not chosen yet)",
+      "detail": "auto-detect (set in config.json)",
       "fix": "Pick an engine below. Auto-detect picks ElevenLabs whenever a key is present — which makes every preview cost credits — so ProseCast asks you to choose on purpose.",
       "optional": false,
       "engine": "auto",
-      "source": "default"
+      "source": "file"
     },
     {
       "key": "ollama",

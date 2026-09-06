@@ -1,37 +1,38 @@
 {
-  "ready": false,
+  "ready": true,
   "os": "Darwin",
   "config_path": "MACHINE",
-  "config_exists": false,
+  "config_exists": true,
   "shadowed_by_env": [],
   "rows": [
     {
       "key": "voice_engine",
       "label": "Voice engine",
-      "ok": false,
-      "state": "warn",
-      "detail": "auto-detect (not chosen yet)",
-      "fix": "Pick an engine below. Auto-detect picks ElevenLabs whenever a key is present — which makes every preview cost credits — so ProseCast asks you to choose on purpose.",
+      "ok": true,
+      "state": "ok",
+      "detail": "Chatterbox · ChatterboxTTS · cuda · 40 voices",
+      "fix": "",
       "optional": false,
-      "engine": "auto",
-      "source": "default"
+      "engine": "chatterbox",
+      "endpoint": "http://localhost:8101",
+      "source": "file"
     },
     {
       "key": "ollama",
       "label": "Who's speaking (local AI)",
-      "ok": false,
-      "state": "missing",
-      "detail": "Who's speaking (local AI) · http://localhost · not responding",
-      "fix": "Install Ollama from ollama.com and start it, or point the URL at a machine that runs it.",
+      "ok": true,
+      "state": "ok",
+      "detail": "Who's speaking (local AI) · http://localhost · ready",
+      "fix": "",
       "optional": true
     },
     {
       "key": "whisper",
       "label": "Read-along timing (whisper)",
-      "ok": false,
-      "state": "missing",
-      "detail": "Read-along timing (whisper) · http://localhost · not responding",
-      "fix": "Optional. Without it the read-along highlights by sentence (estimated) instead of by word.",
+      "ok": true,
+      "state": "ok",
+      "detail": "Read-along timing (whisper) · http://localhost · ready",
+      "fix": "",
       "optional": true
     },
     {
