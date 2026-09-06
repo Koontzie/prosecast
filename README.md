@@ -56,6 +56,35 @@ something you bring.
 
 ---
 
+## 🎙️ Why not just hire a narrator?
+
+You should, when you can. A professional full-cast recording is the best
+version of any book, and it costs what skilled people cost — thousands of
+dollars and weeks of studio time. Most books will never get one: the indie
+novel with forty readers, the 650-page rulebook, the play a cast needs to
+hear before rehearsal, the out-of-print paperback, the manuscript you are
+still writing. ProseCast is for the books that would otherwise stay silent,
+and for the author who wants to hear an audiobook of their own work before
+deciding whether to pay for a real one.
+
+It is also an accessibility tool. Plenty of people cannot read a page of
+text the way it was printed — low vision, dyslexia, fatigue, a brain injury,
+or just eyes that are done for the day — and a flat screen-reader voice
+turns a novel into a manual. A performed version, with a different voice for
+each character and the words lighting up as they are spoken, is the
+difference between "I can technically access this book" and actually
+enjoying it.
+
+What it refuses to do: ship anyone's voice, or clone one without the
+speaker's consent. The voices come from the TTS server you run; the
+reference clips are yours. The direction the project is heading — where
+narrators and voice actors publish voice and casting packs, get credited,
+and charge for them if they want to — is written up in
+[docs/PHILOSOPHY.md](docs/PHILOSOPHY.md). It is a direction, not a feature,
+and that document says so plainly.
+
+---
+
 ## 🪜 Which rung are you on?
 
 ProseCast is built as a ladder. Every rung works on its own; each one up
