@@ -36,6 +36,7 @@ Endpoints:
 """
 
 import copy
+import datetime as _dt
 import json
 import os
 import tempfile
@@ -263,6 +264,10 @@ def _norm_meta(m: dict) -> dict:
         "license": str(m.get("license") or ""),
         "distributable": bool(m.get("distributable")),
         "source_url": str(m.get("source_url") or ""),
+        # Stamped by POST /voices/meta so the Voices view's "recently edited"
+        # sort is a real ordering rather than a decorative one. Never written
+        # by hand; absent on every entry that predates the Voices view.
+        "edited": str(m.get("edited") or ""),
     }
 
 
@@ -1454,8 +1459,15 @@ def voices_library():
     # Overlay entries with no live voice behind them. A voice deleted on the
     # server must not silently take Tyler's notes with it, so they are surfaced
     # rather than cleaned up.
-    orphans = [k for k in meta
-               if k != "_readme" and k not in seen and isinstance(meta[k], dict)]
+    #
+    # Chatterbox only, deliberately. Its voice list lives on a server and can
+    # actually lose a voice; say/piper/elevenlabs/gtts have static lists that
+    # never shrink, so every unmatched entry there is just a note about ANOTHER
+    # engine's voices. Reporting those would cry orphan over the whole bank the
+    # moment someone switched to `say`.
+    orphans = ([k for k in meta
+                if k != "_readme" and k not in seen and isinstance(meta[k], dict)]
+               if engine == "chatterbox" else [])
 
     return {"engine": engine, "voices": voices, "orphans": sorted(orphans)}
 
@@ -1526,6 +1538,7 @@ def save_voice_meta(key: str, body: VoiceMetaPatch):
         except Exception:
             pass          # engine unreachable — saving the note still matters more
     entry.update(patch)
+    entry["edited"] = _dt.datetime.now(_dt.timezone.utc).isoformat(timespec="seconds")
     data[key] = entry
 
     # write_json_atomic, not open(..,'w'): _voice_meta() swallows JSONDecodeError

@@ -1,0 +1,172 @@
+{
+  "_readme": "Vetted voice-corpus catalogue, served read-only by GET /voices/sources and shown in the Voices view's 'Find more voices' panel. Tiers come from docs/voice-sources.md: ship = public domain / CC0 / CC BY (safe in a release or a voice pack); private = NC/SA/research-only, Tyler's box only; never = ND, all-rights-reserved or scraped. A Creative Commons licence is a copyright licence, not voice consent — see docs/voice-sources.md. `command` is a line for a human to run; nothing in ProseCast ever runs it.",
+  "note": "A Creative Commons licence is a copyright licence, not voice consent. They are separate legal objects and only one of them is settled by a dataset card. If a reader ever objects to a specific voice, retire it.",
+  "doc": "docs/voice-sources.md",
+  "sources": [
+    {
+      "id": "librivox-dialects",
+      "name": "LibriVox Dialect & Accent collections",
+      "tier": "ship",
+      "license": "CC0-1.0",
+      "us_regional": true,
+      "speakers": 55,
+      "url": "https://archive.org/details/dialect_accent_0909_librivox",
+      "blurb": "The only free corpus with English speakers explicitly labelled by US region — 20 US readers (Texas, NYC, Upstate NY, South Carolina, South Louisiana, Pennsylvania, Indiana, SoCal, Pacific NW, Great Lakes, Kansas, Minnesota, Midwest) plus 35 international. Home-recorded MP3, so quality varies; the staging script scores each clip so you audition the clean ones first.",
+      "command": "python3 scripts/stage_librivox_dialects.py --region us"
+    },
+    {
+      "id": "hifi-tts",
+      "name": "Hi-Fi TTS",
+      "tier": "ship",
+      "license": "CC-BY-4.0",
+      "us_regional": false,
+      "speakers": 10,
+      "url": "https://www.openslr.org/109/",
+      "blurb": "Best raw audio of any free multi-speaker corpus: 44.1 kHz, at least 32 dB SNR, 17+ hours each. Not accent-labelled and only 10 voices — use it for narrator-grade references, not variety. Attribution required.",
+      "command": null
+    },
+    {
+      "id": "libritts-r",
+      "name": "LibriTTS-R",
+      "tier": "ship",
+      "license": "CC-BY-4.0",
+      "us_regional": false,
+      "speakers": 2400,
+      "url": "https://www.openslr.org/141/",
+      "blurb": "The volume tier: 24 kHz, ~585 h, ~2,400 speakers, speech-restored. No accent metadata, but the reader pool is LibriVox so it skews American. This is the 'I need 200 distinct American voices' answer, at the cost of not knowing which region any of them is from.",
+      "command": null
+    },
+    {
+      "id": "vctk",
+      "name": "VCTK",
+      "tier": "ship",
+      "license": "CC-BY-4.0",
+      "us_regional": false,
+      "speakers": 110,
+      "url": "https://huggingface.co/datasets/CSTR-Edinburgh/vctk",
+      "blurb": "What the bank is already built on. Accent-labelled, 110 speakers — but only about 4 of them American, which is exactly why every US character sounds like the same three people. Keep it; stop expecting American range from it.",
+      "command": "python3 scripts/stage_vctk_voices.py"
+    },
+    {
+      "id": "qwen3-voicedesign",
+      "name": "Qwen3-TTS VoiceDesign (synthetic)",
+      "tier": "ship",
+      "license": "Apache-2.0",
+      "us_regional": false,
+      "speakers": null,
+      "url": "https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign",
+      "blurb": "Generate a voice from a text description, then use that synthetic output as the Chatterbox clone reference. No real person exists, so right-of-publicity never attaches — the best licence on this page. Caveat: accent is not a controllable dimension, so use it for demographic variety (age, pitch, timbre) and real recordings for accent.",
+      "command": null
+    },
+    {
+      "id": "coraal",
+      "name": "CORAAL — Corpus of Regional African American Language",
+      "tier": "private",
+      "license": "CC-BY-NC-SA-4.0",
+      "us_regional": true,
+      "speakers": 220,
+      "url": "https://lingtools.uoregon.edu/coraal/",
+      "blurb": "220+ African American Language speakers across Atlanta, DC, Detroit, LA, Princeville NC, Providence, Rochester and Valdosta — the best AAVE regional coverage that exists, and a real gap in this bank. NC-SA, so your box only, never a release. Sociolinguistic interviews: crosstalk and interviewer bleed need careful cutting.",
+      "command": null
+    },
+    {
+      "id": "speech-accent-archive",
+      "name": "GMU Speech Accent Archive",
+      "tier": "private",
+      "license": "CC-BY-NC-SA-4.0",
+      "us_regional": true,
+      "speakers": 3000,
+      "url": "https://accent.gmu.edu/",
+      "blurb": "Thousands of speakers with birthplace metadata, all reading the same phonetically-loaded paragraph for 20-30 s — ideal clip length, enormous US coverage. The ShareAlike is the blocker: it would virally relicense anything derived from it.",
+      "command": null
+    },
+    {
+      "id": "ears",
+      "name": "EARS",
+      "tier": "private",
+      "license": "CC-BY-NC-4.0",
+      "us_regional": false,
+      "speakers": 107,
+      "url": "https://sp-uhh.github.io/ears_dataset/",
+      "blurb": "107 speakers, 48 kHz anechoic, 22 emotional styles — technically the best-engineered option anywhere, and the one you would most want to ship. Non-commercial, so you cannot.",
+      "command": null
+    },
+    {
+      "id": "expresso",
+      "name": "Expresso",
+      "tier": "private",
+      "license": "CC-BY-NC-4.0",
+      "us_regional": false,
+      "speakers": 4,
+      "url": "https://huggingface.co/datasets/ylacombe/expresso",
+      "blurb": "48 kHz, 26 expressive styles — good for style-matched references, which is the highest-leverage rule in the clone recipe. Only 4 speakers, and non-commercial.",
+      "command": null
+    },
+    {
+      "id": "idea-dialectsarchive",
+      "name": "IDEA / dialectsarchive.com",
+      "tier": "never",
+      "license": "All rights reserved",
+      "us_regional": true,
+      "speakers": null,
+      "url": "https://www.dialectsarchive.com/copyright-credit-information",
+      "blurb": "The obvious-looking answer for US dialects, and a hard no: their copyright page forbids distributing any sound file or portion of one without express written consent, plus fees.",
+      "command": null
+    },
+    {
+      "id": "santa-barbara-corpus",
+      "name": "Santa Barbara Corpus of Spoken American English",
+      "tier": "never",
+      "license": "CC-BY-ND-3.0",
+      "us_regional": true,
+      "speakers": null,
+      "url": "https://www.linguistics.ucsb.edu/research/santa-barbara-corpus",
+      "blurb": "No Derivatives — and trimming plus normalising a clip is a derivative. Also conversational audio with crosstalk.",
+      "command": null
+    },
+    {
+      "id": "timit",
+      "name": "TIMIT",
+      "tier": "never",
+      "license": "LDC licence (paywalled, no redistribution)",
+      "us_regional": true,
+      "speakers": 630,
+      "url": "https://catalog.ldc.upenn.edu/LDC93S1",
+      "blurb": "The canonical '8 US dialect regions' corpus and useless here: utterances are about 3 s (far too short for a clone reference), 16 kHz, behind the LDC paywall, no redistribution.",
+      "command": null
+    },
+    {
+      "id": "emilia",
+      "name": "Emilia",
+      "tier": "never",
+      "license": "CC-BY-NC-4.0",
+      "us_regional": false,
+      "speakers": null,
+      "url": "https://huggingface.co/datasets/amphion/Emilia-Dataset",
+      "blurb": "Scraped from in-the-wild podcasts and YouTube — the worst consent profile on this page. Gated and non-commercial on top of that.",
+      "command": null
+    },
+    {
+      "id": "common-voice",
+      "name": "Mozilla Common Voice (US English split)",
+      "tier": "never",
+      "license": "CC0-1.0 content, no-rehost packaging terms",
+      "us_regional": false,
+      "speakers": 5705,
+      "url": "https://commonvoice.mozilla.org/en/datasets",
+      "blurb": "A near-miss worth recording: 5,705 speakers tagged 'United States English' and CC0 content — but accent granularity is national only (no US sub-regions), clips are ~5 s MP3, and the packaging terms say you agree not to rehost. Usable privately; awkward to ship derived clips from.",
+      "command": null
+    },
+    {
+      "id": "gigaspeech-peoples-speech-voxpopuli",
+      "name": "GigaSpeech / People's Speech / VoxPopuli",
+      "tier": "never",
+      "license": "Mixed per-clip",
+      "us_regional": false,
+      "speakers": null,
+      "url": "https://github.com/SpeechColab/GigaSpeech",
+      "blurb": "Skip all three: per-clip licence variation makes an audit nightmare, and VoxPopuli is EU-accented with no US value.",
+      "command": null
+    }
+  ]
+}

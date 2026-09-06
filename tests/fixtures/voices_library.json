@@ -1,0 +1,155 @@
+{
+  "engine": "chatterbox",
+  "voices": [
+    {
+      "id": "predefined:us-nyc-add.wav",
+      "name": "us-nyc-add",
+      "key": "us-nyc-add",
+      "kind": "predefined",
+      "gender": "m",
+      "notes": "great for a gruff narrator",
+      "tags": [
+        "american",
+        "nyc",
+        "gravelly"
+      ],
+      "rating": 4,
+      "hidden": false,
+      "region": "nyc",
+      "accent_label": "American accent, New York City",
+      "license": "CC0-1.0",
+      "distributable": true,
+      "source_url": "https://archive.org/download/dialect_accent_0909_librivox/a.mp3",
+      "edited": ""
+    },
+    {
+      "id": "predefined:us-texas-metro-jkl.wav",
+      "name": "us-texas-metro-jkl",
+      "key": "us-texas-metro-jkl",
+      "kind": "predefined",
+      "gender": "f",
+      "notes": "warm, unhurried",
+      "tags": [
+        "american",
+        "texas"
+      ],
+      "rating": 5,
+      "hidden": false,
+      "region": "texas",
+      "accent_label": "American accent, Texas metro",
+      "license": "CC0-1.0",
+      "distributable": true,
+      "source_url": "https://archive.org/download/dialect_accent_0909_librivox/b.mp3",
+      "edited": ""
+    },
+    {
+      "id": "predefined:us-minnesota-rmb.wav",
+      "name": "us-minnesota-rmb",
+      "key": "us-minnesota-rmb",
+      "kind": "predefined",
+      "gender": "f",
+      "notes": "",
+      "tags": [],
+      "rating": 2,
+      "hidden": false,
+      "region": "minnesota",
+      "accent_label": "American accent, Minnesota",
+      "license": "CC0-1.0",
+      "distributable": true,
+      "source_url": "https://archive.org/download/dialect_accent_0909_librivox/c.mp3",
+      "edited": ""
+    },
+    {
+      "id": "predefined:x-irish-padraig.wav",
+      "name": "x-irish-padraig",
+      "key": "x-irish-padraig",
+      "kind": "predefined",
+      "gender": "m",
+      "notes": "Irish accent",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "irish",
+      "accent_label": "Irish accent",
+      "license": "CC0-1.0",
+      "distributable": true,
+      "source_url": "https://archive.org/download/dialect_accent_0909_librivox/d.mp3",
+      "edited": ""
+    },
+    {
+      "id": "predefined:clear-scots-1.wav",
+      "name": "clear-scots-1",
+      "key": "clear-scots-1",
+      "kind": "predefined",
+      "gender": "m",
+      "notes": "thick, hard to follow at speed",
+      "tags": [
+        "scots"
+      ],
+      "rating": 1,
+      "hidden": false,
+      "region": "scots",
+      "accent_label": "",
+      "license": "CC-BY-NC-SA-4.0",
+      "distributable": false,
+      "source_url": "https://example.org/private-corpus",
+      "edited": ""
+    },
+    {
+      "id": "predefined:soft-british-1.wav",
+      "name": "soft-british-1",
+      "key": "soft-british-1",
+      "kind": "predefined",
+      "gender": "f",
+      "notes": "sibilant on s sounds",
+      "tags": [
+        "british"
+      ],
+      "rating": 1,
+      "hidden": true,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    },
+    {
+      "id": "Gianna.wav",
+      "name": "Gianna (clone)",
+      "key": "Gianna",
+      "kind": "clone",
+      "gender": "f",
+      "notes": "clone reference, steady",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    },
+    {
+      "id": "Robert.wav",
+      "name": "Robert (clone)",
+      "key": "Robert",
+      "kind": "clone",
+      "gender": "",
+      "notes": "",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    }
+  ],
+  "orphans": [
+    "ScarJo_Voice"
+  ]
+}

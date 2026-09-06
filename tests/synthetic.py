@@ -228,3 +228,80 @@ def pin_chatterbox(sp, *, device: str = "cuda", voices: int = 40) -> None:
             return [{"name": f"voice-{i}.wav"} for i in range(voices)]
         return None
     sp._get_json = fake
+
+
+# ── The voice bank behind the Voices view's fixtures (E7) ────────────────────
+#
+# Shared so scripts/refresh_ui_fixtures.py and the drift test in
+# tests/test_voices_library.py feed /voices/library byte-identical input. The
+# list deliberately carries every case the view has to draw: a retired voice, a
+# clone, provenance that is safe to ship and provenance that is not, an
+# unlabeled voice, and three of the Chatterbox server's own test artefacts that
+# must never reach the page.
+
+VOICE_BANK = [
+    {"id": "predefined:us-nyc-add.wav", "name": "us-nyc-add"},
+    {"id": "predefined:us-texas-metro-jkl.wav", "name": "us-texas-metro-jkl"},
+    {"id": "predefined:us-minnesota-rmb.wav", "name": "us-minnesota-rmb"},
+    {"id": "predefined:x-irish-padraig.wav", "name": "x-irish-padraig"},
+    {"id": "predefined:clear-scots-1.wav", "name": "clear-scots-1"},
+    {"id": "predefined:soft-british-1.wav", "name": "soft-british-1"},
+    {"id": "predefined:cachetest_0001.wav", "name": "cachetest_0001"},
+    {"id": "predefined:voice_selftest.wav", "name": "voice_selftest"},
+    {"id": "predefined:scanprobe_a.wav", "name": "scanprobe_a"},
+    {"id": "Gianna.wav", "name": "Gianna (clone)"},
+    {"id": "Robert.wav", "name": "Robert (clone)"},
+]
+
+VOICE_BANK_META = {
+    "_readme": "Voice metadata overlay — edit by hand. Key = voice display name "
+               "(or clone filename stem).",
+    "us-nyc-add": {"gender": "m", "notes": "great for a gruff narrator",
+                   "tags": ["american", "nyc", "gravelly"], "rating": 4,
+                   "region": "nyc", "accent_label": "American accent, New York City",
+                   "license": "CC0-1.0", "distributable": True,
+                   "source_url": "https://archive.org/download/dialect_accent_0909_librivox/a.mp3"},
+    "us-texas-metro-jkl": {"gender": "f", "notes": "warm, unhurried",
+                           "tags": ["american", "texas"], "rating": 5,
+                           "region": "texas", "accent_label": "American accent, Texas metro",
+                           "license": "CC0-1.0", "distributable": True,
+                           "source_url": "https://archive.org/download/dialect_accent_0909_librivox/b.mp3"},
+    "us-minnesota-rmb": {"gender": "f", "rating": 2, "region": "minnesota",
+                         "accent_label": "American accent, Minnesota",
+                         "license": "CC0-1.0", "distributable": True,
+                         "source_url": "https://archive.org/download/dialect_accent_0909_librivox/c.mp3"},
+    "x-irish-padraig": {"gender": "m", "notes": "Irish accent", "region": "irish",
+                        "accent_label": "Irish accent", "license": "CC0-1.0",
+                        "distributable": True,
+                        "source_url": "https://archive.org/download/dialect_accent_0909_librivox/d.mp3"},
+    # NC corpus: annotated, usable here, must never end up in a release.
+    "clear-scots-1": {"gender": "m", "notes": "thick, hard to follow at speed",
+                      "tags": ["scots"], "rating": 1, "region": "scots",
+                      "license": "CC-BY-NC-SA-4.0", "distributable": False,
+                      "source_url": "https://example.org/private-corpus"},
+    # Retired: still in the pool, out of auto-casting.
+    "soft-british-1": {"gender": "f", "notes": "sibilant on s sounds", "hidden": True,
+                       "tags": ["british"], "rating": 1},
+    # The legacy display-name key, which the shipped file really does use.
+    "Gianna (clone)": {"gender": "f", "notes": "clone reference, steady"},
+    # A voice deleted server-side. Its notes must be surfaced, never dropped.
+    "ScarJo_Voice": {"gender": "f", "notes": "shouldnt be used"},
+}
+
+
+def pin_voice_bank(server_mod, tmp_dir, engine: str = "chatterbox"):
+    """Point server.py at a fixed voice list and a fixed overlay file.
+
+    Returns nothing useful — the caller restores what it cares about. The
+    overlay lands in `tmp_dir` so the real voice_meta.json is never read or
+    written by a fixture run.
+    """
+    import json as _json
+    from pathlib import Path as _Path
+    meta_path = _Path(tmp_dir) / "voice_meta.json"
+    meta_path.write_text(_json.dumps(VOICE_BANK_META, indent=2, ensure_ascii=False),
+                         encoding="utf-8")
+    server_mod.VOICE_META_PATH = meta_path
+    server_mod._active_engine = engine
+    server_mod._chatterbox_voice_cache = [dict(v) for v in VOICE_BANK]
+    return meta_path

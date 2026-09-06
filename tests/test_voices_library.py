@@ -118,6 +118,15 @@ def test_a_matched_legacy_key_is_not_an_orphan(client, meta_file, cb):
     assert "Gianna (clone)" not in client.get("/voices/library").json()["orphans"]
 
 
+def test_a_static_engine_never_cries_orphan(client, meta_file, monkeypatch):
+    """say/piper/elevenlabs have lists that cannot lose a voice, so an
+    unmatched overlay entry there is a note about ANOTHER engine's voices —
+    not a stranded one. Reporting them would flag the whole bank as orphaned
+    the moment someone switched to `say`."""
+    monkeypatch.setattr(server, "_active_engine", "say")
+    assert client.get("/voices/library").json()["orphans"] == []
+
+
 def test_library_is_not_chatterbox_only(client, meta_file, monkeypatch):
     monkeypatch.setattr(server, "_active_engine", "say")
     body = client.get("/voices/library").json()
@@ -348,3 +357,63 @@ def test_the_ship_tier_is_the_only_one_with_a_pull_command(client):
 
 def test_the_shipped_catalogue_file_parses(client):
     assert json.loads((ROOT / "voice_sources.json").read_text())["sources"]
+
+
+# ── keeping the Voices view's fixtures honest ────────────────────────────────
+#
+# tests/ui/check_voices.py drives the page with these files. They come from the
+# live endpoints via scripts/refresh_ui_fixtures.py against the fixed voice
+# bank in tests/synthetic.py — the same input on both sides, so the SHAPE is
+# always the server's own. The rule this obeys cost a month when it was broken:
+# a hand-written mock is free to be kinder than the endpoint, and the 09-03
+# reader view was "verified headless" against one that still had a field the
+# server had stopped sending.
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+from synthetic import pin_voice_bank  # noqa: E402
+
+
+@pytest.fixture
+def bank(tmp_path):
+    """Pin the voice list and overlay the way the generator does, then put the
+    module back — these are process globals, not per-request state."""
+    real = (server._active_engine, server.VOICE_META_PATH, server._chatterbox_voice_cache)
+    yield lambda engine="chatterbox": pin_voice_bank(server, tmp_path, engine=engine)
+    server._active_engine, server.VOICE_META_PATH, server._chatterbox_voice_cache = real
+
+
+def test_voices_library_fixture_still_matches_this_endpoint(client, bank):
+    bank("chatterbox")
+    live = client.get("/voices/library").json()
+    assert live == json.loads((FIXTURES / "voices_library.json").read_text()), \
+        "voices_library.json has drifted from /voices/library — regenerate it"
+
+
+def test_say_library_fixture_still_matches_this_endpoint(client, bank):
+    bank("say")
+    live = client.get("/voices/library").json()
+    assert live == json.loads((FIXTURES / "voices_library_say.json").read_text()), \
+        "voices_library_say.json has drifted from /voices/library — regenerate it"
+
+
+def test_voices_sources_fixture_still_matches_this_endpoint(client):
+    live = client.get("/voices/sources").json()
+    assert live == json.loads((FIXTURES / "voices_sources.json").read_text()), \
+        "voices_sources.json has drifted from /voices/sources — regenerate it"
+
+
+def test_the_fixture_bank_still_covers_what_the_view_has_to_draw(client, bank):
+    """If someone trims the bank, the headless check quietly stops testing the
+    cases it exists for. Name them here instead."""
+    bank("chatterbox")
+    body = client.get("/voices/library").json()
+    voices = body["voices"]
+    assert any(v["hidden"] for v in voices), "no hidden voice left to grey out"
+    assert any(v["kind"] == "clone" for v in voices), "no clone left"
+    assert any(v["distributable"] for v in voices), "no shippable licence left"
+    assert any(v["license"] and not v["distributable"] for v in voices), \
+        "no restricted licence left — the amber badge would go untested"
+    assert any(v["rating"] for v in voices) and any(v["tags"] for v in voices)
+    assert body["orphans"], "no orphan left"
+    assert not any("cachetest" in v["key"] for v in voices), "an artefact reached the fixture"

@@ -33,7 +33,8 @@ from prosecast import ingest as ingest_mod  # noqa: E402
 from prosecast import library as lib  # noqa: E402
 from prosecast import setup_probe as setup_probe_mod  # noqa: E402
 from synthetic import (PLAY, build_pdf, pin_chatterbox, pin_config,  # noqa: E402
-                       pin_machine, pin_probes, pin_status, study_ir)
+                       pin_machine, pin_probes, pin_status, pin_voice_bank,
+                       study_ir)
 
 FIXTURES = ROOT / "tests" / "fixtures"
 
@@ -146,6 +147,23 @@ def main() -> None:
     write("setup_status_chatterbox.json", pin_status(client.get("/setup/status").json()),
           "GET /setup/status (an engine chosen and answering)")
     client.put("/config", json={"values": {"tts_engine": "say"}})
+
+    # ── The Voices view (E7) ────────────────────────────────────────────────
+    # A fixed voice list and a fixed overlay, so the fixture is reproducible on
+    # any machine while the SHAPE still comes from the live endpoint. The bank
+    # lives in tests/synthetic.py so the drift test feeds the same input.
+    real_engine, real_meta = server._active_engine, server.VOICE_META_PATH
+    real_cache = server._chatterbox_voice_cache
+    pin_voice_bank(server, tmp, engine="chatterbox")
+    write("voices_library.json", client.get("/voices/library").json(),
+          "GET /voices/library (chatterbox)")
+    pin_voice_bank(server, tmp, engine="say")
+    write("voices_library_say.json", client.get("/voices/library").json(),
+          "GET /voices/library (say — no cloning, no sourcing)")
+    server._active_engine, server.VOICE_META_PATH = real_engine, real_meta
+    server._chatterbox_voice_cache = real_cache
+    write("voices_sources.json", client.get("/voices/sources").json(),
+          "GET /voices/sources")
 
     # The wizard's last step: the built-in sample book, ingested as a job.
     started = client.post("/books/sample").json()
