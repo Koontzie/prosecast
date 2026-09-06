@@ -214,17 +214,78 @@ def _voice_meta() -> dict:
         return {}
 
 
+def _voice_key(voice_id: str) -> str:
+    """The canonical overlay key for a voice id: the filename stem.
+
+    'predefined:us-nyc-add.wav' and 'us-nyc-add.wav' both key on 'us-nyc-add'.
+    Every NEW write to voice_meta.json uses this; the read path still falls
+    back to the display name because the hand-edited file has entries in both
+    styles ('Robert' alongside 'bright-indian-1').
+    """
+    return Path(str(voice_id).split(":", 1)[-1]).stem
+
+
+def _clean_tags(raw) -> list[str]:
+    """Free-form tags, lowercased, de-duplicated, order preserved, capped at 12."""
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for t in raw:
+        t = str(t).strip().lower()[:40]
+        if t and t not in out:
+            out.append(t)
+    return out[:12]
+
+
+def _norm_meta(m: dict) -> dict:
+    """One overlay entry, normalised to the full schema with safe defaults.
+
+    Old entries carry only gender/notes; the staging script adds region,
+    accent_label, license, distributable and source_url; the Voices view adds
+    tags, rating and hidden. Everything is optional and nothing here raises —
+    a hand-edited file must never be able to take the voice list down.
+    """
+    m = m if isinstance(m, dict) else {}
+    g = str(m.get("gender", "")).strip().lower()[:1]
+    try:
+        rating = int(m.get("rating") or 0)
+    except (TypeError, ValueError):
+        rating = 0
+    return {
+        "gender": g if g in ("f", "m") else "",
+        "notes": str(m.get("notes") or ""),
+        "tags": _clean_tags(m.get("tags")),
+        "rating": min(5, max(0, rating)),
+        "hidden": bool(m.get("hidden")),
+        "region": str(m.get("region") or ""),
+        "accent_label": str(m.get("accent_label") or ""),
+        "license": str(m.get("license") or ""),
+        "distributable": bool(m.get("distributable")),
+        "source_url": str(m.get("source_url") or ""),
+    }
+
+
+def _lookup_meta(meta: dict, voice_id: str, name: str) -> dict:
+    """Overlay entry for a voice: stem first, then the legacy display-name key."""
+    stem = _voice_key(voice_id)
+    return _norm_meta(meta.get(stem) or meta.get(name) or {})
+
+
 def _apply_voice_meta(voices: list[dict]) -> list[dict]:
-    """Merge gender glyphs + gender field into [{id, name}] voice entries."""
+    """Merge the voice_meta.json overlay into [{id, name}] voice entries.
+
+    `name` gains the gender glyph — that is a DISPLAY string, never a key; the
+    overlay key is `_voice_key(id)`. Every other overlay field rides along so
+    the cast drawer can grey out a retired voice and the Voices view can filter
+    on provenance without a second round trip.
+    """
     meta = _voice_meta()
     out = []
     for v in voices:
-        stem = Path(str(v["id"]).split(":", 1)[-1]).stem
-        m = meta.get(v["name"]) or meta.get(stem) or {}
-        g = str(m.get("gender", "")).strip().lower()[:1]
-        g = g if g in ("f", "m") else ""
+        m = _lookup_meta(meta, v["id"], v["name"])
+        g = m["gender"]
         glyph = " ♀" if g == "f" else " ♂" if g == "m" else ""
-        out.append({"id": v["id"], "name": v["name"] + glyph, "gender": g})
+        out.append({"id": v["id"], "name": v["name"] + glyph, **m})
     return out
 
 
