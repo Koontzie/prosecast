@@ -175,9 +175,9 @@ must not fire).
 
 **The README is a contract (09-05).** It promises: ffmpeg required, tesseract
 scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,
-first run lands on Setup, `main.py --llm-model` defaults to the configured
-model. If code changes make any of those false, change the README in the same
-commit.
+the setup wizard opens until an engine has been chosen (a config.json alone is
+not the test), `main.py --llm-model` defaults to the configured model. If code
+changes make any of those false, change the README in the same commit.
 
 **Config (new, 09-03).** `prosecast/config.py` resolves *defaults <
 `config.json` < env vars*. `config.json` is gitignored and holds Tyler's
