@@ -12,6 +12,7 @@ Offline and hermetic, like tests/test_ingest.py: tmp library, tmp books/.
 import builtins
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -31,8 +32,26 @@ def sandbox(tmp_path, monkeypatch):
     monkeypatch.setattr(lib, "LIBRARY_DIR", tmp_path / "library")
     monkeypatch.setattr(ingest, "BOOKS_DIR", tmp_path / "books")
     monkeypatch.setattr(server, "BOOKS_DIR", tmp_path / "books")
+    # The resolved engine is cached in a module global that PUT /config clears
+    # in the app but nothing clears between tests — without this, whichever
+    # engine an earlier test file left behind decides how this one casts.
+    monkeypatch.setattr(server, "_active_engine", None)
     (tmp_path / "books").mkdir()
-    return tmp_path
+    yield tmp_path
+    # An ingest job runs on its own daemon thread. If a test returns while one
+    # is still going, monkeypatch puts LIBRARY_DIR back to the developer's real
+    # library and the thread finishes writing into THAT. It happened: a run of
+    # this file re-cast the real sample_book. Never leave one running.
+    for t in threading.enumerate():
+        if t.name.startswith("ingest-") and t.is_alive():
+            t.join(timeout=120)
+
+
+@pytest.fixture
+def on_say(client):
+    """Pin the engine, the way the wizard's step 1 does."""
+    client.put("/config", json={"values": {"tts_engine": "say"}})
+    return client
 
 
 @pytest.fixture
@@ -74,7 +93,7 @@ def test_first_call_ingests_the_sample_as_a_job(client, sandbox):
 
 
 def test_the_text_file_is_written_where_books_live(client, sandbox):
-    client.post("/books/sample")
+    _wait(client, client.post("/books/sample").json()["job_id"])
     assert (sandbox / "books" / "sample_book.txt").exists()
 
 
@@ -91,10 +110,68 @@ def test_second_call_is_a_no_op(client, sandbox):
     before = lib.ir_path("sample_book").read_bytes()
 
     body = client.post("/books/sample").json()
-    assert body == {"slug": "sample_book", "exists": True,
+    assert body == {"slug": "sample_book", "exists": True, "recast": False,
                     "chapters": len(json.loads(before)["chapters"])}
     assert "job_id" not in body
     assert lib.ir_path("sample_book").read_bytes() == before
+
+
+# ── the casting that makes it playable ───────────────────────────────────────
+#
+# The render preflight aborts on a book with no voice_map, and on one whose map
+# was made for another engine. Both are right for a real book and both are dead
+# ends for a wizard with no casting step — so the sample book, and only the
+# sample book, is cast for you.
+
+def test_the_voice_map_is_on_disk_before_the_job_says_done(on_say, sandbox):
+    client = on_say
+    """A poller that sees `done` fires POST /render next. If the casting is
+    still running on the job's thread at that moment, preflight aborts with
+    "No voice_map.json" — which is exactly what the first real run did, and how
+    the escape into the developer's own library was found."""
+    job = _wait(client, client.post("/books/sample").json()["job_id"])
+    assert job["status"] == "done"
+    assert lib.voice_map_path("sample_book").exists()
+    assert job.get("recast") is True          # the job reports what it did
+
+
+def test_the_sample_is_cast_for_the_active_engine(on_say, sandbox):
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    vm = json.loads(lib.voice_map_path("sample_book").read_text())
+    assert vm["engine"] == "say"
+    assert set(vm["map"]) >= {"NARRATOR", "Darcy", "Elizabeth"}
+    pool = set(server._voice_pool("say"))
+    assert all(v in pool for v in vm["map"].values()), vm["map"]
+
+
+def test_a_cast_sample_passes_preflight(on_say, sandbox):
+    client = on_say
+    from prosecast import preflight
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    rep = preflight.preflight("sample_book", server._get_active_engine())
+    assert rep.ok, rep.summary()
+
+
+def test_switching_engine_recasts_and_says_so(on_say, sandbox):
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    assert client.post("/books/sample").json()["recast"] is False
+
+    client.put("/config", json={"values": {"tts_engine": "stub"}})
+    body = client.post("/books/sample").json()
+    assert body["recast"] is True, "a map from another engine must be replaced"
+    vm = json.loads(lib.voice_map_path("sample_book").read_text())
+    assert vm["engine"] == "stub"
+    assert client.post("/books/sample").json()["recast"] is False   # now settled
+
+
+def test_no_other_book_is_ever_cast(client, sandbox):
+    lib.ensure_book_dir("someone_elses_book")
+    lib.write_json_atomic(lib.ir_path("someone_elses_book"),
+                          {"book_title": "Theirs", "chapters": [], "characters": []})
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    assert not lib.voice_map_path("someone_elses_book").exists()
 
 
 def test_a_second_call_never_makes_a_second_book(client, sandbox):

@@ -3046,8 +3046,11 @@ async function frHear() {
     if (sample.job_id)
       await pollIngest(sample.job_id, j => frSay(`reading it… ${j.detail || j.stage || ''}`));
 
+    // `recast` means the sample was cast for a different engine last time, so
+    // whatever wavs are on disk were made by that engine — render past them.
     frSay('rendering chapter 1…');
-    const started = await postJSON(`/render/${sample.slug}/0`, {});
+    const force = sample.recast ? '?force=true' : '';
+    const started = await postJSON(`/render/${sample.slug}/0${force}`, {});
     await pollRenderStatus(started.job_id, j => frSay(frRenderLine(j)));
 
     frSay('almost there…');

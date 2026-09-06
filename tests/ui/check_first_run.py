@@ -72,8 +72,9 @@ def router(*, calls: list, status: dict, config: dict, ticks: int = 2,
 
     def route(r):
         req = r.request
-        path = req.url.split(f":{PORT}", 1)[-1].split("?")[0]
-        calls.append((req.method, path, req.post_data))
+        full = req.url.split(f":{PORT}", 1)[-1]
+        path = full.split("?")[0]
+        calls.append((req.method, path, req.post_data, full))
 
         def js(obj, code=200):
             r.fulfill(status=code, content_type="application/json", body=json.dumps(obj))
@@ -314,7 +315,7 @@ def main() -> int:
                   page.locator("#fr-cost").is_hidden())
             page.click("#fr-hear-btn")
             page.wait_for_selector("#firstrun-modal-overlay.hidden", state="attached", timeout=15000)
-            ordered = [f"{m} {p}" for m, p, _ in calls
+            ordered = [f"{m} {p}" for m, p, _, _ in calls
                        if p in ("/books/sample",) or p.startswith("/render/")]
             check("it asked for the sample book first",
                   ordered[:1] == ["POST /books/sample"], ordered)
@@ -325,7 +326,23 @@ def main() -> int:
             check("the book was opened",
                   any(c[1].startswith("/chapters/sample_book") for c in calls))
             check("the wizard closed itself", page.locator("#firstrun-modal-overlay").is_hidden())
+            render_url = next(c[3] for c in calls if c[1].startswith("/render/"))
+            check("a fresh sample is not force-rendered", "force" not in render_url, render_url)
             page.screenshot(path=str(Path(__file__).parent / f"firstrun_{skin}.png"))
+
+            print("--- a sample cast for another engine is rendered past ---")
+            calls.clear()
+            boot(page, calls=calls, status=firstrun, config=cfg_first,
+                 sample_fixture={"slug": "sample_book", "exists": True,
+                                 "chapters": 2, "recast": True})
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            page.evaluate("fr.step = 3; frGo(4);")
+            page.click("#fr-hear-btn")
+            page.wait_for_selector("#firstrun-modal-overlay.hidden", state="attached", timeout=15000)
+            render_url = next(c[3] for c in calls if c[1].startswith("/render/"))
+            check("recast means force=true", "force=true" in render_url, render_url)
+            check("an existing sample needs no ingest poll",
+                  not any(c[1] == "/render_status/FIXTURE" for c in calls))
 
             print("--- ElevenLabs is told what it will cost, and asked twice ---")
             calls.clear()

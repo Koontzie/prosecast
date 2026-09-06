@@ -354,13 +354,18 @@ class IngestBody(BaseModel):
 
 
 def _run_ingest_job(job_id: str, path, mode: str, title: str,
-                    chapters, keep_tables: bool, ocr: bool = False) -> None:
+                    chapters, keep_tables: bool, ocr: bool = False,
+                    finish=None) -> None:
     """Background thread target. Deliberately NOT on the render queue: ingest is
     CPU-bound and GPU-free, and a new upload must not sit behind an overnight
     book render.
 
     Takes a plain path, not an upload entry: POST /books/sample writes its file
     itself and never goes through the in-memory upload table.
+
+    `finish(job, result)` runs *before* the job is marked done, so anything the
+    caller must have in place — the sample book's voice map — is on disk by the
+    time a poller sees `done` and fires the next request.
     """
     job = _render_jobs[job_id]
 
@@ -375,6 +380,8 @@ def _run_ingest_job(job_id: str, path, mode: str, title: str,
         res = ingest_mod.run(path, mode, slug=job["book_slug"], title=title,
                              chapters=chapters, keep_tables=keep_tables, ocr=ocr,
                              progress=progress)
+        if finish is not None:
+            finish(job, res)
         with _jobs_lock:
             job.update(status="done", progress=len(ingest_mod.STAGES), result=res)
     except ingest_mod.IngestError as e:
@@ -437,6 +444,58 @@ def ingest_book(body: IngestBody):
 SAMPLE_SLUG = "sample_book"
 
 
+def _ensure_sample_cast() -> bool:
+    """Give the sample book a voice map for whatever engine is active.
+
+    The render preflight refuses an uncast book — rightly, because an overnight
+    round-robin is never what anyone wanted — and it refuses a voice map made
+    for a different engine. Both are correct for a real book and both are dead
+    ends for the first-run wizard, which has no casting step and whose whole
+    promise is that you hear something. The sample book is a demo asset this
+    endpoint owns end to end, not anyone's casting labor, so it is the one book
+    ProseCast will cast for you. No other book is touched.
+
+    Returns True if it (re)cast — which also means any audio already on disk was
+    made by a different engine and must not be reused.
+    """
+    engine = _get_active_engine()
+    pool = set(_voice_pool(engine))
+    vm_path = lib.voice_map_path(SAMPLE_SLUG)
+    if vm_path.exists():
+        try:
+            saved = json.loads(vm_path.read_text())
+        except Exception:
+            saved = {}
+        entries = saved.get("map") or {}
+        if entries and saved.get("engine") == engine and (
+                not pool or all(v in pool for v in entries.values())):
+            return False                      # already cast for this engine
+
+    characters = _speaking_characters(_load_ir(lib.ir_path(SAMPLE_SLUG)))
+    lib.ensure_book_dir(SAMPLE_SLUG)
+    with open(vm_path, "w", encoding="utf-8") as f:
+        json.dump({"engine": engine, "map": _default_voice_map(characters, engine)},
+                  f, indent=2, ensure_ascii=False)
+    return True
+
+
+def _cast_the_sample(job: dict, result: dict) -> None:
+    """Runs inside the ingest job, before it is marked done — a poller that sees
+    `done` and immediately posts a render must not beat the voice map to disk."""
+    job["stage"] = "casting"
+    job["detail"] = "giving everyone a voice"
+    try:
+        job["recast"] = _ensure_sample_cast()
+    except Exception as e:                    # the book is fine; say what failed
+        job["cast_error"] = str(e)
+
+
+def _run_sample_job(job_id: str, path) -> None:
+    """The sample book's ingest, plus the casting that makes it playable."""
+    _run_ingest_job(job_id, path, "novel", "Sample Book", None, False, False,
+                    finish=_cast_the_sample)
+
+
 @app.post("/books/sample")
 def create_sample_book():
     """Put the built-in sample book in the library, ingesting it if it is new.
@@ -446,11 +505,16 @@ def create_sample_book():
     sample book is created — the wizard's last step calls it, and so can
     anyone who deleted it.
 
-    Idempotent: if `library/sample_book/ir.json` is already there this returns
-    `{exists: true}` and does no work. Otherwise it writes the text and runs
-    the same ingest job `/books/ingest` runs — own daemon thread, rules-only
-    attribution, no LLM — returning a `job_id` to poll at
-    `/render_status/{job_id}` like any other ingest.
+    Idempotent: if `library/sample_book/ir.json` is already there this does no
+    ingest. Otherwise it writes the text and runs the same ingest job
+    `/books/ingest` runs — own daemon thread, rules-only attribution, no LLM —
+    returning a `job_id` to poll at `/render_status/{job_id}` like any other
+    ingest.
+
+    Either way the sample book ends up cast for the active engine (see
+    `_ensure_sample_cast`); `recast` says whether that had to be redone, which
+    is the caller's signal that audio already on disk came from another engine
+    and the render wants `force=true`.
     """
     ir_path = lib.ir_path(SAMPLE_SLUG)
     if ir_path.exists():
@@ -458,7 +522,8 @@ def create_sample_book():
             chapters = len(_load_ir(ir_path).get("chapters", []))
         except Exception:
             chapters = 0
-        return {"slug": SAMPLE_SLUG, "exists": True, "chapters": chapters}
+        return {"slug": SAMPLE_SLUG, "exists": True, "chapters": chapters,
+                "recast": _ensure_sample_cast()}
 
     from prosecast.book_parser import write_sample_book
     path = BOOKS_DIR / "sample_book.txt"
@@ -476,8 +541,8 @@ def create_sample_book():
         "stage": "queued", "detail": "preparing the sample book",
         "error": None, "result": None,
     }
-    threading.Thread(target=_run_ingest_job, daemon=True, name=f"ingest-{SAMPLE_SLUG}",
-                     args=(job_id, path, "novel", "Sample Book", None, False, False)).start()
+    threading.Thread(target=_run_sample_job, daemon=True, name=f"ingest-{SAMPLE_SLUG}",
+                     args=(job_id, path)).start()
     return {"slug": SAMPLE_SLUG, "exists": False, "job_id": job_id}
 
 
