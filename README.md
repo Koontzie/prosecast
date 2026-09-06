@@ -287,6 +287,8 @@ Chatterbox without paying anyone. ElevenLabs is an optional upgrade for people
 who want premium cloud voices on a few characters. It is **your** account and
 **your** key — ProseCast never touches your money and never marks anything up.
 
+ElevenLabs voices sound better, but today ProseCast's emotion tags do not reach them — each line is read with ElevenLabs's own interpretation, not the direction the tag pass chose. This is a known gap; see HANDOFF.md.
+
 Know before you start: ElevenLabs charges per character, and a typical novel
 is about 550,000 of them. The sane pattern is to render the book locally and
 reserve ElevenLabs for the leads. Full guide, with the cost table:

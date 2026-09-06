@@ -17,6 +17,8 @@ certain characters or shorter pieces.
 **ElevenLabs is your account, not ours.** You sign up with ElevenLabs, you pay ElevenLabs
 directly for credits, and ProseCast never touches your money or marks anything up.
 
+ElevenLabs voices sound better, but today ProseCast's emotion tags do not reach them — each line is read with ElevenLabs's own interpretation, not the direction the tag pass chose. This is a known gap; see HANDOFF.md.
+
 **Disclosure:** ProseCast is an independent affiliate of ElevenLabs and may receive compensation
 for referrals. If you sign up through our affiliate link — [https://try.elevenlabs.io/dmylr2z8w3w9](https://try.elevenlabs.io/dmylr2z8w3w9) — ElevenLabs may
 pay us a referral. It costs you nothing extra, and we'd rather say that out loud than bury it.
