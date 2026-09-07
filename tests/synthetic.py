@@ -194,12 +194,18 @@ def pin_probes(sp, ollama_ok: bool, whisper_ok: bool) -> None:
 
 PINNED_TOOLS = ("say", "ffmpeg", "tesseract")
 
+# E9.4 put a version in the ffmpeg/tesseract rows, and `_tool_version` gets it
+# by RUNNING the binary — which reads the generating machine, not the pinned
+# one, and would put Tyler's own ffmpeg build number in a tracked fixture.
+PINNED_VERSIONS = {"ffmpeg": "ffmpeg 7.1", "tesseract": "tesseract 5.3.4"}
+
 
 def pin_machine(sp, *, os_name: str = "Darwin", have=PINNED_TOOLS,
                 ollama_ok: bool = False, whisper_ok: bool = False) -> None:
     """Pin everything about the machine that /setup/status can see."""
     sp._OS = os_name
     sp._which = lambda binary: (f"/usr/local/bin/{binary}" if binary in have else None)
+    sp._tool_version = lambda binary: PINNED_VERSIONS.get(binary, "")
     pin_probes(sp, ollama_ok=ollama_ok, whisper_ok=whisper_ok)
 
 

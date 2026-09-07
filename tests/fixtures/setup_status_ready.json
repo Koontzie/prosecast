@@ -39,18 +39,20 @@
       "label": "ffmpeg",
       "ok": true,
       "state": "ok",
-      "detail": "/usr/local/bin/ffmpeg",
+      "detail": "found · ffmpeg 7.1",
       "fix": "",
-      "optional": false
+      "optional": false,
+      "extra": "/usr/local/bin/ffmpeg"
     },
     {
       "key": "tool_tesseract",
       "label": "tesseract (OCR)",
       "ok": true,
       "state": "ok",
-      "detail": "/usr/local/bin/tesseract",
+      "detail": "found · tesseract 5.3.4",
       "fix": "",
-      "optional": true
+      "optional": true,
+      "extra": "/usr/local/bin/tesseract"
     },
     {
       "key": "gpu",

@@ -317,9 +317,10 @@ def clean_env(monkeypatch):
 @pytest.fixture
 def pinned(clean_env):
     """Pin the machine the way the generator does, then put the module back."""
-    real = (_sp._OS, _sp._which, _sp.probe_ollama, _sp.probe_whisper)
+    real = (_sp._OS, _sp._which, _sp.probe_ollama, _sp.probe_whisper, _sp._tool_version)
     yield pin_machine
-    _sp._OS, _sp._which, _sp.probe_ollama, _sp.probe_whisper = real
+    (_sp._OS, _sp._which, _sp.probe_ollama, _sp.probe_whisper,
+     _sp._tool_version) = real
 
 
 def test_firstrun_fixtures_still_match_these_endpoints(client, sandbox, pinned):

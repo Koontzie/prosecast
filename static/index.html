@@ -370,6 +370,14 @@
     .su-intro { color: #888; font-size: .88rem; line-height: 1.6; margin-bottom: 22px; }
     .su-intro b { color: #ddd; }
     .su-note { font-size: .74rem; color: #666; line-height: 1.5; margin: 6px 0 0; }
+    /* "You're set" — above the intro, so a green engine reads as an invitation
+       rather than a green badge over a column of amber optional rows. */
+    .su-banner { display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+      background: #12201c; border: 1px solid #24463d; border-radius: 8px;
+      padding: 14px 16px; margin-bottom: 20px; }
+    .su-banner-say { flex: 1 1 260px; color: #a9c9c0; font-size: .88rem; line-height: 1.55; }
+    .su-banner-say b { color: #7fd6bf; }
+    .su-banner-btns { display: flex; gap: 8px; flex-wrap: wrap; }
     .su-warnenv { background: #221a0c; border: 1px solid #4a3a1a; color: #e0b25c; font-size: .78rem;
       padding: 8px 12px; border-radius: 6px; margin-bottom: 16px; line-height: 1.5; }
 
@@ -1420,6 +1428,9 @@ html[data-theme="onair"] {
 [data-theme="onair"] .su-intro { color: var(--oa-cream2); }
 [data-theme="onair"] .su-intro b { color: var(--oa-cream); }
 [data-theme="onair"] .su-note { color: var(--oa-dim); }
+[data-theme="onair"] .su-banner { background: #101c19; border-color: #2c4a41; border-radius: 4px; }
+[data-theme="onair"] .su-banner-say { color: var(--oa-cream2); }
+[data-theme="onair"] .su-banner-say b { color: var(--oa-teal); }
 [data-theme="onair"] .su-warnenv { background: var(--oa-gold-bg); border-color: var(--oa-gold-dim); color: var(--oa-amber); }
 [data-theme="onair"] .su-section { background: var(--oa-panel); border-color: var(--oa-line2); border-radius: 4px; }
 [data-theme="onair"] .su-section h3 { color: var(--oa-mut); font-family: var(--oa-mono); font-weight: 500; }
@@ -2900,9 +2911,13 @@ function suPlaque(row) {
 function suRow(row, extraBody) {
   if (!row) return '';
   const fix = row.fix ? `<div class="su-fix">${esc(row.fix).replace(/`([^`]+)`/g, '<code>$1</code>')}</div>` : '';
+  // `extra` is the full path to a binary. Accurate, and useless on screen —
+  // Windows fills the row with C:\Users\…\WinGet\Packages\Gyan.FFmpeg_…\ffmpeg.EXE.
+  // It lives in the tooltip, for the one time in a year someone needs it.
+  const title = row.extra ? ` title="${escAttr(row.extra)}"` : '';
   return `<div class="su-row">${suPlaque(row)}<div class="su-body">
     <div class="su-label">${esc(row.label)}</div>
-    <div class="su-detail">${esc(row.detail || '')}</div>${fix}${extraBody || ''}</div></div>`;
+    <div class="su-detail"${title}>${esc(row.detail || '')}</div>${fix}${extraBody || ''}</div></div>`;
 }
 
 function suValue(key) {
@@ -3031,7 +3046,27 @@ function renderSetup() {
   const elCard = engine === 'elevenlabs' ? elDisclosureHTML() : '';
   const engineFields = engineFieldsHTML(engine);
 
+  // A green READY badge over five amber optional rows reads as "something is
+  // wrong" — that is what the Windows install landed on, with no play button
+  // anywhere on the page. When the voice engine is actually ok, say so first
+  // and point at the sound.
+  const engineRow = rows.voice_engine;
+  const ready = !!(engineRow && engineRow.ok);
+  const engineName = ({ say: 'System voices', piper: 'Piper', chatterbox: 'Chatterbox',
+                        elevenlabs: 'ElevenLabs' })[engineRow && engineRow.engine] ||
+                     (engineRow && engineRow.engine) || 'Your voice engine';
+  const banner = ready ? `
+    <div class="su-banner" id="su-banner">
+      <div class="su-banner-say"><b>You're set.</b> ${esc(engineName)} is ready — open a book and
+        press play, or hear the sample now.</div>
+      <div class="su-banner-btns">
+        <button class="su-btn primary" id="su-hear-sample" onclick="setupHearSample(this)">▶ Hear the sample</button>
+        <button class="rv-btn" onclick="openFirstRun()">↻ Run setup again</button>
+      </div>
+    </div>` : '';
+
   const html = `
+    ${banner}
     <p class="su-intro">${intro}</p>
     ${shadow}
 
@@ -3084,6 +3119,25 @@ function renderSetup() {
 
   document.getElementById('su-page').innerHTML = html;
   paintSaveButtons();
+}
+
+// The banner's button. Same sequence as the wizard's last step; the Setup page
+// says what is happening in the button itself, since it has no fr-say line.
+async function setupHearSample(btn) {
+  if (btn.disabled) return;
+  const original = btn.textContent;
+  btn.disabled = true;
+  try {
+    await hearTheSample(text => { btn.textContent = text; }, null,
+                        () => { closeSetupView(); });
+  } catch (e) {
+    console.error('[setup] hear the sample:', e);
+    btn.textContent = `✗ ${String(e.message || e)} — retry?`;
+    btn.disabled = false;
+    return;
+  }
+  btn.textContent = original;
+  btn.disabled = false;
 }
 
 async function saveSetup() {
@@ -3362,6 +3416,38 @@ function frSay(text, isErr) {
   el.className = 'fr-say' + (isErr ? ' err' : '');
 }
 
+// The sample book, from nothing to sound. Step 4 of the wizard and the Setup
+// page's "▶ Hear the sample" are the same sequence and must stay the same
+// sequence — the wizard's version is the one that was walked through on a real
+// Windows machine, and a second copy would drift out of that.
+//
+//   say(text)      progress, in the caller's own words
+//   remember(slug) the book now exists — the wizard uses this so Esc lands on it
+//   beforePlay()   close whatever is covering the reader, just before playback
+async function hearTheSample(say, remember, beforePlay) {
+  say('preparing the sample book…');
+  const sample = await postJSON('/books/sample', {});
+  if (remember) remember(sample.slug);
+  if (sample.job_id)
+    await pollIngest(sample.job_id, j => say(`reading it… ${j.detail || j.stage || ''}`));
+
+  // `recast` means the sample was cast for a different engine last time, so
+  // whatever wavs are on disk were made by that engine — render past them.
+  say('rendering chapter 1…');
+  const force = sample.recast ? '?force=true' : '';
+  const started = await postJSON(`/render/${sample.slug}/0${force}`, {});
+  await pollRenderStatus(started.job_id, j => say(frRenderLine(j)));
+
+  say('almost there…');
+  const books = await fetchJSON('/books');
+  state.books = books;
+  renderBookList(books);
+  await loadBook(sample.slug);
+  if (beforePlay) beforePlay();
+  playChapter(sample.slug, 0);
+  return sample.slug;
+}
+
 async function frHear() {
   if (fr.busy) return;
   // Spending someone's ElevenLabs credits takes a second, deliberate click.
@@ -3376,27 +3462,8 @@ async function frHear() {
   document.getElementById('fr-recover').classList.add('fr-hidden');
   frPaintFooter();
   try {
-    frSay('preparing the sample book…');
-    const sample = await postJSON('/books/sample', {});
-    fr.bookSlug = sample.slug;               // from here on, Esc lands on the book
-    if (sample.job_id)
-      await pollIngest(sample.job_id, j => frSay(`reading it… ${j.detail || j.stage || ''}`));
-
-    // `recast` means the sample was cast for a different engine last time, so
-    // whatever wavs are on disk were made by that engine — render past them.
-    frSay('rendering chapter 1…');
-    const force = sample.recast ? '?force=true' : '';
-    const started = await postJSON(`/render/${sample.slug}/0${force}`, {});
-    await pollRenderStatus(started.job_id, j => frSay(frRenderLine(j)));
-
-    frSay('almost there…');
-    const books = await fetchJSON('/books');
-    state.books = books;
-    renderBookList(books);
-    await loadBook(sample.slug);
-    fr.busy = false;
-    closeFirstRun();
-    playChapter(sample.slug, 0);
+    await hearTheSample(frSay, slug => { fr.bookSlug = slug; },
+                        () => { fr.busy = false; closeFirstRun(); });
   } catch (e) {
     console.error('[firstrun]', e);
     fr.busy = false;

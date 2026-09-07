@@ -528,6 +528,62 @@ def main() -> int:
             check("the second click goes ahead",
                   any(c[1] == "/books/sample" for c in calls))
 
+            print("--- the Setup page says you're set, and points at the sound ---")
+            # A green READY badge over five amber optional rows reads as
+            # "something is wrong". That is the page the Windows install landed
+            # on after the casting modal, with no play button anywhere.
+            calls.clear()
+            boot(page, calls=calls, status=ready, config=cfg_ready)
+            page.click("#setup-chip")
+            page.wait_for_selector("#setup-view", state="visible", timeout=8000)
+            page.wait_for_timeout(300)
+            check("the banner is there when the engine is ok",
+                  page.locator("#su-banner").is_visible())
+            said = page.text_content("#su-banner") or ""
+            check("it says you are set", "You're set" in said, said[:60])
+            check("it names the engine that is ready",
+                  "System voices" in said, said[:80])
+            check("it offers the sample", page.locator("#su-hear-sample").is_visible())
+            check("it offers the wizard again",
+                  "Run setup again" in (page.text_content(".su-banner-btns") or ""))
+            check("the banner is above the intro",
+                  page.evaluate("document.querySelector('#su-banner').compareDocumentPosition("
+                                "document.querySelector('.su-intro')) "
+                                "& Node.DOCUMENT_POSITION_FOLLOWING") > 0)
+            check("the amber optional rows are still there, not hidden",
+                  page.locator("#setup-view .su-plaque.off, #setup-view .su-plaque.warn").count() > 0,
+                  page.locator("#setup-view .su-plaque.off, #setup-view .su-plaque.warn").count())
+            ffmpeg_row = next(r for r in ready["rows"] if r["key"] == "tool_ffmpeg")
+            shown = page.text_content("#setup-view") or ""
+            check("the ffmpeg row says a version, not a path",
+                  ffmpeg_row["detail"] in shown and ffmpeg_row["extra"] not in shown,
+                  ffmpeg_row["detail"])
+            check("the full path is in the tooltip",
+                  ffmpeg_row["extra"] in (page.inner_html("#setup-view") or ""))
+
+            print("--- ...and the button runs the same sequence the wizard does ---")
+            calls.clear()
+            page.click("#su-hear-sample")
+            page.wait_for_selector("body.reader-open", timeout=15000)
+            ordered = [f"{m} {p}" for m, p, _, _ in calls
+                       if p == "/books/sample" or p.startswith("/render/")]
+            check("it asked for the sample book, then a render",
+                  ordered[:2] == ["POST /books/sample", "POST /render/sample_book/0"], ordered)
+            check("it left the Setup page",
+                  not page.evaluate("document.body.classList.contains('setup-open')"))
+            check("it ends in the reader, reading",
+                  page.evaluate("document.body.classList.contains('reader-open')"))
+
+            print("--- no banner when the engine is not ready ---")
+            boot(page, calls=calls, status=firstrun, config=cfg_first)
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            page.click("#fr-skip")
+            page.wait_for_timeout(300)
+            check("the Setup page is showing", 
+                  page.evaluate("document.body.classList.contains('setup-open')"))
+            check("no 'you're set' while the engine is missing",
+                  page.locator("#su-banner").count() == 0)
+
             print("--- a failure lands in the wizard with a way out ---")
             calls.clear()
             boot(page, calls=calls, status=firstrun, config=cfg_first, fail_at="sample")

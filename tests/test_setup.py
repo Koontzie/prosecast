@@ -190,6 +190,57 @@ def test_whisper_off_is_not_a_failure(cfg, monkeypatch):
     assert row["state"] == "off" and row["optional"]
 
 
+def test_tool_rows_say_a_version_and_hide_the_path(cfg, monkeypatch):
+    """Windows put `C:\\Users\\...\\WinGet\\Packages\\Gyan.FFmpeg_...\\ffmpeg.EXE` in
+    the row — accurate, useless to a person. The version is what a human reads;
+    the path moves to `extra` for the tooltip."""
+    monkeypatch.setattr(sp, "_which", lambda b: f"/opt/bin/{b}")
+    monkeypatch.setattr(sp, "_tool_version",
+                        lambda b: {"ffmpeg": "ffmpeg 9.0.1"}.get(b, "tesseract 5.5.3"))
+    rows = {r["key"]: r for r in sp.probe_tools()}
+    assert rows["tool_ffmpeg"]["detail"] == "found · ffmpeg 9.0.1"
+    assert rows["tool_ffmpeg"]["extra"] == "/opt/bin/ffmpeg"
+    assert "/opt/bin" not in rows["tool_ffmpeg"]["detail"]
+    assert rows["tool_tesseract"]["detail"] == "found · tesseract 5.5.3"
+
+
+def test_a_tool_that_will_not_say_its_version_is_still_found(cfg, monkeypatch):
+    """A version string is a courtesy. Failing to get one must not turn a
+    working ffmpeg into a red row."""
+    monkeypatch.setattr(sp, "_which", lambda b: f"/opt/bin/{b}")
+    monkeypatch.setattr(sp, "_tool_version", lambda b: "")
+    row = {r["key"]: r for r in sp.probe_tools()}["tool_ffmpeg"]
+    assert row["ok"] and row["state"] == "ok" and row["detail"] == "found"
+    assert row["extra"] == "/opt/bin/ffmpeg"
+
+
+def test_tool_version_parses_the_real_shapes(monkeypatch):
+    """`ffmpeg -version` → "ffmpeg version 9.0.1 Copyright …";
+    `tesseract --version` → "tesseract 5.5.3". Both, plus junk."""
+    import subprocess
+
+    class Done:
+        def __init__(self, out):
+            self.stdout, self.stderr = out, ""
+
+    outs = {"ffmpeg": "ffmpeg version 9.0.1 Copyright (c) 2000-2026 the FFmpeg developers\nbuilt with",
+            "tesseract": "tesseract 5.5.3\n leptonica-1.85.0",
+            "weird": "no idea what this is"}
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: Done(outs[cmd[0]]))
+    assert sp._tool_version("ffmpeg") == "ffmpeg 9.0.1"
+    assert sp._tool_version("tesseract") == "tesseract 5.5.3"
+    assert sp._tool_version("weird") == ""
+
+
+def test_tool_version_never_raises(monkeypatch):
+    import subprocess
+
+    def boom(*a, **k):
+        raise OSError("no such binary")
+    monkeypatch.setattr(subprocess, "run", boom)
+    assert sp._tool_version("ffmpeg") == ""
+
+
 def test_tools_missing_get_install_hint(cfg, monkeypatch):
     monkeypatch.setattr(sp, "_which", lambda b: "/usr/bin/ffmpeg" if b == "ffmpeg" else None)
     rows = {r["key"]: r for r in sp.probe_tools()}

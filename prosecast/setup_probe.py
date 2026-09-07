@@ -277,17 +277,55 @@ def probe_whisper() -> dict:
                 f"whisper · {base} · {model}", "", optional=True, endpoint=base, model=model)
 
 
+def _tool_version(binary: str) -> str:
+    """The first line of `<binary> -version`, trimmed to something readable.
+
+    "ffmpeg version 9.0.1 Copyright (c) 2000-2026 …" → "ffmpeg 9.0.1"
+    "tesseract 5.5.3"                                → "tesseract 5.5.3"
+
+    Never raises and never blocks for long: a version string is a courtesy, and
+    the row is just as true without one.
+    """
+    import re
+    import subprocess
+    for flag in ("-version", "--version"):
+        try:
+            out = subprocess.run([binary, flag], capture_output=True, text=True,
+                                 timeout=5)
+        except Exception:
+            continue
+        line = ((out.stdout or "") + (out.stderr or "")).strip().splitlines()
+        if not line:
+            continue
+        m = re.match(rf"{re.escape(binary)}\s+(?:version\s+)?(\S+)", line[0], re.I)
+        if m:
+            return f"{binary} {m.group(1)}"
+    return ""
+
+
 def probe_tools() -> list[dict]:
+    r"""One row per external binary.
+
+    `detail` is what a person needs — "found · ffmpeg 9.0.1". The full path is
+    accurate and useless on screen (Windows put
+    `C:\Users\...\WinGet\Packages\Gyan.FFmpeg_...\ffmpeg.EXE` in the row),
+    so it moves to `extra`, which the Setup page shows on hover.
+    """
     rows = []
     for binary, label, why, optional, hint in (
         ("ffmpeg", "ffmpeg", "needed for M4B export and voice-clip prep", False,
-         _install_hint("ffmpeg", win="Windows: download from ffmpeg.org and add it to PATH")),
+         _install_hint("ffmpeg", win="Windows: `winget install -e --id Gyan.FFmpeg`, "
+                                     "then close and reopen your terminal")),
         ("tesseract", "tesseract (OCR)", "needed only for scanned PDFs", True,
-         _install_hint("tesseract", apt="tesseract-ocr")),
+         _install_hint("tesseract", apt="tesseract-ocr",
+                       win="Windows: `winget install -e --id UB-Mannheim.TesseractOCR`")),
     ):
         path = _which(binary)
         if path:
-            rows.append(_row("tool_" + binary, label, True, "ok", path, "", optional=optional))
+            version = _tool_version(binary)
+            rows.append(_row("tool_" + binary, label, True, "ok",
+                             f"found · {version}" if version else "found", "",
+                             optional=optional, extra=path))
         else:
             rows.append(_row("tool_" + binary, label, False, "off" if optional else "missing",
                              f"not found · {why}", hint, optional=optional))
