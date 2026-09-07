@@ -53,6 +53,111 @@ MASCULINE_TITLES = {
     "father", "uncle", "master", "count", "baron", "emperor", "monk",
 }
 
+# ── Layer 1b: common English given names ─────────────────────────────────────
+#
+# What this is for: on rung 1 there is no Ollama, so the LLM layer never runs
+# and EVERY character comes out unprofiled — which is how the first Windows
+# render gave Elizabeth and Jane male voices. A list of names is enough to fix
+# the common case without asking anyone to install anything.
+#
+# What it is not: a way to know someone's gender. It is a frequency table for
+# English-language fiction, and it is wrong about real people constantly —
+# names move between genders across decades and countries (Evelyn, Hilary and
+# Beverly were all men's names within living memory), and it knows nothing
+# about names from most of the world. So:
+#
+#   * It is the LAST resort. A title in the name wins, the LLM reading actual
+#     pronouns wins, and a person's own casting always wins.
+#   * When in doubt, LEAVE IT OUT. An omission costs a round-robin voice, which
+#     is what happens today; a wrong entry costs a re-render of every line the
+#     character speaks. AMBIGUOUS_NAMES exists to make that refusal explicit
+#     and to stop anyone "helpfully" adding Jordan to a list later.
+#   * Confidence is 0.6 — deliberately below what a title or a pronoun earns.
+#
+# Surnames are absent on purpose: "Darcy" and "Bennet" are how a book names
+# people too, and guessing from them is how you cast a butler as a duchess.
+
+FEMININE_NAMES = frozenset("""
+abigail ada adelaide adele agatha agnes aileen alice alicia alison amanda
+amelia amy anastasia andrea angela anita ann anna annabel anne annette annie
+antonia april arabella audrey aurora ava barbara beatrice belinda bella
+bernadette bertha bess bessie beth bethany betsy betty blanche brenda bridget
+camilla candace carla carmen carol caroline carolyn catherine cathy cecilia
+celia charlotte chloe christina christine cindy claire clara clarissa claudia
+colette connie constance cora cordelia cornelia crystal cynthia daisy daphne
+darlene dawn deborah debra deirdre delia denise diana diane dolores donna dora
+doreen doris dorothea dorothy edith edna eileen elaine eleanor elena eliza
+elizabeth ella ellen eloise elsie emily emma enid erica erin esme estelle
+esther ethel eugenia eunice eva evelyn faith fanny felicity fiona flora
+florence frances freda gabriella gail genevieve georgia georgina geraldine
+gertrude gillian gina ginny gladys gloria grace greta gretchen gwendolyn
+hannah harriet hazel helen helena henrietta hilda holly hope ida imogen ingrid
+irene iris isabel isabella isadora ivy jacqueline jane janet janice jasmine
+jemima jenna jennifer jenny jessica jill joan joanna joanne jocelyn josephine
+joy joyce judith judy julia julie juliet june karen kate katherine kathleen
+kathryn kathy katie kay kirsten kitty laura laurel lauren lavinia leah leonora
+lettie lila lilian lillian lily linda lisa lois lola lorna lottie louisa
+louise lucia lucille lucinda lucy lydia mabel madeleine madeline madge maggie
+maisie marcia margaret margery maria marian marianne marie marigold marilyn
+marjorie martha mary matilda maud maude maureen mavis maxine meg megan melanie
+melissa mercy mildred millicent millie minerva minnie miranda miriam moira
+molly mona monica muriel myra myrtle nadia nancy naomi natalie nell nellie
+nicola nicole nina nora norah norma octavia olga olive olivia opal ophelia
+pamela patience patricia patsy paula pauline pearl peggy penelope penny
+persephone phoebe phyllis polly portia priscilla prudence rachel ramona
+rebecca regina renee rhoda rhonda rita roberta rosa rosalind rose rosemary
+rosie rowena roxanne ruby ruth sabrina sally samantha sandra sarah selina
+serena sheila shirley sibyl sonia sophia sophie stella stephanie susan susanna
+susannah suzanne sybil sylvia tabitha tamara teresa tessa thelma theodora
+theresa tilly tina trudy ursula valerie vanessa vera verity veronica victoria
+violet virginia vivienne wanda wendy wilhelmina willa wilma winifred yvonne
+zelda zoe
+""".split())
+
+MASCULINE_NAMES = frozenset("""
+aaron abel abraham adam adrian alan albert alec alexander alfred algernon
+allan alvin ambrose andrew angus anthony archibald archie arnold arthur august
+augustus austin barnaby barney barry bartholomew basil benedict benjamin
+bennett bernard bert bertram bill billy bob boris brandon brendan brian bruce
+bruno bryan byron caleb calvin carl cecil cedric charles chester christian
+christopher clarence claude clement clifford clive clyde colin conrad
+cornelius craig cuthbert cyril cyrus daniel darren dave david dean dennis
+derek desmond dick dominic donald douglas duncan dwight earl eddie edgar
+edmund edward edwin elias elijah elliot elmer emmanuel enoch eric ernest ethan
+eugene eustace everett ezra felix ferdinand fergus floyd francis frank
+franklin fraser fred frederick gabriel gareth garrett gavin geoffrey george
+gerald gerard gilbert giles glenn godfrey gordon graham grant gregory gustav
+guy hamish hank harold harry harvey hector henry herbert herman hiram horace
+howard hubert hugh hugo humphrey ian ignatius irving isaac ivan jack jacob
+james jared jason jasper jeffrey jeremy jerome jerry jim jimmy joel john
+johnny jonah jonathan joseph joshua josiah julian julius justin keith kenneth
+kevin lambert lancelot larry laurence lawrence leo leonard leopold lester
+lewis liam lionel lloyd louis lucas luke luther malcolm marcus mark martin
+marvin matthew maurice max maxwell michael miles milton mitchell montgomery
+mortimer moses murray nathan nathaniel neil nelson nicholas nigel noah norman
+oliver oscar oswald otto owen patrick paul percival percy perry peter philip
+phillip pierce quentin ralph randolph raymond reginald rex richard robert
+roderick rodney roger roland ronald rory ross roy rufus rupert russell samuel
+saul sebastian seth seymour silas simon solomon stanley stephen steven stewart
+stuart sylvester theodore thomas timothy tobias toby todd tom tommy tony
+travis trevor tristan ulysses vernon victor vincent virgil wallace walter
+warren wayne wesley wilbur wilfred william willie winston zachary
+""".split())
+
+# Names this table refuses to answer for, so that a later "helpful" addition
+# has to argue with a list rather than slip in. Genuinely unisex in English,
+# or common enough in both columns that a coin flip is not worth a re-render.
+AMBIGUOUS_NAMES = frozenset("""
+alex ali angel ashley aubrey avery bailey billie blair blake brett brook
+brooke cameron carey carroll casey cassidy charlie chris corey courtney dakota
+dale dana darcy devon drew dylan eden ellis emerson finley gale harper hayden
+hilary hollis jackie jamie jean jesse jo jody jordan kelly kendall kim kirby
+lee leslie lindsay logan lynn marion meredith morgan nicky noel parker pat
+payton quinn reagan reese regan riley robin rowan ryan sage sam sandy sasha
+shannon shawn shelby sidney skyler spencer stacy sterling sydney taylor terry
+tracy val vivian
+""".split())
+
 PROMPT_TEMPLATE = """\
 You are helping cast voice actors for an audiobook. Based ONLY on the
 excerpts below, profile the character "{name}". Surrounding narration is
@@ -91,6 +196,47 @@ def profile_from_name(name: str) -> Optional[dict]:
         "evidence": f"title '{title}' in name",
         "method": "title",
     }
+
+
+def profile_from_first_name(name: str) -> Optional[dict]:
+    """A common English given name in the character's name → a guess.
+
+    Every token is checked, not just the first, so "Old Tom" and "Aunt Sally"
+    resolve. Tokens the table refuses to answer for are skipped rather than
+    treated as evidence, and a name whose tokens disagree ("Jack and Jill")
+    resolves to nothing at all. Read the comment above FEMININE_NAMES before
+    trusting this for anything: it is a frequency table, not knowledge.
+    """
+    votes = set()
+    for token in re.findall(r"[a-z]+", name.lower()):
+        if token in AMBIGUOUS_NAMES:
+            continue
+        if token in FEMININE_NAMES:
+            votes.add("feminine")
+        elif token in MASCULINE_NAMES:
+            votes.add("masculine")
+    if len(votes) != 1:
+        return None
+    gender = votes.pop()
+    return {
+        "gender": gender,
+        "age": "unknown",
+        "voice_hints": "",
+        "confidence": 0.6,          # below a title (0.9) and below a pronoun
+        "evidence": f"'{name}' is a common {gender} given name in English",
+        "method": "first-name",
+    }
+
+
+def guess_profile(name: str) -> Optional[dict]:
+    """Everything the rules can tell about a character without an LLM.
+
+    This is the whole cast profiler on rung 1 — no Ollama, no AI pass, just a
+    title in the name or a name the table knows. Returns None when it has
+    nothing, which is not a failure: a character with no profile is cast by
+    round-robin exactly as before.
+    """
+    return profile_from_name(name) or profile_from_first_name(name)
 
 
 # ── Excerpt gathering ─────────────────────────────────────────────────────────
@@ -222,7 +368,7 @@ def run_profile_pass(
     print(f"[PROFILE] Model:   {model}")
     print(f"[PROFILE] Targets: {len(targets)} characters (>= {MIN_LINES_TO_PROFILE} lines)")
 
-    by_title = llm_done = ambiguous = errors = 0
+    by_title = llm_done = ambiguous = errors = by_name = 0
     consecutive_errors = 0
     done = 0
     if on_progress:
@@ -233,6 +379,17 @@ def run_profile_pass(
         done += 1
         if on_progress:
             on_progress(done, len(targets))
+
+    def _fallback(who: str) -> None:
+        """The name table, for a character the LLM could not read — because
+        Ollama went away, because it answered nonsense, or because there was
+        nothing to show it. Better than leaving the character unprofiled."""
+        nonlocal by_name
+        guessed = profile_from_first_name(who)
+        if guessed:
+            profiles[who] = guessed
+            by_name += 1
+            print(f"  ~ {who:<22} {guessed['gender']:<10} (common given name)")
 
     for name in targets:
         titled = profile_from_name(name)
@@ -245,6 +402,7 @@ def run_profile_pass(
 
         excerpts = gather_excerpts(ir_data, name)
         if not excerpts:
+            _fallback(name)
             _step(name)
             continue
         raw = _call_ollama(
@@ -253,6 +411,7 @@ def run_profile_pass(
         )
         if raw is None:
             errors += 1
+            _fallback(name)
             consecutive_errors += 1
             if consecutive_errors >= 3:
                 print(f"\n[PROFILE] {consecutive_errors} connection failures in a row — "
@@ -268,11 +427,19 @@ def run_profile_pass(
         prof = parse_profile_response(raw)
         if prof is None:
             errors += 1
+            _fallback(name)
             _step(name)
             continue
         if prof["confidence"] < confidence_threshold:
-            prof["gender"] = "ambiguous"
-            ambiguous += 1
+            # The model read the pronouns and found nothing. A common given
+            # name is weak evidence, but it beats casting by round-robin.
+            guessed = profile_from_first_name(name)
+            if guessed:
+                prof = guessed
+                by_name += 1
+            else:
+                prof["gender"] = "ambiguous"
+                ambiguous += 1
         else:
             llm_done += 1
         profiles[name] = prof
@@ -284,6 +451,6 @@ def run_profile_pass(
         _step(name)
 
     print(f"\n[PROFILE] {by_title} by title, {llm_done} by LLM, "
-          f"{ambiguous} ambiguous, {errors} errors")
-    _fill(profiled=by_title + llm_done + ambiguous, errors=errors)
+          f"{by_name} by name, {ambiguous} ambiguous, {errors} errors")
+    _fill(profiled=by_title + llm_done + by_name + ambiguous, errors=errors)
     return ir_data

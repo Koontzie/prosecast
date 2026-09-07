@@ -391,6 +391,23 @@ def _voice_pool_assignable(engine: str) -> list[str]:
 _PROFILE_GENDER = {"feminine": "f", "masculine": "m"}
 
 
+def _gender_hint(profiles: dict | None, speaker: str) -> str:
+    """What we know about this character's gender, best source first.
+
+    The IR's `character_profiles` is the AI pass's work and wins. Without it —
+    which is every book on rung 1, where there is no Ollama at all — fall back
+    to what the rules alone can say: a title in the name, then the cast
+    profiler's table of common English given names. That fallback is why the
+    sample no longer casts Elizabeth and Jane as men on a fresh Windows box.
+    """
+    profiled = str(((profiles or {}).get(speaker) or {}).get("gender", "")).strip().lower()
+    if profiled in _PROFILE_GENDER:
+        return profiled
+    from prosecast.cast_profiler import guess_profile
+    guessed = guess_profile(speaker)
+    return guessed["gender"] if guessed else ""
+
+
 def _default_voice_map(characters: list[str], engine: str,
                        profiles: dict | None = None) -> dict[str, str]:
     """Auto-cast: round-robin, but never across a gender we know.
@@ -431,8 +448,7 @@ def _default_voice_map(characters: list[str], engine: str,
         if speaker == 'NARRATOR':
             result[speaker] = pool[0]
             continue
-        want = _PROFILE_GENDER.get(
-            str(((profiles or {}).get(speaker) or {}).get("gender", "")).strip().lower(), "")
+        want = _PROFILE_GENDER.get(_gender_hint(profiles, speaker), "")
         choices = buckets.get(want) or characters_pool
         key = want if buckets.get(want) else ""
         result[speaker] = choices[cursors[key] % len(choices)]
@@ -671,9 +687,11 @@ def _ensure_sample_cast() -> bool:
     if vm_path.exists() and _sample_map_fits(vm_path, engine):
         return False                          # already cast for this engine
 
+    from prosecast.book_parser import SAMPLE_CHARACTER_PROFILES
     ir = _load_ir(lib.ir_path(SAMPLE_SLUG))
     characters = _speaking_characters(ir)
-    profiles = ir.get("character_profiles", {})
+    # The shipped cast underneath, anything an AI pass actually found on top.
+    profiles = {**SAMPLE_CHARACTER_PROFILES, **(ir.get("character_profiles") or {})}
     lib.ensure_book_dir(SAMPLE_SLUG)
     with open(vm_path, "w", encoding="utf-8") as f:
         json.dump({"engine": engine,

@@ -288,6 +288,24 @@ since Netherfield," she said.
 '''
 
 
+# The sample book's cast, as the text itself establishes it. Two of these four
+# ("Darcy", "Bingley") are surnames, which no name table can or should resolve,
+# and on rung 1 there is no Ollama to read the pronouns — so the demo everyone
+# meets first would cast two of its four characters by coin flip. This is a
+# fact about a file ProseCast ships, not a guess, so it ships with it.
+# `_ensure_sample_cast` uses it; a real AI pass over the sample still wins.
+SAMPLE_CHARACTER_PROFILES = {
+    "Elizabeth": {"gender": "feminine",  "age": "young-adult", "voice_hints": "warm, quick",
+                  "confidence": 1.0, "evidence": "the sample book's own cast", "method": "shipped"},
+    "Jane":      {"gender": "feminine",  "age": "young-adult", "voice_hints": "gentle, even",
+                  "confidence": 1.0, "evidence": "the sample book's own cast", "method": "shipped"},
+    "Darcy":     {"gender": "masculine", "age": "adult", "voice_hints": "reserved, low",
+                  "confidence": 1.0, "evidence": "the sample book's own cast", "method": "shipped"},
+    "Bingley":   {"gender": "masculine", "age": "adult", "voice_hints": "bright, eager",
+                  "confidence": 1.0, "evidence": "the sample book's own cast", "method": "shipped"},
+}
+
+
 def write_sample_book(path: str):
     """Write the built-in sample book to the given path."""
     Path(path).parent.mkdir(parents=True, exist_ok=True)

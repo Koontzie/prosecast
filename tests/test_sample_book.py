@@ -248,6 +248,95 @@ def test_an_unreadable_map_is_replaced(on_say, sandbox):
     assert client.post("/books/sample").json()["recast"] is True
 
 
+# ── the sample is cast by gender on rung 1, with nothing installed ───────────
+#
+# The fresh-clone Windows run still put Elizabeth and Jane on male voices. No
+# titles in their IR names, no Ollama, so no gender hint reached the cast at
+# all. Two fixes meet here: the sample ships its own cast profile, and the
+# profiler's name table answers for common English given names without an LLM.
+
+SAMPLE_CAST_GENDER = {"Elizabeth": "f", "Jane": "f", "Darcy": "m", "Bingley": "m"}
+
+
+def test_every_one_of_the_samples_cast_is_gendered_without_ollama():
+    """The claim, deterministically: on rung 1, with no AI pass and no spaCy,
+    all four of the sample's characters reach the voice map with the right
+    gender. Two come from the name table, two (surnames) from the shipped
+    profile — see book_parser.SAMPLE_CHARACTER_PROFILES."""
+    from prosecast.book_parser import SAMPLE_CHARACTER_PROFILES
+    meta = server._voice_meta()
+    labels = {v["id"]: v["name"] for v in server._raw_voices("piper")}
+    vm = server._default_voice_map(
+        ["NARRATOR", *SAMPLE_CAST_GENDER], "piper", SAMPLE_CHARACTER_PROFILES)
+    for char, want in SAMPLE_CAST_GENDER.items():
+        got = server._lookup_meta(meta, vm[char], labels.get(vm[char], ""))["gender"]
+        assert got == want, f"{char} was cast {got!r}, wanted {want!r}: {vm}"
+    assert vm["Elizabeth"] != vm["Jane"], "two women, two voices"
+    assert vm["Darcy"] != vm["Bingley"], vm
+
+
+@pytest.mark.parametrize("engine", ["piper", "say"])
+def test_the_sample_casts_women_as_women_with_no_ollama(client, sandbox, engine):
+    """The same thing through the endpoint, on the book it actually builds.
+
+    Which characters exist here depends on spaCy: "Jane" is only ever found by
+    the NER layer, so without `en_core_web_sm` the sample's cast is Elizabeth,
+    Darcy and Bingley. Whoever IS in the cast must be cast correctly, so this
+    checks the ones present rather than pretending to know.
+    """
+    client.put("/config", json={"values": {"tts_engine": engine}})
+    _wait(client, client.post("/books/sample").json()["job_id"])
+
+    ir = json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))
+    assert not ir.get("character_profiles"), \
+        "this test is meaningless if something profiled the cast"
+
+    vm = json.loads(lib.voice_map_path("sample_book").read_text(encoding="utf-8"))["map"]
+    assert set(vm) >= {"NARRATOR", "Elizabeth", "Darcy", "Bingley"}, vm
+    assert set(vm.values()) <= set(server._voice_pool(engine))
+
+    if engine != "piper":
+        return                # `say` ships no gender labels; nothing to assert
+    meta = server._voice_meta()
+    labels = {v["id"]: v["name"] for v in server._raw_voices(engine)}
+    for char, want in SAMPLE_CAST_GENDER.items():
+        if char not in vm:
+            continue
+        got = server._lookup_meta(meta, vm[char], labels.get(vm[char], ""))["gender"]
+        assert got == want, f"{char} was cast {got!r}, wanted {want!r}: {vm}"
+    assert vm["Darcy"] != vm["Bingley"], vm
+
+
+def test_the_surnames_come_from_the_shipped_profile(client, sandbox):
+    """Darcy and Bingley are surnames. No name table can resolve them, and no
+    table should try — which is why the sample carries its own cast."""
+    from prosecast.book_parser import SAMPLE_CHARACTER_PROFILES
+    from prosecast.cast_profiler import guess_profile
+    assert guess_profile("Darcy") is None
+    assert guess_profile("Bingley") is None
+    assert SAMPLE_CHARACTER_PROFILES["Darcy"]["gender"] == "masculine"
+    assert SAMPLE_CHARACTER_PROFILES["Bingley"]["gender"] == "masculine"
+
+
+def test_a_real_ai_pass_over_the_sample_still_wins(on_say, sandbox):
+    """The shipped profile is a floor, not a ceiling."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    ir = _load = json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))
+    ir["character_profiles"] = {"Darcy": {"gender": "feminine", "confidence": 0.95,
+                                          "age": "adult", "voice_hints": "",
+                                          "evidence": "she said", "method": "llm"}}
+    lib.write_json_atomic(lib.ir_path("sample_book"), ir)
+    lib.voice_map_path("sample_book").unlink()
+
+    client.put("/config", json={"values": {"tts_engine": "piper"}})
+    client.post("/books/sample")
+    vm = json.loads(lib.voice_map_path("sample_book").read_text(encoding="utf-8"))["map"]
+    meta = server._voice_meta()
+    labels = {v["id"]: v["name"] for v in server._raw_voices("piper")}
+    assert server._lookup_meta(meta, vm["Darcy"], labels[vm["Darcy"]])["gender"] == "f"
+
+
 def test_no_other_book_is_ever_cast(client, sandbox):
     lib.ensure_book_dir("someone_elses_book")
     lib.write_json_atomic(lib.ir_path("someone_elses_book"),
