@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import platform
 import shutil
+from pathlib import Path
 import urllib.error
 import urllib.request
 
@@ -75,6 +76,24 @@ def _install_hint(pkg: str, brew: str | None = None, apt: str | None = None,
     if _OS == "Windows":
         return win or f"Windows: install {pkg} and make sure it is on your PATH"
     return f"Linux: `sudo apt install {apt}` (or your distro's equivalent)"
+
+
+def _voices_dir() -> Path:
+    """Where `piper --model <name>` looks for `<name>.onnx`: the process's
+    working directory, which for ProseCast is the folder it was started in."""
+    return Path.cwd()
+
+
+def _voice_file(name: str) -> Path:
+    return _voices_dir() / f"{name}.onnx"
+
+
+def _download_hint(names: list[str]) -> str:
+    """The exact commands, one per line — the Setup page and the wizard both
+    print a probe's `fix` verbatim, so this has to be runnable as written."""
+    lines = "\n".join(f"`python -m piper.download_voices {n}`" for n in names)
+    return (lines + "\nRun these from the ProseCast folder — Piper looks for "
+            "voices in the folder it is started in.")
 
 
 # ── probes ───────────────────────────────────────────────────────────────────
@@ -174,13 +193,39 @@ def _voice_engine_row() -> dict:
                     "Chatterbox is the free upgrade.", engine=engine)
 
     if engine == "piper":
+        from prosecast.tts_engine import VoiceAssigner
+        wanted = list(VoiceAssigner.PIPER_VOICES)
+        missing = [v for v in wanted if not _voice_file(v).exists()]
+        have = len(wanted) - len(missing)
+
         if not _which("piper"):
             return _row("voice_engine", "Voice engine", False, "missing",
                         "Piper · not installed",
-                        "Install Piper TTS (`pip install piper-tts`) and download at least one "
-                        "voice model (.onnx) from the Piper voices page.", engine=engine)
+                        "Install Piper (`pip install piper-tts`), then download its voices: "
+                        + _download_hint(missing or wanted), engine=engine,
+                        voices_present=have, voices_wanted=len(wanted))
+
+        # The binary being on PATH says nothing about whether it can speak.
+        # `piper --model <name>` resolves `<name>.onnx` from the working
+        # directory, so a machine with piper and no .onnx files probed "ok"
+        # and then failed at render time, which is the worst place to find out
+        # (Windows, 2026-09-06).
+        if not have:
+            return _row("voice_engine", "Voice engine", False, "missing",
+                        f"Piper · installed · no voice files ({_voices_dir()})",
+                        "Piper is here but has nothing to speak with. Download its voices: "
+                        + _download_hint(missing), engine=engine,
+                        voices_present=0, voices_wanted=len(wanted))
+        if missing:
+            return _row("voice_engine", "Voice engine", True, "warn",
+                        f"Piper (local, CPU) · {have} of {len(wanted)} voice files",
+                        f"{len(missing)} of ProseCast's {len(wanted)} Piper voices are not "
+                        "downloaded, so casting has fewer voices to tell characters apart "
+                        "with. Add them: " + _download_hint(missing), engine=engine,
+                        voices_present=have, voices_wanted=len(wanted))
         return _row("voice_engine", "Voice engine", True, "ok",
-                    "Piper (local, CPU) · no GPU needed", "", engine=engine)
+                    f"Piper (local, CPU) · {have} voice files · no GPU needed", "",
+                    engine=engine, voices_present=have, voices_wanted=len(wanted))
 
     if engine == "gtts":
         return _row("voice_engine", "Voice engine", True, "warn",

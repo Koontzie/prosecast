@@ -397,6 +397,18 @@ def test_say_library_fixture_still_matches_this_endpoint(client, bank):
         "voices_library_say.json has drifted from /voices/library — regenerate it"
 
 
+def test_piper_library_fixture_still_matches_this_endpoint(client, bank):
+    """The pinned bank's overlay has no Piper entry at all, so every gender in
+    this fixture came from the code. If that stops being true, the headless
+    check would go on finding glyphs for the wrong reason."""
+    bank("piper")
+    live = client.get("/voices/library").json()
+    assert live == json.loads((FIXTURES / "voices_library_piper.json").read_text()), \
+        "voices_library_piper.json has drifted from /voices/library — regenerate it"
+    assert len(live["voices"]) == 6
+    assert all(v["gender"] in ("f", "m") for v in live["voices"]), live["voices"]
+
+
 def test_voices_sources_fixture_still_matches_this_endpoint(client):
     live = client.get("/voices/sources").json()
     assert live == json.loads((FIXTURES / "voices_sources.json").read_text()), \

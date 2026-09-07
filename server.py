@@ -281,10 +281,33 @@ def _norm_meta(m: dict) -> dict:
     }
 
 
+def _builtin_voice_meta() -> dict:
+    """Metadata ProseCast ships, under anything a person has written.
+
+    Chatterbox voices are files on someone's server and can only be described
+    by hand, so `voice_meta.json` is the only place their gender can come from.
+    Piper's six are a fixed list ProseCast itself chose, and their gender is a
+    fact about the training data, not an opinion — so it ships with the code
+    (`VoiceAssigner.PIPER_VOICE_META`) and a fresh clone auto-casts correctly
+    without anyone editing a JSON file first. The overlay still wins.
+    """
+    from prosecast.tts_engine import VoiceAssigner
+    return VoiceAssigner.PIPER_VOICE_META
+
+
 def _lookup_meta(meta: dict, voice_id: str, name: str) -> dict:
-    """Overlay entry for a voice: stem first, then the legacy display-name key."""
+    """Overlay entry for a voice: the shipped defaults, then whatever the
+    hand-edited file says (stem key first, then the legacy display-name key).
+
+    Merged rather than replaced, so annotating a Piper voice in the Voices tab
+    — which PATCHes one field — does not silently drop its gender.
+    """
     stem = _voice_key(voice_id)
-    return _norm_meta(meta.get(stem) or meta.get(name) or {})
+    entry = dict(_builtin_voice_meta().get(stem) or {})
+    over = meta.get(stem) or meta.get(name) or {}
+    if isinstance(over, dict):
+        entry.update(over)
+    return _norm_meta(entry)
 
 
 def _apply_voice_meta(voices: list[dict]) -> list[dict]:
@@ -364,23 +387,56 @@ def _voice_pool_assignable(engine: str) -> list[str]:
     return out
 
 
-def _default_voice_map(characters: list[str], engine: str) -> dict[str, str]:
-    """Replicate VoiceAssigner round-robin without synthesizing anything."""
+# The cast profiler's vocabulary (prosecast/cast_profiler.py) → the overlay's.
+_PROFILE_GENDER = {"feminine": "f", "masculine": "m"}
+
+
+def _default_voice_map(characters: list[str], engine: str,
+                       profiles: dict | None = None) -> dict[str, str]:
+    """Auto-cast: round-robin, but never across a gender we know.
+
+    `profiles` is the IR's `character_profiles` — the cast profiler's
+    gender/age sketch. Where it has an opinion about a character, that
+    character is cast from voices labelled the same way and the other pool is
+    not touched; characters it says nothing about round-robin the whole pool as
+    before. Each gender rotates independently, so two women get two voices.
+
+    Without this, the first Windows run gave Elizabeth `ryan` and Jane `kusal`
+    — both men — while the profiler had known both were women all along. A
+    wrong-gender voice is the most expensive casting error there is: it is
+    audible in the first sentence and it costs a re-render.
+
+    Gender comes from the same overlay the Voices tab edits, so it works for
+    every engine whose voices are labelled, not just Piper.
+    """
     # Hidden voices are excluded here and nowhere else. If retiring left
     # nothing to cast with, fall back to the full pool rather than handing
     # every character an empty voice.
     pool = _voice_pool_assignable(engine) or _voice_pool(engine)
     if not pool:
         return {c: '' for c in characters}
+
+    meta = _voice_meta()
+    by_id = {v["id"]: v for v in _raw_voices(engine)}
+    gender_of = {vid: _lookup_meta(meta, vid, by_id.get(vid, {}).get("name", vid))["gender"]
+                 for vid in pool}
+    # Index 0 is the narrator's and is not dealt out to characters, matching
+    # the round-robin VoiceAssigner does at render time.
+    characters_pool = pool[1:] if len(pool) > 1 else pool
+    buckets = {g: [v for v in characters_pool if gender_of.get(v) == g] for g in ("f", "m")}
+    cursors = {"f": 0, "m": 0, "": 0}
+
     result = {}
-    char_idx = 0
     for speaker in characters:
         if speaker == 'NARRATOR':
             result[speaker] = pool[0]
-        else:
-            idx = (char_idx % (len(pool) - 1)) + 1 if len(pool) > 1 else 0
-            result[speaker] = pool[idx]
-            char_idx += 1
+            continue
+        want = _PROFILE_GENDER.get(
+            str(((profiles or {}).get(speaker) or {}).get("gender", "")).strip().lower(), "")
+        choices = buckets.get(want) or characters_pool
+        key = want if buckets.get(want) else ""
+        result[speaker] = choices[cursors[key] % len(choices)]
+        cursors[key] += 1
     return result
 
 
@@ -615,10 +671,13 @@ def _ensure_sample_cast() -> bool:
     if vm_path.exists() and _sample_map_fits(vm_path, engine):
         return False                          # already cast for this engine
 
-    characters = _speaking_characters(_load_ir(lib.ir_path(SAMPLE_SLUG)))
+    ir = _load_ir(lib.ir_path(SAMPLE_SLUG))
+    characters = _speaking_characters(ir)
+    profiles = ir.get("character_profiles", {})
     lib.ensure_book_dir(SAMPLE_SLUG)
     with open(vm_path, "w", encoding="utf-8") as f:
-        json.dump({"engine": engine, "map": _default_voice_map(characters, engine)},
+        json.dump({"engine": engine,
+                   "map": _default_voice_map(characters, engine, profiles)},
                   f, indent=2, ensure_ascii=False)
     return True
 
@@ -751,16 +810,17 @@ def get_cast_candidates(book_slug: str):
 
     # Build voice map: saved if exists, else defaults
     all_names = [c["name"] for c in characters]
+    profiles = ir.get("character_profiles", {})
     if has_voice_map:
         with open(vm_path, encoding="utf-8") as f:
             saved = json.load(f)
         voice_map = saved.get("map", {})
-        defaults = _default_voice_map(all_names, engine)
+        defaults = _default_voice_map(all_names, engine, profiles)
         for name in all_names:
             if name not in voice_map:
                 voice_map[name] = defaults[name]
     else:
-        voice_map = _default_voice_map(all_names, engine)
+        voice_map = _default_voice_map(all_names, engine, profiles)
 
     return {
         "has_voice_map": has_voice_map,
@@ -1612,12 +1672,12 @@ def get_voice_map(book_slug: str):
             saved = json.load(f)
         voice_map = saved.get("map", {})
         # Fill in any characters not yet in the saved map with auto-assigned defaults
-        defaults = _default_voice_map(characters, engine)
+        defaults = _default_voice_map(characters, engine, ir.get("character_profiles", {}))
         for char in characters:
             if char not in voice_map:
                 voice_map[char] = defaults[char]
     else:
-        voice_map = _default_voice_map(characters, engine)
+        voice_map = _default_voice_map(characters, engine, ir.get("character_profiles", {}))
 
     return {"engine": engine, "map": voice_map}
 

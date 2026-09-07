@@ -2956,7 +2956,7 @@ function engineChoices(os) {
     { id: isMac ? 'say' : 'piper', name: isMac ? 'System voices' : 'Piper',
       tag: 'free', tagCls: 'free',
       desc: isMac ? 'macOS built-in voices. No setup, no GPU. Robotic for a whole book, perfect for checking everything works.'
-                  : 'Local, CPU-only, any OS. Needs the piper binary and one voice model.' },
+                  : 'Local, CPU-only, any OS. Needs the piper program and six voice files; Setup lists the download commands.' },
     { id: 'chatterbox', name: 'Chatterbox', tag: 'free · local', tagCls: 'free',
       desc: 'Expressive multi-voice narration on your own GPU (or a machine you run). The engine ProseCast is built around.' },
     { id: 'elevenlabs', name: 'ElevenLabs', tag: 'your account', tagCls: 'paid',
@@ -4481,11 +4481,19 @@ function vvStarsHTML(rating) {
 
 function vvRowHTML(v, i) {
   const lic = v.license || '';
+  // Piper's six are models ProseCast points at rather than ships, and their
+  // licences are per-dataset (CC BY-NC-SA for some, "see URL" for others). The
+  // badge sends you to the source instead of asserting one we never checked.
+  const isPiper = (vvData && vvData.engine) === 'piper';
   const licClass = v.distributable ? 'vv-lic-ok' : 'vv-lic-no';
-  const licText = lic ? lic.split('-')[0] + (lic.startsWith('CC-BY') ? ' BY' : '') : 'unknown';
-  const licTitle = (lic || 'licence not recorded') + ' — ' +
-    (v.distributable ? 'safe to ship in a release or a voice pack'
-                     : 'NOT cleared for a release; your own machine only');
+  const licText = isPiper && !lic ? 'see source'
+    : lic ? lic.split('-')[0] + (lic.startsWith('CC-BY') ? ' BY' : '') : 'unknown';
+  const licTitle = isPiper && !lic
+    ? 'Piper voice models are downloaded from the Piper voices page, not shipped by ProseCast — '
+      + 'see huggingface.co/rhasspy/piper-voices for each voice\u2019s dataset and licence.'
+    : (lic || 'licence not recorded') + ' — ' +
+      (v.distributable ? 'safe to ship in a release or a voice pack'
+                       : 'NOT cleared for a release; your own machine only');
   return `
     <div class="vv-row${v.hidden ? ' retired' : ''}" data-key="${esc(v.key)}" id="vv-row-${i}">
       <div class="vv-head">

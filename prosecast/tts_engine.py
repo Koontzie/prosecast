@@ -44,12 +44,49 @@ class VoiceAssigner:
         {'tld': 'co.in',  'slow': False},   # Indian
     ]
 
+    # Piper resolves `<name>.onnx` from the CURRENT WORKING DIRECTORY (see
+    # _synthesize_piper), so these files live in the ProseCast folder itself.
+    # Download them with `python -m piper.download_voices <name>`; the Setup
+    # page prints the exact lines for whichever are missing.
+    #
+    # Index 0 is the narrator. Three female, three male, so a cast of five has
+    # something to match on — with four voices and no gender, the first Windows
+    # run put Elizabeth on `ryan` and Jane on `kusal` (both men) and gave
+    # Bingley Elizabeth's voice.
     PIPER_VOICES = [
         'en_US-lessac-medium',
         'en_US-ryan-medium',
         'en_GB-alan-medium',
         'en_US-kusal-medium',
+        'en_US-hfc_female-medium',
+        'en_GB-jenny_dioco-medium',
     ]
+
+    # Shipped defaults for the overlay in voice_meta.json — that file stays the
+    # place a person's own labels live, and anything it says wins (server.py's
+    # `_lookup_meta` layers them). Piper's own catalogue carries no gender
+    # field, so each of these was read off the dataset the voice was trained
+    # on, named in its MODEL_CARD on huggingface.co/rhasspy/piper-voices:
+    #
+    #   lessac      Blizzard 2013 Lessac corpus — Catherine Byers, female
+    #   ryan        RyanSpeech (Kaggle, roholazandie) — male
+    #   alan        Mimic3 en_UK apope — Alan Pope, male
+    #   kusal       Mimic2 kusal — male
+    #   hfc_female  NICT Hi-Fi-Captain, the en-US *female* speaker
+    #   jenny_dioco Jenny TTS dataset (dioco-group) — Jenny, female
+    #
+    # Licence is deliberately absent: these are per-dataset (CC BY-NC-SA for
+    # ryan and hfc_female, "see URL" for the rest) and ProseCast does not
+    # redistribute the models. The Voices tab says "see the Piper voices page"
+    # rather than asserting one.
+    PIPER_VOICE_META = {
+        'en_US-lessac-medium':      {'gender': 'f', 'notes': 'US · the default narrator'},
+        'en_US-ryan-medium':        {'gender': 'm', 'notes': 'US'},
+        'en_GB-alan-medium':        {'gender': 'm', 'notes': 'British'},
+        'en_US-kusal-medium':       {'gender': 'm', 'notes': 'US'},
+        'en_US-hfc_female-medium':  {'gender': 'f', 'notes': 'US'},
+        'en_GB-jenny_dioco-medium': {'gender': 'f', 'notes': 'British'},
+    }
 
     SAY_VOICES = [
         'Samantha',

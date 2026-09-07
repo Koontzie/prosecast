@@ -160,6 +160,12 @@ def main() -> None:
     pin_voice_bank(server, tmp, engine="say")
     write("voices_library_say.json", client.get("/voices/library").json(),
           "GET /voices/library (say — no cloning, no sourcing)")
+    # Piper's six carry a gender from the code (VoiceAssigner.PIPER_VOICE_META),
+    # not from the overlay — the pinned bank above has no entry for any of
+    # them, so this fixture proves a fresh clone sees the glyphs.
+    pin_voice_bank(server, tmp, engine="piper")
+    write("voices_library_piper.json", client.get("/voices/library").json(),
+          "GET /voices/library (piper — gender ships with the code)")
     server._active_engine, server.VOICE_META_PATH = real_engine, real_meta
     server._chatterbox_voice_cache = real_cache
     write("voices_sources.json", client.get("/voices/sources").json(),

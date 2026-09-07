@@ -59,6 +59,7 @@ def fixture(name: str) -> dict:
 
 LIBRARY = fixture("voices_library.json")
 LIBRARY_SAY = fixture("voices_library_say.json")
+LIBRARY_PIPER = fixture("voices_library_piper.json")
 SOURCES = fixture("voices_sources.json")
 
 # One block of silence — enough for <audio> to accept the src without the
@@ -412,6 +413,31 @@ def main() -> int:
                   page.locator("#vv-orphans").is_hidden())
             check("collapsed panels are still collapsed here",
                   not [s for s in ("#vv-sources", "#vv-ab") if not page.locator(s).is_hidden()])
+
+            print("--- Piper's six carry a gender the overlay never gave them ---")
+            # The Windows cast (2026-09-06) put Elizabeth and Jane on male
+            # voices because the Piper pool offered nothing to match on. The
+            # gender now ships in the code, so it is here on a clone where
+            # voice_meta.json has never been touched — this fixture is
+            # generated against a pinned bank with no Piper entry at all.
+            boot(page, calls=calls, library=LIBRARY_PIPER)
+            open_voices(page)
+            check("all six Piper voices are listed",
+                  page.locator(".vv-row").count() == 6, page.locator(".vv-row").count())
+            names = page.eval_on_selector_all(
+                ".vv-name", "els => els.map(e => e.textContent.trim())")
+            fem = [n for n in names if n.endswith("♀")]
+            masc = [n for n in names if n.endswith("♂")]
+            check("three are marked female", len(fem) == 3, fem)
+            check("three are marked male", len(masc) == 3, masc)
+            check("every voice is marked one or the other",
+                  len(fem) + len(masc) == 6, names)
+            lic = page.eval_on_selector_all(
+                ".vv-lic", "els => els.map(e => [e.textContent.trim(), e.title])")
+            check("the licence badge does not assert a licence",
+                  all(t == "see source" for t, _ in lic), lic[:2])
+            check("it points at the Piper voices page instead",
+                  all("rhasspy/piper-voices" in title for _, title in lic), lic[:1])
 
             print("--- zero voices, and a library that will not load ---")
             boot(page, calls=calls, library={"engine": "stub", "voices": [], "orphans": []})
