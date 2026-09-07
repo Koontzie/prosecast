@@ -168,8 +168,20 @@ if ($script:Failed) {
   Write-Host "=== Finished with problems - see the [x] lines above. ===" -ForegroundColor Red
   exit 1
 }
-Write-Host "=== Done. Start ProseCast: ===" -ForegroundColor Green
-Write-Host "  .\start-prosecast.ps1" -ForegroundColor Cyan
+Write-Host "=== Done. ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "  It opens http://localhost:8000 in your browser. The first run walks"
 Write-Host "  you through four steps and ends by reading you the sample book."
+Write-Host ""
+Write-Host "  Copy and run this:"
+Write-Host "      .\start-prosecast.ps1" -ForegroundColor Cyan
+Write-Host ""
+
+# Offering to start it saves the one step most likely to be got wrong (the
+# leading `.\`), but the command is printed above FIRST, because that is the
+# thing to remember tomorrow. Enter or Y starts it; anything else does not.
+$answer = Read-Host "  Start ProseCast now? [Y/n]"
+if ($answer -eq '' -or $answer -match '^[Yy]') {
+  Write-Host ""
+  & (Join-Path $PSScriptRoot "start-prosecast.ps1")
+}

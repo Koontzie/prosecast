@@ -290,6 +290,16 @@ def test_setup_ps1_writes_the_launcher():
     assert "Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" in text
 
 
+def test_setup_ps1_prints_the_command_before_it_offers_to_run_it():
+    """The prompt is a convenience; the printed command is the thing someone
+    needs tomorrow. Print it first, or the offer replaces the knowledge."""
+    text = SETUP_PS1.read_text(encoding="utf-8")
+    printed = text.index('Write-Host "      .\\start-prosecast.ps1"')
+    asked = text.index("Start ProseCast now?")
+    assert printed < asked, "the command must be printed before the prompt"
+    assert "Read-Host" in text
+
+
 def test_setup_ps1_is_plain_ascii():
     """Windows PowerShell 5.1 reads a BOM-less .ps1 as the system codepage, so
     a stray curly quote or box-drawing character becomes mojibake in a script
