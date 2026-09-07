@@ -93,10 +93,13 @@ document.addEventListener('DOMContentLoaded', function () {
 SAMPLE_BOOK_ROW = {"slug": "sample_book", "title": "Sample Book",
                    "chapters": 2, "unresolved": 0}
 
+# The sample's real shape: a short chapter 1 (the one the wizard renders while
+# someone waits) and everything else in chapter 2.
 SAMPLE_CHAPTERS = {"book_title": "Sample Book", "chapters": [
-    {"index": i, "title": t, "block_count": 12, "dialogue_count": 8,
+    {"index": i, "title": t, "block_count": n, "dialogue_count": d,
      "unresolved_count": 0, "has_audio": i == 0, "wav_file": f"ch{i}.wav"}
-    for i, t in enumerate(["Chapter 1: The Meeting", "Chapter 2: The Conversation"])]}
+    for i, (t, n, d) in enumerate([("Chapter 1: The Meeting", 10, 5),
+                                   ("Chapter 2: The Conversation", 40, 21)])]}
 
 
 def router(*, calls: list, status: dict, config: dict, ticks: int = 2,

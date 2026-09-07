@@ -126,6 +126,13 @@ Six layers, each filling gaps left by the previous:
 | Carousel b8 Ch17-30 | 959 | 103 (89.3%) | not run | 103 |
 | A Parade of Horribles (--narrator Carl) | 3,890 | 388 (90.0%) | 6 (99.8%) | **6** |
 
+The sample is **2 chapters, 50 blocks, 26 of them dialogue**, split 10 / 40 on
+purpose: the first-run wizard renders chapter 1 while a stranger waits on a
+progress line, so chapter 1 is the opening exchange and nothing more. The 100%
+figure is with `en_core_web_sm` installed — without spaCy, layer 2 never runs,
+"Jane" is not found as a speaker and 9 dialogue blocks stay unresolved. Moving
+the chapter break in E9.7 changed neither number.
+
 **Phase 2 complete.** The full attribution pipeline (rule-based + LLM) achieves 99.8% on a 100-chapter LitRPG novel. The LLM pass resolved 382/388 blocks the heuristics missed (avg confidence 0.811). The 6 remaining unresolved blocks are reserved for the correction UI.
 
 ## Test Books

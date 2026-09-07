@@ -11,9 +11,53 @@ findings — the render worker's whole-document write first, now that E3 is
 guarding around it rather than fixing it. Rulebook render + C4 still open.
 **E9 (same day)** closed the eight findings from the first real Windows
 install: ProseCast now installs and speaks on Windows with `SETUP.ps1` and no
-terminal afterwards. E6's, E7's and E9's commits are LOCAL — Tyler reviews and
-pushes.
-**Updated:** 2026-09-06
+terminal afterwards, and **E9.7 (09-07)** polished what the fresh-clone re-run
+found — a start prompt, gendered casting on rung 1, and a 10-block chapter 1 so
+the wizard reaches sound faster. E9 is pushed; E9.7's commits are LOCAL.
+**Updated:** 2026-09-07
+
+## Session 2026-09-07 (Claude Code, Mac) — E9.7: polish from the fresh-clone Windows run
+
+Tyler re-ran the Windows install from a fresh clone with `SETUP.ps1` and it
+**passed**. Three things it turned up, none of them breakage.
+**Tests 375 → 406 passed, 1 skipped. All five `tests/ui/` checks green.**
+
+- **`SETUP.ps1` ended on a path with nothing to do about it.** It now prints
+  "Copy and run this: `.\start-prosecast.ps1`" and then asks "Start ProseCast
+  now? [Y/n]", starting it on Enter or Y. The command is printed *before* the
+  prompt on purpose — the prompt saves a step today, the printed line is what
+  you need tomorrow.
+- **The sample still cast Elizabeth and Jane as men.** E9.3 made auto-cast
+  gender-aware; on rung 1 there is nothing to be aware of — no titles in those
+  names, no Ollama, so `character_profiles` is empty for every book. Two fixes:
+  `book_parser.SAMPLE_CHARACTER_PROFILES` ships the sample's own cast (two of
+  the four are **surnames** — "Darcy", "Bingley" — which no name table can or
+  should resolve), and `cast_profiler` gains a **~650-name** table of common
+  English given names as the rules-only last resort, behind titles and behind
+  the LLM. The part worth defending is `AMBIGUOUS_NAMES`: 88 genuinely unisex
+  names it refuses to answer for, so adding Jordan later has to argue with a
+  list. When in doubt it is left out — an omission costs a round-robin voice,
+  a wrong entry costs a re-render of every line that character speaks.
+- **The sample is re-split: chapter 1 is now 10 blocks, chapter 2 is 40**
+  (50 blocks total, 26 of them dialogue — unchanged). Chapter 1 is the opening
+  Elizabeth/Darcy exchange, ending on the silence before he says what he came
+  to say; the Jane and Bingley scenes are chapter 2. The wizard renders
+  chapter 1 while a stranger watches a progress line, so its length is a
+  product decision now, with a test that fails if it grows past 12.
+  **Moving the break cost no attribution** — 26 dialogue and 9 unresolved
+  before and after, measured both ways.
+
+**One thing worth knowing that this session found:** "Jane" is only ever found
+by the **spaCy NER layer**. On a venv without `en_core_web_sm` the sample's
+cast is Elizabeth, Darcy and Bingley, and 9 dialogue blocks stay unresolved —
+which is why the benchmark table's "0 unresolved / 100%" is a *with-spaCy*
+figure. That path could not be exercised on this Mac (the model is not
+installed here; it is the suite's one skip), so the gender fix is covered by a
+deterministic test over all four names as well as the end-to-end one.
+
+**Still Tyler's:** hear the new chapter 1 on the laptop and confirm the wait is
+short enough to feel instant, and confirm the Y/n prompt behaves on a real
+PowerShell — `SETUP.ps1` still has never been executed on this machine.
 
 ## Session 2026-09-06 (Claude Code, Mac) — E9: Windows findings
 

@@ -216,6 +216,12 @@ def parse_book(path: str) -> list:
 
 # ── Sample book ───────────────────────────────────────────────────────────────
 
+# Two chapters, deliberately lopsided. Chapter 1 is the first exchange and
+# nothing else — ten blocks — because the first-run wizard renders exactly this
+# chapter and a stranger is waiting on it. Everything after the pause before
+# Darcy says what he came to say is chapter 2. If you lengthen chapter 1, you
+# are lengthening the wait between "▶ Read me the sample" and the first sound
+# anyone hears from ProseCast.
 SAMPLE_TEXT = '''\
 Chapter 1: The Meeting
 
@@ -234,6 +240,8 @@ Please sit down, Mr. Darcy."
 
 Darcy took the chair by the fireplace. A silence stretched between them,
 comfortable enough for Elizabeth, though she sensed something was troubling him.
+
+Chapter 2: The Conversation
 
 "I wished to speak to you," said Darcy at last,
 "about the matter we discussed at Netherfield."
@@ -256,8 +264,6 @@ Darcy rose and bowed. "Miss Bennet."
 
 Elizabeth looked between the two of them, a quiet amusement rising in her chest.
 "I shall ring for tea," she said.
-
-Chapter 2: The Conversation
 
 Later that afternoon, Bingley arrived at the house, his good cheer evident
 the moment he stepped through the door.

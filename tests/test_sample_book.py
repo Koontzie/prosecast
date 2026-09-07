@@ -92,6 +92,30 @@ def test_first_call_ingests_the_sample_as_a_job(client, sandbox):
     assert ir["ingest"]["mode"] == "novel"
 
 
+def test_chapter_one_is_short_enough_to_wait_for(client, sandbox):
+    """The wizard renders chapter 1 while a stranger watches a progress line,
+    so its length is a product decision, not an accident of where a scene
+    ended. Ten blocks; the rest of the sample is chapter 2."""
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    chapters = json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))["chapters"]
+    assert len(chapters) == 2
+    assert len(chapters[0]["blocks"]) <= 12, (
+        f"chapter 1 has grown to {len(chapters[0]['blocks'])} blocks — that is the "
+        "wait between '▶ Read me the sample' and the first sound anyone hears")
+    assert len(chapters[1]["blocks"]) > len(chapters[0]["blocks"]), \
+        "chapter 2 holds the rest of the book"
+
+
+def test_the_split_did_not_cost_any_attribution(client, sandbox):
+    """Moving a chapter break can strand the alternating heuristic, which seeds
+    itself from the previous chapter's last speakers. It did not: the sample
+    has the same 26 dialogue blocks and the same attribution as before."""
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    chapters = json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))["chapters"]
+    blocks = [b for ch in chapters for b in ch["blocks"]]
+    assert sum(1 for b in blocks if b["type"] == "dialogue") == 26
+
+
 def test_the_text_file_is_written_where_books_live(client, sandbox):
     _wait(client, client.post("/books/sample").json()["job_id"])
     assert (sandbox / "books" / "sample_book.txt").exists()
