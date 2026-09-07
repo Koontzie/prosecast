@@ -7,12 +7,13 @@ Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
 2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
 gmail author scrubbed) and force-pushed; every commit hash from before this
 session changed, so hashes quoted in older STATUS entries no longer resolve.
-**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **297 passed,
-1 skipped** (247 before E7, 231 before E6, 197 before E3) — the skip is
-`en_core_web_sm` missing from the venv; `bash SETUP.sh` installs and verifies
-it, after which the number is 301. Without tesseract a further 6 skip. Skips
-are healthy, not regressions. There are now **five** `tests/ui/` checks, and
-Playwright + chromium are installed in the Mac venv.
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **375 passed,
+1 skipped** (300 before E9, 297 before the librivox commit, 247 before E7, 231
+before E6, 197 before E3) — the skip is `en_core_web_sm` missing from the venv;
+`bash SETUP.sh` installs and verifies it, after which the number is higher.
+Without tesseract a further 6 skip. Skips are healthy, not regressions. There
+are still **five** `tests/ui/` checks, and Playwright + chromium are installed
+in the Mac venv.
 
 ---
 
@@ -24,8 +25,9 @@ whole-book resumable renders and word-accurate read-along — **every step in th
 UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05; since E6 on
 2026-09-06 the first run walks a stranger to the sound of a voice without a
 README, and since E7 the same day the voice bank is a page you can browse,
-audition and annotate rather than a JSON file. **E3 is pushed; E6's and E7's
-commits are local — Tyler reviews and pushes.**
+audition and annotate rather than a JSON file. Since E9, also the same day, it
+installs and speaks on **Windows**. **E3 is pushed; E6's, E7's and E9's commits
+are local — Tyler reviews and pushes.**
 
 | Phase | What | State |
 |---|---|---|
@@ -37,6 +39,7 @@ commits are local — Tyler reviews and pushes.**
 | **E3** | **Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card** | **✓ 09-05** |
 | **E6** | **First-run wizard: engine → probe → optional brains → hears the sample book** | **✓ 09-06 (local commits)** |
 | **E7** | **Voices tab: voice library + notes/tags/rating, audition + A/B, `hidden`, sourcing catalogue** | **✓ 09-06 (local commits)** |
+| **E9** | **Windows: UTF-8 everywhere + guard test, wizard never loses you, six gendered Piper voices, `SETUP.ps1`** | **✓ 09-06 (local commits)** |
 
 Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 `README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
@@ -104,6 +107,17 @@ blunt 409, and that guard can be relaxed the moment the merge fix lands.
   now actually removes a voice from auto-casting, so it is worth doing
   properly. **Before uploading anything new, read the `librivox_voices/`
   MANIFEST finding below** — it will bite on the next upload.
+- **E9 is done** (09-06, Claude Code on the Mac — see the STATUS entry). What
+  is left is Tyler's and none of it is checkable from a Mac: re-run on the
+  laptop from a **fresh clone** with `SETUP.ps1` (it has never been executed),
+  judge the **two new Piper voices' gender by ear** (read off their datasets,
+  not heard), and see the wizard once on a machine where the sample book
+  already exists.
+- **Next after that:** E8 (data safety, `docs/CC_BRIEF_data_safety.md`) when
+  Gideon is free — it is the render worker's whole-document write, the first of
+  the four findings below. Then the **installer**: the nine manual steps E9
+  documented are its specification, and it is a design session before it is a
+  build.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
@@ -256,6 +270,45 @@ at all. The hook fires while **nobody has chosen an engine**: the
 hold the two sides — `setup_status_setup_sh.json` (a config.json, nothing
 chosen → fires) and `setup_status_chatterbox.json` (chosen and answering →
 must not fire).
+
+**Windows (09-06, E9).** It works, and it was installed from scratch on a real
+Windows 11 laptop to find out. Four things a session needs to know:
+
+*Every text read and write names its encoding, and a test enforces it.*
+`tests/test_encoding_guard.py` walks `server.py`, `main.py`, `prosecast/` and
+`scripts/` with `ast` and fails on any text-mode `open()` or
+`.read_text()`/`.write_text()` without `encoding=`. This is not style: Windows
+defaults to cp1252, `static/index.html` is UTF-8, and `GET /` used to 500 on
+the first request of a fresh install. The test allowlists nothing — a mode it
+cannot read as a literal counts as text. `wave.open` and `pymupdf.open` are out
+of scope because they are different functions with no `encoding` parameter.
+**Do not add a bare `open()` to those four locations; the suite will catch it,
+but it is faster to not.**
+
+*Piper resolves `<name>.onnx` from the CURRENT WORKING DIRECTORY.* That is why
+the voice files live in the repo root (gitignored) rather than somewhere
+tidier, why `SETUP.ps1` downloads them there, and why `probe_voice_engine`
+looks there. `PIPER_VOICES` is six voices and `PIPER_VOICE_META` carries their
+gender **in code**, not in `voice_meta.json`, so a fresh clone auto-casts
+correctly before anyone edits an overlay; the overlay is merged over it and
+still wins. Adding a voice to the pool means adding it to `SETUP.ps1` too —
+`tests/test_piper_voices.py` fails if they drift.
+
+*`SETUP.ps1` and `start-prosecast.ps1` are the Windows entry points.* The
+second is generated by the first and gitignored. **Neither has ever been run on
+this Mac** — there is no PowerShell here. What is checkable is pytest-checked
+(voice list, `--isolated` on every pip line, plain ASCII); the rest was linted
+by eye, and the script's own header says which steps Tyler ran by hand.
+
+*The wizard suppresses the casting modal.* `init()` opens the only book when
+the library holds exactly one, so on a machine where `main.py --sample` had
+already made `sample_book` from a terminal, `loadBook`'s "no voice map → cast
+this" modal opened **on top of** the first-run wizard. `loadBook` now checks
+`isFirstRunOpen()`. Casting the sample is step 4's job, via `POST /books/sample`
+— whose `_sample_map_fits()` asks the preflight's questions about the map on
+disk and does not care who wrote it. Esc from the wizard goes to Setup unless
+that run made a book, in which case it goes to the book; the Skip link always
+goes to Setup.
 
 **The README is a contract (09-05).** It promises: ffmpeg required, tesseract
 scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,

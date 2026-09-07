@@ -9,56 +9,105 @@ any more** — and nothing requires the README either. Next: the **cast
 exchange** design (PHILOSOPHY.md is the spec-of-record), then the four HANDOFF
 findings — the render worker's whole-document write first, now that E3 is
 guarding around it rather than fixing it. Rulebook render + C4 still open.
-E6's and E7's commits are LOCAL — Tyler reviews and pushes.
+**E9 (same day)** closed the eight findings from the first real Windows
+install: ProseCast now installs and speaks on Windows with `SETUP.ps1` and no
+terminal afterwards. E6's, E7's and E9's commits are LOCAL — Tyler reviews and
+pushes.
 **Updated:** 2026-09-06
 
-## Session 2026-09-06 (Claude Code, Mac) — E9 BLOCKED at Step 0: dirty working tree
+## Session 2026-09-06 (Claude Code, Mac) — E9: Windows findings
 
-Started `docs/CC_BRIEF_windows_findings.md`. Stopped at the brief's own
-guardrail before writing any code: *"Working tree: expected clean at `main`.
-`git status -sb` first; if there are modified files, STOP and write what you
-found to `STATUS.md`."* It is not clean. **No E9 work was done and nothing was
-committed.**
+Ran `docs/CC_BRIEF_windows_findings.md` end to end. Tyler installed ProseCast
+from scratch on a rebuilt Windows 11 laptop that evening and it **worked** —
+the wizard rendered the sample on Piper and the reader followed along — but
+getting there took nine things an average person cannot do and turned up two
+real bugs. This session fixed what code can fix and wrote down what it cannot.
+**Tests 300 → 375 passed, 1 skipped. All five `tests/ui/` checks green in both
+skins.**
 
-**What is in the tree:**
+**The eight findings, and what happened to each:**
 
-```
-## main...origin/main
- M scripts/stage_librivox_dialects.py     (+31 −9, uncommitted)
-?? tests/test_stage_librivox.py           (3 tests, all passing)
-?? docs/CC_BRIEF_data_safety.md           (the E8 brief)
-?? CC_BRIEF_windows_findings.md           (byte-identical copy of docs/CC_BRIEF_windows_findings.md)
-```
+1. **`UnicodeDecodeError: 'charmap'` on `GET /` — FIXED.** `server.py:2358` was
+   `read_text()` with no encoding; Windows defaults to cp1252 and
+   `index.html` is UTF-8, so the very first request 500'd. **35** such calls
+   across `server.py`, `main.py`, `prosecast/` and `scripts/` now name
+   `encoding="utf-8"`. `lib.write_json_atomic` already did — checked, not
+   assumed. `tests/test_encoding_guard.py` walks those four locations with
+   `ast` and fails on any text-mode `open()` or `.read_text()`/`.write_text()`
+   without one; it failed on 13 files before the sweep. `PYTHONUTF8` is gone
+   from the docs; the only trace left is one import-time tip on Windows.
+2. **The wizard lost him — FIXED, three ways.** SETUP.sh's smoke test
+   (`main.py --sample --tts stub`) had already made `library/sample_book` from
+   a terminal, so `init()` found exactly one book and opened it, and
+   `loadBook`'s casting modal landed **on top of** the wizard; "Cast the book"
+   then dropped him on the Setup page. Now: `_sample_map_fits()` asks the
+   render preflight's two questions about whatever map is on disk without
+   caring who wrote it (and no longer raises on a map of engine-config dicts —
+   `dict in set` is a TypeError); `loadBook` skips the casting modal while the
+   wizard is open; and Esc has its own door from the Skip link — Skip always
+   goes to Setup, Esc goes to the book if this wizard run made one.
+3. **Piper voices had no gender — FIXED.** Elizabeth got `ryan` and Jane got
+   `kusal`, both men, while the cast profiler had known both were women.
+   `PIPER_VOICES` is now six, three female and three male, and the gender ships
+   in the code (`PIPER_VOICE_META`) rather than in `voice_meta.json`, so a
+   fresh clone auto-casts correctly before anyone edits an overlay. The
+   hand-edited overlay still wins and is *merged* over the shipped entry, so
+   annotating a voice cannot silently un-gender it. `_default_voice_map` now
+   takes the IR's `character_profiles` and rotates each gender independently.
+4. **Nothing told a Windows user to download voice models — FIXED.** The probe
+   counted the binary and nothing else; a machine with `piper` and zero `.onnx`
+   files read `ok` and would have failed at render time. It now counts the
+   files in the working directory (where `piper --model` looks): six → ok,
+   some → warn (still `ok`, so it never walls the wizard), none → missing. The
+   fix text is the exact `python -m piper.download_voices <name>` line per
+   missing voice. The Piper card no longer says "one voice model".
+5. **ffmpeg row showed the full winget path — FIXED.** It reads
+   "found · ffmpeg 9.0.1" now, parsed from the first line of `ffmpeg -version`
+   (same for tesseract), falling back to "found". The path moved to a new
+   `extra` field the Setup page hangs on the tooltip.
+6. **Setup never said "you're ready, go listen" — FIXED.** When the voice
+   engine is ok there is a banner above the intro: "You're set. <engine> is
+   ready…", with **▶ Hear the sample** and **↻ Run setup again**. The amber
+   optional rows stay; the banner reframes them. The button runs the wizard's
+   own step-4 sequence because it *is* that sequence — `hearTheSample()` is
+   now shared.
+7. **Nine manual steps — DOCUMENTED, and mostly automated.** `SETUP.ps1`
+   mirrors `SETUP.sh` and adds `piper-tts` plus the six voice downloads, and
+   writes `start-prosecast.ps1` as the double-click entry point. The README's
+   "not tested natively on Windows, use WSL2" paragraph is now a real
+   **"### Windows (tested 2026-09-06)"** section. The NVIDIA `extra-index-url`
+   tripwire is not ours to fix: `--isolated` sidesteps it and the README says
+   how to find it.
+8. **Tyler's read on Piper — IN THE README**, in its own words: some voices are
+   decent, some noticeably robotic; it works, it needs no GPU, and it is the
+   rung you use to decide whether Chatterbox is worth setting up.
 
-The modified script plus its untracked test look like one finished, coherent
-change that was never committed: `split_note_name()` turns
-`us-midwest-dm deep slow male.wav` into an upload name plus a listening note,
-`do_upload` prints the rename plan and uploads the space-free name, and
-`merge_voice_meta` accepts `(name, note)` pairs and puts the note in front of
-the accent label. Whoever wrote it should commit it — it is not mine to
-judge, squash, or stash.
+**Two places the code disagreed with the brief, resolved rather than guessed:**
 
-**Why this actually blocks E9 rather than being tidiness:** Step 1 sweeps
-`encoding="utf-8"` across `server.py`, `main.py`, `prosecast/`, **and
-`scripts/`**. `scripts/stage_librivox_dialects.py` has seven bare text
-reads/writes that the sweep must fix — lines 323, 361, 425, 462, 536, 544,
-572 — and **544 and 572 are inside `merge_voice_meta`, the exact function the
-uncommitted diff rewrites.** Sweeping it would interleave E9's edit with
-in-progress work in the same hunks, and `git commit -m "E9.1: ..."` would
-carry a stranger's librivox change into an encoding commit. The new
-`tests/test_encoding_guard.py` walks `scripts/` too, so its pass/fail would
-depend on uncommitted code.
+- The brief said auto-cast should respect gender on Piper "the same way it does
+  on Chatterbox". It did not do it on Chatterbox either — `_default_voice_map`
+  was a pure round-robin for every engine. The fix is engine-agnostic and
+  driven by the overlay, so the sentence is true now for both.
+- `_ensure_sample_cast` already re-cast on an engine mismatch, so finding 2's
+  endpoint half was mostly in place. The gap was narrower than the brief
+  thought (a CLI-made book has *no* voice map at all, not one for another
+  engine) and the visible failure was entirely in the UI.
 
-**Baseline observed before stopping (read-only):** `.venv/bin/pytest tests/ -q`
-→ **300 passed, 1 skipped** in 16.3s. The brief predicts 297 passed, 1 skipped;
-the extra 3 are exactly the untracked `tests/test_stage_librivox.py`, so the
-brief's number is right for the committed tree and the healthy-loop check
-should be read as **297 + 1 (encoding guard)** once the tree is clean.
+**Still Tyler's to verify — none of it is checkable from a Mac:**
 
-**To unblock:** commit or stash `scripts/stage_librivox_dialects.py` +
-`tests/test_stage_librivox.py`, then re-run the brief from Step 0. The
-duplicate `CC_BRIEF_windows_findings.md` at the repo root can be deleted; the
-copy under `docs/` is the one the brief refers to.
+- **Re-run on the laptop from a fresh clone with `SETUP.ps1`.** It has never
+  been executed; there is no PowerShell on this machine. Its voice list, its
+  `--isolated` lines and its ASCII-ness are pytest-checked, the rest is by eye.
+  `--isolated` and the two new voice downloads are the steps Tyler has *not*
+  done by hand.
+- **The two new voices' gender, by ear.** `en_US-hfc_female-medium` and
+  `en_GB-jenny_dioco-medium` were chosen from the live rhasspy/piper-voices
+  catalogue, and their gender read off the dataset each voice's MODEL_CARD
+  names — the catalogue itself carries no gender field. Sources are in the
+  comment above `PIPER_VOICE_META`.
+- **The wizard on a machine where the sample book already exists.** The
+  headless check reproduces it from generated fixtures; the real thing was
+  reproduced once, on Windows, by accident.
 
 ## Session 2026-09-06 (Claude Code, Mac) — E7: the Voices tab
 
