@@ -122,7 +122,7 @@ def _find_ir_by_name(query: str) -> str | None:
     for slug in lib.list_book_slugs():
         ir_file = lib.ir_path(slug)
         try:
-            with open(ir_file) as f:
+            with open(ir_file, encoding="utf-8") as f:
                 title = json.load(f).get("book_title", "")
         except Exception:
             continue
@@ -216,7 +216,7 @@ def main():
                 print(f"    Available books in {lib.LIBRARY_DIR}:")
                 for slug in lib.list_book_slugs():
                     try:
-                        title = json.load(open(lib.ir_path(slug))).get("book_title", slug)
+                        title = json.load(open(lib.ir_path(slug), encoding="utf-8")).get("book_title", slug)
                         print(f"      {title}")
                     except Exception:
                         pass
@@ -247,7 +247,7 @@ def main():
             print(f"❌  No existing IR found at {ir_path}")
             print("    Run without --use-existing-ir to build it first.")
             sys.exit(1)
-        with open(ir_path) as f:
+        with open(ir_path, encoding="utf-8") as f:
             ir_data = json.load(f)
         print(f"[IR] Loaded existing IR → {ir_path}")
         print(f"[IR] {len(ir_data['chapters'])} chapters, {ir_data['unresolved_count']} unresolved")
@@ -268,7 +268,7 @@ def main():
         from prosecast.ir_generator import save_ir, asdict
         save_ir(ir, ir_path)
 
-        with open(ir_path) as f:
+        with open(ir_path, encoding="utf-8") as f:
             ir_data = json.load(f)
 
     # ── LLM attribution pass (Phase 2) ───────────────────────────────────────

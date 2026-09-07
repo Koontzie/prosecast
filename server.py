@@ -39,6 +39,7 @@ import copy
 import datetime as _dt
 import json
 import os
+import sys
 import tempfile
 import threading
 import uuid
@@ -54,6 +55,15 @@ from pydantic import BaseModel
 
 from prosecast import ingest as ingest_mod
 from prosecast import library as lib
+
+# Belt and braces, not the fix. The fix is that every text read and write in
+# this codebase names its encoding (E9.1, tests/test_encoding_guard.py) — but
+# a stranger's console is also full of book text, and on Windows that console
+# is cp1252 unless something says otherwise. If a curly quote ever comes back
+# as a mojibake smear, this line is the first thing to check.
+if sys.platform == "win32" and sys.flags.utf8_mode == 0:
+    print("ProseCast: this Python is not in UTF-8 mode. Nothing should break — "
+          "but start-prosecast.ps1 (written by SETUP.ps1) sets PYTHONUTF8=1 for you.")
 
 app = FastAPI(title="ProseCast")
 
@@ -381,7 +391,7 @@ def list_books():
     books = []
     for slug in lib.list_book_slugs():
         try:
-            with open(lib.ir_path(slug)) as f:
+            with open(lib.ir_path(slug), encoding="utf-8") as f:
                 ir = json.load(f)
             books.append({
                 "slug": slug,
@@ -575,7 +585,7 @@ def _ensure_sample_cast() -> bool:
     vm_path = lib.voice_map_path(SAMPLE_SLUG)
     if vm_path.exists():
         try:
-            saved = json.loads(vm_path.read_text())
+            saved = json.loads(vm_path.read_text(encoding="utf-8"))
         except Exception:
             saved = {}
         entries = saved.get("map") or {}
@@ -720,7 +730,7 @@ def get_cast_candidates(book_slug: str):
     # Build voice map: saved if exists, else defaults
     all_names = [c["name"] for c in characters]
     if has_voice_map:
-        with open(vm_path) as f:
+        with open(vm_path, encoding="utf-8") as f:
             saved = json.load(f)
         voice_map = saved.get("map", {})
         defaults = _default_voice_map(all_names, engine)
@@ -1171,7 +1181,7 @@ def get_cast(book_slug: str):
     vm_path = lib.voice_map_path(book_slug)
     voice_map = {}
     if vm_path.exists():
-        with open(vm_path) as f:
+        with open(vm_path, encoding="utf-8") as f:
             voice_map = json.load(f).get("map", {})
 
     ranked = sorted(
@@ -1576,7 +1586,7 @@ def get_voice_map(book_slug: str):
 
     vm_path = lib.voice_map_path(book_slug)
     if vm_path.exists():
-        with open(vm_path) as f:
+        with open(vm_path, encoding="utf-8") as f:
             saved = json.load(f)
         voice_map = saved.get("map", {})
         # Fill in any characters not yet in the saved map with auto-assigned defaults
@@ -1842,7 +1852,7 @@ def _save_render_state(book_slug: str, job: dict) -> None:
         state = {"jobs": []}
         if path.exists():
             try:
-                state = json.loads(path.read_text())
+                state = json.loads(path.read_text(encoding="utf-8"))
             except Exception:
                 pass
         state["jobs"] = [j for j in state.get("jobs", [])
@@ -1853,7 +1863,7 @@ def _save_render_state(book_slug: str, job: dict) -> None:
             "error": job.get("error"),
             "chapter_results": job.get("chapter_results", []),
         }]
-        path.write_text(json.dumps(state, indent=2))
+        path.write_text(json.dumps(state, indent=2), encoding="utf-8")
     except Exception:
         pass  # advisory only — never let bookkeeping kill a render
 
@@ -2342,7 +2352,7 @@ def download_m4b(book_slug: str):
     # Friendly download filename from the book title
     nice_name = book_slug
     try:
-        title = json.load(open(lib.ir_path(book_slug))).get("book_title", book_slug)
+        title = json.load(open(lib.ir_path(book_slug), encoding="utf-8")).get("book_title", book_slug)
         nice_name = re.sub(r"[^\w\- ]", "", title).strip() or book_slug
     except Exception:
         pass
@@ -2355,5 +2365,5 @@ def download_m4b(book_slug: str):
 def index():
     html_path = STATIC_DIR / "index.html"
     if html_path.exists():
-        return HTMLResponse(html_path.read_text())
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
     return HTMLResponse("<h1>index.html not found in static/</h1>", status_code=500)

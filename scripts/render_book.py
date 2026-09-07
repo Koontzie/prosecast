@@ -65,7 +65,7 @@ def main():
         print("[Preflight] SKIPPED by flag — good luck.")
 
     ir_path = lib.ir_path(slug)
-    ir = json.loads(ir_path.read_text())
+    ir = json.loads(ir_path.read_text(encoding="utf-8"))
     total = len(ir["chapters"])
     targets = parse_chapters(args.chapters, total) if args.chapters else list(range(total))
 

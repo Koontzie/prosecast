@@ -61,7 +61,7 @@ def main():
             failed += 1
             print(f"  ✗ {out.name} FAILED")
 
-    (out_dir / "manifest.txt").write_text("\n".join(manifest) + "\n")
+    (out_dir / "manifest.txt").write_text("\n".join(manifest) + "\n", encoding="utf-8")
     total = len(files)
     print(f"\n[Audition] {done} rendered, {skipped} already done, {failed} failed — "
           f"{skipped + done}/{total} total. Re-run to continue if incomplete.")

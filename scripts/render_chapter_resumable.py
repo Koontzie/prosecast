@@ -65,7 +65,7 @@ def main():
 
     vm_path = lib.voice_map_path(args.slug)
     if vm_path.exists():
-        engine.load_voice_map(json.loads(vm_path.read_text()).get("map", {}))
+        engine.load_voice_map(json.loads(vm_path.read_text(encoding="utf-8")).get("map", {}))
         print(f"[Audio] Loaded voice map → {vm_path}")
 
     blocks_dir = lib.chapter_blocks_dir(args.slug, args.chapter)

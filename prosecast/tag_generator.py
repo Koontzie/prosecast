@@ -425,7 +425,7 @@ def tag_ir(
 
     if failures:
         try:
-            with open(failure_log_path, "w") as f:
+            with open(failure_log_path, "w", encoding="utf-8") as f:
                 json.dump(failures, f, indent=2)
             print(f"\n[TAG] Failure log → {failure_log_path}")
         except Exception as e:

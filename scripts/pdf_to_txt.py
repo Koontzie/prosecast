@@ -56,7 +56,7 @@ def main():
         sys.exit(3)
 
     if toc_path:
-        chapters = json.load(open(toc_path))["chapters"]
+        chapters = json.load(open(toc_path, encoding="utf-8"))["chapters"]
         det = None
         source, note = "toc.json", f"{len(chapters)} chapters from {toc_path}"
     else:

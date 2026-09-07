@@ -231,7 +231,7 @@ def preflight(book_slug: str, engine: str) -> PreflightReport:
             "what you want overnight).")
         return rep
     try:
-        vm = json.loads(vm_path.read_text())
+        vm = json.loads(vm_path.read_text(encoding="utf-8"))
     except Exception as e:
         rep.abort(f"voice_map.json unreadable: {e}")
         return rep
@@ -281,7 +281,7 @@ def preflight(book_slug: str, engine: str) -> PreflightReport:
     ir_path = lib.ir_path(book_slug)
     if ir_path.exists():
         try:
-            ir = json.loads(ir_path.read_text())
+            ir = json.loads(ir_path.read_text(encoding="utf-8"))
             unresolved = ir.get("unresolved_count", 0)
             if unresolved:
                 rep.warn(f"{unresolved} unresolved blocks — they render with "

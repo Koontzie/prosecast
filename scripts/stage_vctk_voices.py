@@ -107,7 +107,7 @@ def do_pull(args):
             if len(done) >= args.n:
                 break
 
-    (out / "ATTRIBUTION.txt").write_text(LICENSE_NOTE)
+    (out / "ATTRIBUTION.txt").write_text(LICENSE_NOTE, encoding="utf-8")
     print(f"\nSaved {len(done)} reference clips to {out}/  (sr={target_sr} Hz)")
     print("Listen to them, delete any you don't want, then re-run with --from-dir + --upload-to.")
     return out

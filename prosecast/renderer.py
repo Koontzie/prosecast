@@ -38,7 +38,7 @@ def make_engine(book_slug: str, engine_name: str | None) -> TTSEngine:
     engine = TTSEngine(engine=engine_name)
     vm_path = lib.voice_map_path(book_slug)
     if vm_path.exists():
-        engine.load_voice_map(json.loads(vm_path.read_text()).get("map", {}))
+        engine.load_voice_map(json.loads(vm_path.read_text(encoding="utf-8")).get("map", {}))
     return engine
 
 

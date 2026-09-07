@@ -42,7 +42,7 @@ FIXTURES = ROOT / "tests" / "fixtures"
 def build_study_book(root: Path) -> str:
     """The same little book tests/test_timeline.py uses (from synthetic.py)."""
     lib.ensure_book_dir("study")
-    (root / "study" / "ir.json").write_text(json.dumps(study_ir()))
+    (root / "study" / "ir.json").write_text(json.dumps(study_ir()), encoding="utf-8")
     return "study"
 
 
@@ -84,7 +84,7 @@ def main() -> None:
     FIXTURES.mkdir(parents=True, exist_ok=True)
 
     def write(name: str, data, source: str) -> None:
-        (FIXTURES / name).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
+        (FIXTURES / name).write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(f"{name:32s} <- {source}")
 
     write("timeline_study_ch0.json", client.get(f"/timeline/{slug}/0").json(),
@@ -135,7 +135,7 @@ def main() -> None:
     # chosen anything — that must still open the wizard. An engine actually
     # picked (and answering) must not.
     (tmp / "config.json").write_text(
-        json.dumps(json.loads((ROOT / "config.example.json").read_text())))
+        json.dumps(json.loads((ROOT / "config.example.json").read_text(encoding="utf-8"))), encoding="utf-8")
     config_mod.invalidate()
     pin_machine(setup_probe_mod, os_name="Darwin", ollama_ok=False, whisper_ok=False)
     write("setup_status_setup_sh.json", pin_status(client.get("/setup/status").json()),
