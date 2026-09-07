@@ -464,6 +464,19 @@ def write_sources_md(out: Path, manifest):
 
 # ── Upload ────────────────────────────────────────────────────────────────────
 
+def split_note_name(name: str):
+    """`us-midwest-dm deep slow male.wav` → (`us-midwest-dm.wav`, `deep slow male`).
+
+    Auditioned files get a listening note appended to the filename after a space.
+    The part before the first space is the MANIFEST key and becomes the (permanent,
+    space-free) upload name; the rest becomes the voice's note. A name with no
+    space passes through untouched.
+    """
+    stem, suffix = os.path.splitext(name)
+    head, _, note = stem.partition(" ")
+    return head + suffix, note.strip()
+
+
 def do_upload(args):
     src = Path(args.from_dir)
     wavs = sorted(p for p in src.glob("*.wav"))
@@ -471,10 +484,13 @@ def do_upload(args):
         sys.exit(f"No .wav files in {src}")
     base = args.upload_to.rstrip("/")
 
+    plan = [(p, *split_note_name(p.name)) for p in wavs]
     print("⚠️  Filenames become PERMANENT once uploaded — voice_map.json files and")
-    print("    AnimaForge reference them by name. Rename BEFORE this step, never after.\n")
-    for p in wavs:
-        print(f"   {p.name}")
+    print("    AnimaForge reference them by name. Rename BEFORE this step, never after.")
+    print("    Words after the first space are NOT uploaded — they become the voice's note.\n")
+    for p, up_name, note in plan:
+        arrow = "" if up_name == p.name else f"  →  {up_name}"
+        print(f"   {p.name}{arrow}" + (f"   [note: {note}]" if note else ""))
     if input(f"\nUpload {len(wavs)} file(s) to {base}? [y/N] ").strip().lower() != "y":
         sys.exit("Aborted.")
 
@@ -484,15 +500,15 @@ def do_upload(args):
         sys.exit("Upload needs `requests` — run this step from the prosecast venv.")
 
     ok, fail, uploaded = 0, 0, []
-    for p in wavs:
+    for p, up_name, note in plan:
         with open(p, "rb") as fh:
             r = requests.post(f"{base}/upload_predefined_voice" if args.predefined
                               else f"{base}/upload_reference",
-                              files={"files": (p.name, fh, "audio/wav")}, timeout=120)
+                              files={"files": (up_name, fh, "audio/wav")}, timeout=120)
         if r.status_code < 300:
-            ok += 1; uploaded.append(p.name); print(f"  ✓ {p.name}")
+            ok += 1; uploaded.append((up_name, note)); print(f"  ✓ {up_name}")
         else:
-            fail += 1; print(f"  ✗ {p.name} → HTTP {r.status_code}: {r.text[:200]}")
+            fail += 1; print(f"  ✗ {up_name} → HTTP {r.status_code}: {r.text[:200]}")
     print(f"\n{ok} uploaded, {fail} failed.")
 
     if uploaded and not args.no_meta:
@@ -503,6 +519,9 @@ def do_upload(args):
 
 def merge_voice_meta(staged_dir: Path, filenames, meta_path: Path):
     """Seed voice_meta.json from MANIFEST.json for the voices we just uploaded.
+
+    `filenames` items are either an upload name or an `(upload name, note)` pair
+    from `split_note_name`; the note lands in front of the accent label.
 
     Saves hand-typing the whole overlay: region, published accent label, licence
     and source URL land automatically. The gender is a PITCH GUESS — it is
@@ -528,16 +547,19 @@ def merge_voice_meta(staged_dir: Path, filenames, meta_path: Path):
             return
 
     added = 0
-    for fn in filenames:
+    for item in filenames:
+        fn, note = item if isinstance(item, tuple) else (item, "")
         m = by_file.get(fn)
         if not m:
+            print(f"  (no MANIFEST entry for {fn} — no provenance seeded; add it in the Voices tab)")
             continue
         key = Path(fn).stem
         entry = dict(meta.get(key) or {})
         if not entry.get("gender"):
             entry["gender"] = m.get("gender_guess", "")
         if not entry.get("notes"):
-            entry["notes"] = m.get("accent_label", "")
+            label = m.get("accent_label", "")
+            entry["notes"] = f"{note} · {label}" if note and label else (note or label)
         entry.setdefault("region", m.get("region", ""))
         entry.setdefault("accent_label", m.get("accent_label", ""))
         entry.setdefault("license", m["license"]["spdx"])
