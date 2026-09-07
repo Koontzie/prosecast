@@ -12,6 +12,54 @@ guarding around it rather than fixing it. Rulebook render + C4 still open.
 E6's and E7's commits are LOCAL — Tyler reviews and pushes.
 **Updated:** 2026-09-06
 
+## Session 2026-09-06 (Claude Code, Mac) — E9 BLOCKED at Step 0: dirty working tree
+
+Started `docs/CC_BRIEF_windows_findings.md`. Stopped at the brief's own
+guardrail before writing any code: *"Working tree: expected clean at `main`.
+`git status -sb` first; if there are modified files, STOP and write what you
+found to `STATUS.md`."* It is not clean. **No E9 work was done and nothing was
+committed.**
+
+**What is in the tree:**
+
+```
+## main...origin/main
+ M scripts/stage_librivox_dialects.py     (+31 −9, uncommitted)
+?? tests/test_stage_librivox.py           (3 tests, all passing)
+?? docs/CC_BRIEF_data_safety.md           (the E8 brief)
+?? CC_BRIEF_windows_findings.md           (byte-identical copy of docs/CC_BRIEF_windows_findings.md)
+```
+
+The modified script plus its untracked test look like one finished, coherent
+change that was never committed: `split_note_name()` turns
+`us-midwest-dm deep slow male.wav` into an upload name plus a listening note,
+`do_upload` prints the rename plan and uploads the space-free name, and
+`merge_voice_meta` accepts `(name, note)` pairs and puts the note in front of
+the accent label. Whoever wrote it should commit it — it is not mine to
+judge, squash, or stash.
+
+**Why this actually blocks E9 rather than being tidiness:** Step 1 sweeps
+`encoding="utf-8"` across `server.py`, `main.py`, `prosecast/`, **and
+`scripts/`**. `scripts/stage_librivox_dialects.py` has seven bare text
+reads/writes that the sweep must fix — lines 323, 361, 425, 462, 536, 544,
+572 — and **544 and 572 are inside `merge_voice_meta`, the exact function the
+uncommitted diff rewrites.** Sweeping it would interleave E9's edit with
+in-progress work in the same hunks, and `git commit -m "E9.1: ..."` would
+carry a stranger's librivox change into an encoding commit. The new
+`tests/test_encoding_guard.py` walks `scripts/` too, so its pass/fail would
+depend on uncommitted code.
+
+**Baseline observed before stopping (read-only):** `.venv/bin/pytest tests/ -q`
+→ **300 passed, 1 skipped** in 16.3s. The brief predicts 297 passed, 1 skipped;
+the extra 3 are exactly the untracked `tests/test_stage_librivox.py`, so the
+brief's number is right for the committed tree and the healthy-loop check
+should be read as **297 + 1 (encoding guard)** once the tree is clean.
+
+**To unblock:** commit or stash `scripts/stage_librivox_dialects.py` +
+`tests/test_stage_librivox.py`, then re-run the brief from Step 0. The
+duplicate `CC_BRIEF_windows_findings.md` at the repo root can be deleted; the
+copy under `docs/` is the one the brief refers to.
+
 ## Session 2026-09-06 (Claude Code, Mac) — E7: the Voices tab
 
 Ran `docs/CC_BRIEF_voices_tab.md` end to end. The only way to record what a

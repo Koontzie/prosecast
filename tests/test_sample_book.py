@@ -166,6 +166,88 @@ def test_switching_engine_recasts_and_says_so(on_say, sandbox):
     assert client.post("/books/sample").json()["recast"] is False   # now settled
 
 
+def _write_map(engine, mapping):
+    """A voice map put on disk by something other than the wizard."""
+    lib.ensure_book_dir("sample_book")
+    lib.voice_map_path("sample_book").write_text(
+        json.dumps({"engine": engine, "map": mapping}), encoding="utf-8")
+
+
+def test_a_book_made_from_the_terminal_gets_cast(on_say, sandbox):
+    """The Windows case, 2026-09-06. `main.py --sample --tts stub` (which
+    SETUP.sh runs as its smoke test) leaves ir.json and stub audio and NO voice
+    map at all. E6.5 asked whether the wizard had made the book; the only
+    question that matters is whether the map on disk fits."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    lib.voice_map_path("sample_book").unlink()          # as the CLI leaves it
+
+    body = client.post("/books/sample").json()
+    assert body["recast"] is True, "an uncast sample book must be cast"
+    vm = json.loads(lib.voice_map_path("sample_book").read_text(encoding="utf-8"))
+    assert vm["engine"] == "say"
+
+
+def test_a_map_for_another_engine_is_replaced(on_say, sandbox):
+    """Cast for stub, active engine is say → re-cast, and `recast: true` so the
+    wizard renders past the wavs the other engine left behind."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    _write_map("stub", {"NARRATOR": "stub-voice", "Elizabeth": "stub-voice"})
+
+    body = client.post("/books/sample").json()
+    assert body["recast"] is True
+    vm = json.loads(lib.voice_map_path("sample_book").read_text(encoding="utf-8"))
+    assert vm["engine"] == "say"
+    pool = set(server._voice_pool("say"))
+    assert all(v in pool for v in vm["map"].values()), vm["map"]
+
+
+def test_a_map_that_fits_is_left_alone(on_say, sandbox):
+    """Cast for say, active engine is say → untouched. Never re-cast a real
+    cast: this endpoint owns the sample book, not anyone's casting labor."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    before = lib.voice_map_path("sample_book").read_bytes()
+
+    body = client.post("/books/sample").json()
+    assert body["recast"] is False
+    assert lib.voice_map_path("sample_book").read_bytes() == before
+
+
+def test_a_map_naming_unknown_voices_is_replaced(on_say, sandbox):
+    """Right engine name, voices this engine has never heard of — the same
+    thing the render preflight aborts on ("voice_map entries not in the say
+    pool"). The wizard has no casting step, so it must not be a dead end."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    _write_map("say", {"NARRATOR": "Rachel", "Elizabeth": "Bella"})
+
+    assert client.post("/books/sample").json()["recast"] is True
+    vm = json.loads(lib.voice_map_path("sample_book").read_text(encoding="utf-8"))
+    assert set(vm["map"].values()) <= set(server._voice_pool("say"))
+
+
+def test_a_map_of_engine_config_dicts_does_not_crash(on_say, sandbox):
+    """voice_map entries may be engine-config dicts, not voice ids —
+    VoiceAssigner.get_voice passes those straight through. `dict in set` is a
+    TypeError, and this check runs inside the endpoint."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    _write_map("say", {"NARRATOR": {"voice": "Samantha"}})
+
+    r = client.post("/books/sample")
+    assert r.status_code == 200, r.text
+    assert r.json()["recast"] is True
+
+
+def test_an_unreadable_map_is_replaced(on_say, sandbox):
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    lib.voice_map_path("sample_book").write_text("{not json", encoding="utf-8")
+    assert client.post("/books/sample").json()["recast"] is True
+
+
 def test_no_other_book_is_ever_cast(client, sandbox):
     lib.ensure_book_dir("someone_elses_book")
     lib.write_json_atomic(lib.ir_path("someone_elses_book"),
@@ -297,6 +379,30 @@ def test_chatterbox_fixture_still_matches_this_endpoint(client, sandbox, pinned)
         "setup_status_chatterbox.json has drifted from /setup/status — regenerate it"
     engine_row = next(r for r in live["rows"] if r["key"] == "voice_engine")
     assert engine_row["engine"] == "chatterbox" and engine_row["source"] == "file"
+
+
+def test_cast_candidates_fixtures_still_match_this_endpoint(on_say, sandbox):
+    """tests/ui/check_first_run.py decides from these two whether the casting
+    modal should have opened. `has_voice_map` false with more than one
+    character IS the modal's trigger — if this endpoint ever stops saying that,
+    the headless check would go on proving the modal stays shut for the wrong
+    reason."""
+    client = on_say
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    vm = lib.voice_map_path("sample_book")
+    cast_bytes = vm.read_bytes()
+
+    vm.unlink()
+    live = client.get("/ir/sample_book/cast_candidates").json()
+    assert live == json.loads((FIXTURES / "cast_candidates_uncast.json").read_text()), \
+        "cast_candidates_uncast.json has drifted — regenerate it"
+    assert live["has_voice_map"] is False and len(live["characters"]) > 1
+
+    vm.write_bytes(cast_bytes)
+    live = client.get("/ir/sample_book/cast_candidates").json()
+    assert live == json.loads((FIXTURES / "cast_candidates_cast.json").read_text()), \
+        "cast_candidates_cast.json has drifted — regenerate it"
+    assert live["has_voice_map"] is True
 
 
 def test_sample_fixture_still_matches_this_endpoint(client, sandbox):

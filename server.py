@@ -566,6 +566,36 @@ def ingest_book(body: IngestBody):
 SAMPLE_SLUG = "sample_book"
 
 
+def _sample_map_fits(vm_path: Path, engine: str) -> bool:
+    """Does the sample book's saved voice map still work on the active engine?
+
+    The same two questions the render preflight asks (`prosecast/preflight.py`
+    steps 4 and 5): was it made for this engine, and is every voice still in
+    this engine's pool? Anything else — unreadable, empty, made for another
+    engine, naming voices this engine has never heard of — does not fit, and
+    the caller recasts.
+
+    The Windows install on 2026-09-06 arrived here by a route E6.5 had not
+    imagined: `main.py --sample --tts stub` had already made the book and its
+    audio from a terminal, leaving no voice map at all. Who created the book is
+    not a question this asks; only whether the map on disk fits.
+    """
+    try:
+        saved = json.loads(vm_path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    entries = saved.get("map") or {}
+    if not entries or saved.get("engine") != engine:
+        return False
+    pool = set(_voice_pool(engine))
+    if not pool:                              # an engine with no static pool
+        return True
+    # Entries may legitimately be engine-config dicts rather than voice ids
+    # (VoiceAssigner.get_voice passes those through). Nothing here may raise on
+    # one — `dict in set` is a TypeError, and this runs inside a GET.
+    return all(isinstance(v, str) and v in pool for v in entries.values())
+
+
 def _ensure_sample_cast() -> bool:
     """Give the sample book a voice map for whatever engine is active.
 
@@ -581,17 +611,9 @@ def _ensure_sample_cast() -> bool:
     made by a different engine and must not be reused.
     """
     engine = _get_active_engine()
-    pool = set(_voice_pool(engine))
     vm_path = lib.voice_map_path(SAMPLE_SLUG)
-    if vm_path.exists():
-        try:
-            saved = json.loads(vm_path.read_text(encoding="utf-8"))
-        except Exception:
-            saved = {}
-        entries = saved.get("map") or {}
-        if entries and saved.get("engine") == engine and (
-                not pool or all(v in pool for v in entries.values())):
-            return False                      # already cast for this engine
+    if vm_path.exists() and _sample_map_fits(vm_path, engine):
+        return False                          # already cast for this engine
 
     characters = _speaking_characters(_load_ir(lib.ir_path(SAMPLE_SLUG)))
     lib.ensure_book_dir(SAMPLE_SLUG)

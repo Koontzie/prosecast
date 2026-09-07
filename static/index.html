@@ -2254,8 +2254,15 @@ async function loadBook(slug) {
 
   state.hasVoiceMap = !!(candidates && candidates.has_voice_map);
 
-  // Show pre-casting modal if no voice map exists and there are named characters
-  if (candidates && !candidates.has_voice_map && candidates.characters.length > 1) {
+  // Show pre-casting modal if no voice map exists and there are named characters.
+  // Never while the first-run wizard is up: init() opens the only book by itself
+  // when the library holds exactly one, so on a machine where `main.py --sample`
+  // had already made sample_book from a terminal, the casting modal landed on
+  // top of the wizard and the wizard was never seen again (Windows, 2026-09-06).
+  // Casting the sample is step 4's job, through POST /books/sample.
+  const wizardUp = typeof isFirstRunOpen === 'function' && isFirstRunOpen();
+  if (candidates && !candidates.has_voice_map && candidates.characters.length > 1
+      && !wizardUp) {
     showCastingModal(slug, candidates, chapData);
   } else {
     renderChapterList(slug, chapData.book_title, chapData.chapters);
@@ -3125,7 +3132,8 @@ async function saveSetup() {
 const FR_SAMPLE_CH1_CHARS = 1500;
 const FR_STEPS = 4;
 
-const fr = { step: 1, engine: '', busy: false, costAck: false, brainsChecked: false };
+const fr = { step: 1, engine: '', busy: false, costAck: false, brainsChecked: false,
+             bookSlug: '' };
 
 function frOverlay() { return document.getElementById('firstrun-modal-overlay'); }
 
@@ -3133,6 +3141,7 @@ function isFirstRunOpen() { return !frOverlay().classList.contains('hidden'); }
 
 async function openFirstRun() {
   fr.step = 1; fr.busy = false; fr.costAck = false; fr.brainsChecked = false;
+  fr.bookSlug = '';
   setupDirty = {};
   try {
     const [cfg, st] = await Promise.all([fetchJSON('/config'), fetchJSON('/setup/status')]);
@@ -3160,11 +3169,23 @@ function closeFirstRun() {
   setupDirty = {};
 }
 
-// Skip, Esc and "Open Setup" are all the same door, on purpose.
+// Two doors, not one. "Skip — take me to Setup" is a request for the Setup
+// page and always honoured. Esc just means "enough of this wizard" — and if
+// this run already made a book, the book is the better place to be left than a
+// table of amber optional rows (Windows, 2026-09-06: "I don't know what to do
+// from here, nor would an average person").
 function frSkip() {
   fr.busy = false;
   closeFirstRun();
   openSetupView();
+}
+
+function frDismiss() {
+  if (fr.busy) return;                       // don't abandon a render mid-flight
+  const slug = fr.bookSlug;
+  fr.busy = false;
+  closeFirstRun();
+  if (slug) loadBook(slug); else openSetupView();
 }
 
 function frGo(step) {
@@ -3357,6 +3378,7 @@ async function frHear() {
   try {
     frSay('preparing the sample book…');
     const sample = await postJSON('/books/sample', {});
+    fr.bookSlug = sample.slug;               // from here on, Esc lands on the book
     if (sample.job_id)
       await pollIngest(sample.job_id, j => frSay(`reading it… ${j.detail || j.stage || ''}`));
 
@@ -3428,7 +3450,7 @@ function frStep1Error(text) {
 function frBack() { if (!fr.busy) frGo(fr.step - 1); }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && isFirstRunOpen()) { e.stopImmediatePropagation(); frSkip(); }
+  if (e.key === 'Escape' && isFirstRunOpen()) { e.stopImmediatePropagation(); frDismiss(); }
 });
 
 document.addEventListener('keydown', e => {

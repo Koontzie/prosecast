@@ -1,0 +1,109 @@
+{
+  "has_voice_map": false,
+  "characters": [
+    {
+      "name": "NARRATOR",
+      "dialogue_count": 0,
+      "sample_line": null
+    },
+    {
+      "name": "Elizabeth",
+      "dialogue_count": 8,
+      "sample_line": "Mr. Darcy called just a few minutes ago,"
+    },
+    {
+      "name": "Darcy",
+      "dialogue_count": 6,
+      "sample_line": "I hope I am not disturbing you at this hour."
+    },
+    {
+      "name": "Bingley",
+      "dialogue_count": 3,
+      "sample_line": "Darcy! I had no idea you were here,"
+    }
+  ],
+  "voices": [
+    {
+      "id": "Samantha",
+      "name": "Samantha",
+      "gender": "",
+      "notes": "",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    },
+    {
+      "id": "Daniel",
+      "name": "Daniel",
+      "gender": "",
+      "notes": "",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    },
+    {
+      "id": "Karen",
+      "name": "Karen",
+      "gender": "",
+      "notes": "",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    },
+    {
+      "id": "Moira",
+      "name": "Moira",
+      "gender": "",
+      "notes": "",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    },
+    {
+      "id": "Tessa",
+      "name": "Tessa",
+      "gender": "",
+      "notes": "",
+      "tags": [],
+      "rating": 0,
+      "hidden": false,
+      "region": "",
+      "accent_label": "",
+      "license": "",
+      "distributable": false,
+      "source_url": "",
+      "edited": ""
+    }
+  ],
+  "engine": "say",
+  "voice_map": {
+    "NARRATOR": "Samantha",
+    "Elizabeth": "Daniel",
+    "Darcy": "Karen",
+    "Bingley": "Moira"
+  }
+}

@@ -171,6 +171,23 @@ def main() -> None:
     started["job_id"] = "FIXTURE"
     write("sample_book.json", started, "POST /books/sample (first call)")
 
+    # The shape that decides whether the casting modal opens over a book, in
+    # the state the Windows machine was actually in on 2026-09-06: the sample
+    # book exists (SETUP.sh's `main.py --sample --tts stub` made it from a
+    # terminal) and has no voice map, so `has_voice_map` is false and there is
+    # more than one character. That is the modal's exact trigger, and
+    # tests/ui/check_first_run.py needs the server's own words for it rather
+    # than a mock that could be kinder.
+    real_vm = lib.voice_map_path("sample_book").read_bytes()
+    lib.voice_map_path("sample_book").unlink()
+    write("cast_candidates_uncast.json",
+          client.get("/ir/sample_book/cast_candidates").json(),
+          "GET /ir/sample_book/cast_candidates (book exists, never cast)")
+    lib.voice_map_path("sample_book").write_bytes(real_vm)
+    write("cast_candidates_cast.json",
+          client.get("/ir/sample_book/cast_candidates").json(),
+          "GET /ir/sample_book/cast_candidates (cast by POST /books/sample)")
+
 
 if __name__ == "__main__":
     main()

@@ -51,8 +51,47 @@ def serve(directory: Path) -> None:
 
 
 def fixture(name: str) -> dict:
-    return json.loads((FIXTURES / name).read_text())
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
 
+
+def silent_wav(seconds: float = 0.4) -> bytes:
+    """A real, playable wav for the mocked /audio route.
+
+    `playChapter` opens the reader view on the line AFTER `await
+    audioEl.play()`, so a 404 there does not merely log — it stops the page
+    short of `body.reader-open`, which is the thing this file now checks.
+    """
+    import io
+    import wave
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(22050)
+        w.writeframes(b"\x00\x00" * int(22050 * seconds))
+    return buf.getvalue()
+
+
+SILENT_WAV = silent_wav()
+
+# Did #casting-modal-overlay ever lose its `hidden` class? Checking once at the
+# end would miss a modal that opened and was closed again; this watches.
+CASTING_WATCHER = """
+window.__castingEverShown = false;
+document.addEventListener('DOMContentLoaded', function () {
+  var el = document.getElementById('casting-modal-overlay');
+  if (!el) return;
+  function look() { if (!el.classList.contains('hidden')) window.__castingEverShown = true; }
+  look();
+  new MutationObserver(look).observe(el, {attributes: true, attributeFilter: ['class']});
+});
+"""
+
+
+# The library row GET /books returns for a sample book that already exists —
+# what init() sees, and why it opens that book by itself.
+SAMPLE_BOOK_ROW = {"slug": "sample_book", "title": "Sample Book",
+                   "chapters": 2, "unresolved": 0}
 
 SAMPLE_CHAPTERS = {"book_title": "Sample Book", "chapters": [
     {"index": i, "title": t, "block_count": 12, "dialogue_count": 8,
@@ -61,13 +100,19 @@ SAMPLE_CHAPTERS = {"book_title": "Sample Book", "chapters": [
 
 
 def router(*, calls: list, status: dict, config: dict, ticks: int = 2,
-           sample_fixture: dict | None = None, fail_at: str = ""):
+           sample_fixture: dict | None = None, fail_at: str = "",
+           books_at_boot: list | None = None, cast_candidates: dict | None = None):
     """Answers the app's fetches. `calls` collects (method, path, body).
 
     `status` and `config` are mutable dicts the caller can swap between
     interactions, exactly as a save-then-reprobe would change them.
+
+    `books_at_boot` seeds GET /books before anything happens — a library that
+    already holds a book, which is what `init()` needs to open one by itself.
+    `cast_candidates` is the generated shape from the live endpoint.
     """
-    state = {"ingest_polls": 0, "render_polls": 0, "books": []}
+    state = {"ingest_polls": 0, "render_polls": 0,
+             "books": list(books_at_boot or [])}
     sample = sample_fixture or fixture("sample_book.json")
 
     def route(r):
@@ -129,7 +174,7 @@ def router(*, calls: list, status: dict, config: dict, ticks: int = 2,
         if path.endswith("/characters"):
             return js({"characters": ["NARRATOR", "Elizabeth", "Darcy"]})
         if path.endswith("/cast_candidates"):
-            return js({"characters": [], "voices": []})
+            return js(cast_candidates or {"characters": [], "voices": []})
         if path.startswith("/voice_map/"):
             return js({"engine": "say", "map": {"NARRATOR": "v1"}})
         if path == "/voices":
@@ -137,9 +182,10 @@ def router(*, calls: list, status: dict, config: dict, ticks: int = 2,
         if path.startswith("/timeline/"):
             return js(fixture("timeline_study_ch0.json"))
         if path.startswith("/audio/"):
-            # There is no real wav behind a mocked render; the <audio> element
-            # complaining about that is the harness, not the app.
-            return r.fulfill(status=404, body="")
+            # A real, silent wav: playChapter opens the reader view only after
+            # `await audioEl.play()` resolves, so a 404 here would hide whether
+            # the wizard actually lands anyone on the book.
+            return r.fulfill(status=200, content_type="audio/wav", body=SILENT_WAV)
         return js({})
     return route
 
@@ -176,6 +222,7 @@ def main() -> int:
             # inline script at parse time, so it must be set before the page loads.
             page.add_init_script(
                 f"try {{ localStorage.setItem('prosecast-theme', '{skin}'); }} catch (e) {{}}")
+            page.add_init_script(CASTING_WATCHER)
             errs: list[str] = []
             page.on("pageerror", lambda e: errs.append(str(e)))
             page.on("console",
@@ -370,6 +417,95 @@ def main() -> int:
             check("recast means force=true", "force=true" in render_url, render_url)
             check("an existing sample needs no ingest poll",
                   not any(c[1] == "/render_status/FIXTURE" for c in calls))
+
+            print("--- a library that already has an uncast book: no modal, "
+                  "and it ends on the book ---")
+            # The Windows machine on 2026-09-06. SETUP.sh's smoke test
+            # (`main.py --sample --tts stub`) had already made sample_book from
+            # a terminal, so init() found exactly one book and opened it, and
+            # loadBook's "no voice map → cast this" modal landed ON TOP of the
+            # wizard. After "Cast the book" he was on the Setup page — a wall of
+            # amber optional rows under a green READY badge — with no play
+            # button anywhere. "I don't know what to do from here, nor would an
+            # average person."
+            calls.clear()
+            uncast = fixture("cast_candidates_uncast.json")
+            check("the fixture really is the modal's trigger",
+                  uncast["has_voice_map"] is False and len(uncast["characters"]) > 1,
+                  f"has_voice_map={uncast['has_voice_map']}, "
+                  f"{len(uncast['characters'])} characters")
+            boot(page, calls=calls, status=firstrun, config=cfg_first,
+                 books_at_boot=[SAMPLE_BOOK_ROW], cast_candidates=uncast,
+                 sample_fixture={"slug": "sample_book", "exists": True,
+                                 "chapters": 2, "recast": True})
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            check("the book really was opened underneath",
+                  any(c[1].startswith("/chapters/sample_book") for c in calls))
+            check("the casting modal did NOT open over the wizard",
+                  not page.evaluate("window.__castingEverShown"))
+            check("the wizard is the thing on screen",
+                  not page.locator("#firstrun-modal-overlay").is_hidden())
+
+            page.evaluate("fr.step = 3; frGo(4);")
+            page.click("#fr-hear-btn")
+            page.wait_for_selector("#firstrun-modal-overlay.hidden", state="attached",
+                                   timeout=15000)
+            page.wait_for_timeout(400)
+            check("the casting modal never appeared at all",
+                  not page.evaluate("window.__castingEverShown"))
+            check("it ends on the book, reading",
+                  page.evaluate("document.body.classList.contains('reader-open')"))
+            check("it does NOT end on the Setup page",
+                  not page.evaluate("document.body.classList.contains('setup-open')"))
+
+            print("--- Esc: Setup when nothing was made, the book when something was ---")
+            # Esc still means "enough of this wizard" and still goes to Setup
+            # (E6's design) — unless this run already made a book, in which case
+            # the book is the better place to be left than a table of rows.
+            calls.clear()
+            boot(page, calls=calls, status=firstrun, config=cfg_first)
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(200)
+            check("Esc with nothing made still lands on Setup",
+                  page.evaluate("document.body.classList.contains('setup-open')"))
+
+            # The book exists (POST /books/sample succeeded and cast it) but the
+            # render failed, so the wizard is still up with its error. Esc here
+            # must not throw away the book it just made.
+            calls.clear()
+            boot(page, calls=calls, status=firstrun, config=cfg_first, fail_at="render",
+                 books_at_boot=[SAMPLE_BOOK_ROW], cast_candidates=fixture("cast_candidates_cast.json"),
+                 sample_fixture={"slug": "sample_book", "exists": True,
+                                 "chapters": 2, "recast": True})
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            page.evaluate("fr.step = 3; frGo(4);")
+            page.click("#fr-hear-btn")
+            page.wait_for_selector("#fr-recover:not(.fr-hidden)", timeout=8000)
+            check("the wizard stayed open on the failure", 
+                  not page.locator("#firstrun-modal-overlay").is_hidden())
+            check("it knows which book it made",
+                  page.evaluate("fr.bookSlug") == "sample_book", page.evaluate("fr.bookSlug"))
+            page.keyboard.press("Escape")
+            page.wait_for_timeout(400)
+            check("Esc lands on that book, not Setup",
+                  not page.evaluate("document.body.classList.contains('setup-open')"))
+            check("the book's chapters are what is on screen",
+                  page.locator(".chapter-row").count() > 0,
+                  page.locator(".chapter-row").count())
+
+            print("--- the Skip link still goes to Setup, always ---")
+            calls.clear()
+            boot(page, calls=calls, status=firstrun, config=cfg_first,
+                 books_at_boot=[SAMPLE_BOOK_ROW], cast_candidates=fixture("cast_candidates_cast.json"),
+                 sample_fixture={"slug": "sample_book", "exists": True,
+                                 "chapters": 2, "recast": True})
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            page.evaluate("fr.bookSlug = 'sample_book';")   # even with a book to go to
+            page.click("#fr-skip")
+            page.wait_for_timeout(200)
+            check("Skip is a request for Setup and is always honoured",
+                  page.evaluate("document.body.classList.contains('setup-open')"))
 
             print("--- ElevenLabs is told what it will cost, and asked twice ---")
             calls.clear()
