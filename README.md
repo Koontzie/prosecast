@@ -92,7 +92,7 @@ sounds better or thinks harder.
 
 | Rung | Hardware | Voices | "Who's speaking" | What to expect |
 |---|---|---|---|---|
-| **1 — Try it** | Any Mac, or any machine with `piper` | macOS system voices / Piper (CPU) | rules only | Robotic but real multi-voice — the setup wizard ends by reading you the sample book. The "does this work at all" rung. |
+| **1 — Try it** | Any Mac, Windows or Linux machine; Piper on CPU | macOS system voices / Piper (CPU) | rules only | Robotic but real multi-voice — the setup wizard ends by reading you the sample book. The "does this work at all" rung. |
 | **2 — Sounds like a book** | A GPU with 8–12 GB of VRAM, in this machine or one across the room | **Chatterbox** (local, free, voice cloning) | rules only, or a small Ollama model | Audiobook-grade narration. Slower on smaller cards. |
 | **3 — Thinks too** | Same GPU with headroom, or a second box | Chatterbox | **Ollama** (`gemma3:12b`) + **faster-whisper** for read-along | The full experience: hard scenes attributed by AI, words lighting up as they are read. This is the reference setup. |
 | **BYO key** | Anything | Your own **ElevenLabs** account for a few hero characters | as above | Premium voices where they earn their cost. A whole book on ElevenLabs is a real bill — see below. |
@@ -116,10 +116,54 @@ brew install python ffmpeg          # + tesseract if you have scans
 sudo apt install python3 python3-venv ffmpeg   # + tesseract-ocr
 ```
 
-**Windows:** ProseCast is developed on macOS and Linux and has not been tested
-natively on Windows. The known-good path is **WSL2** (Ubuntu), which makes it
-the Linux install above. The macOS `say` engine does not exist on Windows, so
-your rung-1 voice engine is Piper. Reports welcome in Issues.
+### Windows (tested 2026-09-06)
+
+Installed from scratch on a rebuilt Windows 11 laptop and played the sample
+book end to end. In PowerShell:
+
+```powershell
+winget install -e --id Python.Python.3.12
+winget install -e --id Gyan.FFmpeg
+```
+
+**Close and reopen PowerShell** — a new install is not on your `PATH` until you
+do. Then:
+
+```powershell
+git clone https://github.com/Koontzie/prosecast.git
+cd prosecast
+.\SETUP.ps1
+.\start-prosecast.ps1
+```
+
+`SETUP.ps1` does everything `SETUP.sh` does, plus installing Piper and
+downloading its six voice files (about 400 MB) into the ProseCast folder —
+Piper looks for voices in the folder it is started in. It is safe to re-run and
+prints a ✓ or ✗ per step. `start-prosecast.ps1` is the file you double-click
+from then on: it starts the server and opens your browser. The setup wizard
+takes it from there.
+
+If Windows says *"running scripts is disabled on this system"*, allow local
+scripts once, for your account only:
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+Two things worth knowing:
+
+- **If `pip` prints "Retrying… getaddrinfo failed" for a host you don't
+  recognise,** an old tool has left a dead package index in your pip config —
+  an NVIDIA one did exactly this, in three config files at once, and made every
+  install crawl. `pip config debug` shows which files. `SETUP.ps1` passes
+  `--isolated` so it ignores them entirely; you'll only meet this running `pip`
+  yourself.
+- **About Piper.** Some of its voices are decent and some are noticeably
+  robotic. It works, it is free, it needs no GPU, and it is the rung you use to
+  decide whether Chatterbox is worth setting up — which it is, and Chatterbox
+  is better.
+
+WSL2 (Ubuntu) also works, and is just the Linux install above.
 
 ### Rung 1 — get it running
 
@@ -162,9 +206,13 @@ no other services installed.
 The **Setup page** (⚙ in the header) is the full list: one row per service,
 green / amber / red, each with the command that fixes it.
 
-Not on a Mac? Install [Piper](https://github.com/rhasspy/piper), make sure
-`piper` is on your `PATH`, and set `"tts_engine": "piper"` in `config.json`
-(or pick it on the Setup page).
+Not on a Mac? On Windows, `SETUP.ps1` above has already installed Piper and
+its voices. On Linux, install [Piper](https://github.com/rhasspy/piper), make
+sure `piper` is on your `PATH`, and download the six voice files into the
+ProseCast folder — the Setup page prints the exact
+`python -m piper.download_voices …` line for each one that is missing. Then
+pick Piper on the Setup page (or set `"tts_engine": "piper"` in
+`config.json`).
 
 ### Rung 2 — Chatterbox voices
 

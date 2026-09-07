@@ -33,3 +33,14 @@ vctk_voices/
 
 # Headless UI check screenshots — regenerable artifacts
 tests/ui/*.png
+
+# Piper voice models, downloaded into the repo root by SETUP.ps1 (and by the
+# `python -m piper.download_voices …` lines the Setup page prints). Piper
+# resolves `<name>.onnx` from the folder it is started in, which is why they
+# live here rather than somewhere tidier. ~400 MB for the six.
+*.onnx
+*.onnx.json
+
+# Written by SETUP.ps1 for the machine it ran on — the file a Windows user
+# double-clicks. Generated, not authored.
+start-prosecast.ps1

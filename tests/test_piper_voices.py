@@ -12,6 +12,7 @@ PATH, with zero .onnx files on disk. `piper --model <name>` resolves
 render time instead — the worst place to learn it.
 """
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -254,3 +255,45 @@ def test_piper_missing_from_path_still_says_how_to_get_voices(cfg, monkeypatch, 
     assert row["ok"] is False and row["state"] == "missing"
     assert "pip install piper-tts" in row["fix"]
     assert "download_voices" in row["fix"]
+
+
+# ── SETUP.ps1 ────────────────────────────────────────────────────────────────
+#
+# The script cannot be run on this machine (no PowerShell), but the one thing
+# most likely to rot in it — the list of voices it downloads — is checkable
+# here. A voice added to the pool and not to the installer is a Windows user
+# whose Setup page says "5 of 6" forever.
+
+SETUP_PS1 = Path(__file__).resolve().parent.parent / "SETUP.ps1"
+
+
+def test_setup_ps1_downloads_exactly_the_pool():
+    text = SETUP_PS1.read_text(encoding="utf-8")
+    listed = re.findall(r"'(en_[A-Za-z]{2}-[\w]+-medium)'", text)
+    assert listed == VoiceAssigner.PIPER_VOICES, (
+        "SETUP.ps1's $PiperVoices has drifted from VoiceAssigner.PIPER_VOICES")
+
+
+def test_setup_ps1_installs_pip_isolated():
+    """A leftover NVIDIA extra-index-url in three pip config files made every
+    install on the real laptop retry a dead host five times."""
+    text = SETUP_PS1.read_text(encoding="utf-8")
+    for line in text.splitlines():
+        if "pip install" in line and not line.lstrip().startswith("#"):
+            assert "--isolated" in line, line.strip()
+
+
+def test_setup_ps1_writes_the_launcher():
+    text = SETUP_PS1.read_text(encoding="utf-8")
+    assert "start-prosecast.ps1" in text
+    assert "uvicorn server:app --port 8000" in text
+    assert "Set-ExecutionPolicy -Scope CurrentUser RemoteSigned" in text
+
+
+def test_setup_ps1_is_plain_ascii():
+    """Windows PowerShell 5.1 reads a BOM-less .ps1 as the system codepage, so
+    a stray curly quote or box-drawing character becomes mojibake in a script
+    nobody here can run to find out."""
+    raw = SETUP_PS1.read_bytes()
+    bad = [(i, b) for i, b in enumerate(raw) if b > 127]
+    assert not bad, f"non-ASCII byte(s) at {bad[:5]}"

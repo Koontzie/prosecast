@@ -327,7 +327,10 @@ Long-horizon feature. Architecture decisions now must not block it — keep IR e
 
 ## Dependencies
 
-`bash SETUP.sh` does all of this and verifies each step. By hand:
+`bash SETUP.sh` does all of this and verifies each step. **On Windows it is
+`.\SETUP.ps1`** (PowerShell) — same steps, plus `piper-tts` and the six Piper
+voice files into the repo root, and it writes `start-prosecast.ps1` as the
+double-click entry point. By hand:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate     # Python 3.11+
