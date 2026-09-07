@@ -24,6 +24,7 @@ pytest.importorskip("fastapi")
 
 import server  # noqa: E402
 from prosecast import config, setup_probe as sp  # noqa: E402
+from prosecast import tts_engine  # noqa: E402
 from prosecast.tts_engine import VoiceAssigner  # noqa: E402
 
 
@@ -196,9 +197,15 @@ def test_an_engine_with_no_labelled_voices_is_unchanged(meta_file, monkeypatch):
 
 @pytest.fixture()
 def piper_on(cfg, tmp_path, monkeypatch):
-    """piper on PATH, and an empty folder for it to look for voices in."""
+    """Piper installed, and an empty folder for it to look for voices in.
+
+    Installed means "importable by the interpreter ProseCast is running in" —
+    NOT "on PATH". PATH is left empty on purpose here: that is the shape of the
+    machine the probe got wrong on 2026-09-07.
+    """
     config.set_many({"tts_engine": "piper"})
-    monkeypatch.setattr(sp, "_which", lambda b: "/usr/bin/piper" if b == "piper" else None)
+    monkeypatch.setattr(sp, "_which", lambda b: None)
+    monkeypatch.setattr(tts_engine, "piper_command", lambda: [sys.executable, "-m", "piper"])
     monkeypatch.setattr(sp, "_voices_dir", lambda: tmp_path)
     return tmp_path
 
@@ -217,7 +224,7 @@ def test_piper_with_no_voice_files_is_not_ok(piper_on):
 def test_the_fix_is_the_exact_command_for_each_missing_voice(piper_on):
     row = sp.probe_voice_engine()
     for name in VoiceAssigner.PIPER_VOICES:
-        assert f"`python -m piper.download_voices {name}`" in row["fix"], name
+        assert f"`{sp._venv_python()} -m piper.download_voices {name}`" in row["fix"], name
     assert "Piper looks for voices in the folder it is started in" in row["fix"]
 
 
@@ -247,14 +254,86 @@ def test_a_partial_download_does_not_block_the_wizard(piper_on):
     assert sp.probe_voice_engine()["ok"] is True
 
 
-def test_piper_missing_from_path_still_says_how_to_get_voices(cfg, monkeypatch, tmp_path):
+def test_piper_not_installed_at_all_still_says_how_to_get_voices(cfg, monkeypatch, tmp_path):
     config.set_many({"tts_engine": "piper"})
     monkeypatch.setattr(sp, "_which", lambda b: None)
+    monkeypatch.setattr(tts_engine, "piper_command", lambda: None)
     monkeypatch.setattr(sp, "_voices_dir", lambda: tmp_path)
     row = sp.probe_voice_engine()
     assert row["ok"] is False and row["state"] == "missing"
     assert "pip install piper-tts" in row["fix"]
     assert "download_voices" in row["fix"]
+
+
+# ── how Piper is invoked (E9.8, the second Windows run) ──────────────────────
+#
+# `start-prosecast.ps1` runs `.venv\Scripts\python.exe -m uvicorn` without
+# activating the venv, so the venv's Scripts/ folder is NOT on PATH and the
+# bare `piper` binary is invisible to the server. The Setup page said "Piper -
+# not installed" with six voice files sitting in the folder beside it. Piper is
+# a Python module; ask the interpreter, not the shell.
+
+def test_piper_runs_through_this_interpreter_not_the_path(monkeypatch):
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: object())
+    monkeypatch.setattr(tts_engine.shutil, "which", lambda b: "/usr/bin/piper")
+    assert tts_engine.piper_command() == [sys.executable, "-m", "piper"]
+
+
+def test_a_piper_outside_the_venv_is_still_honoured(monkeypatch):
+    """Distro package, Homebrew, a standalone build: not importable, still Piper."""
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
+    monkeypatch.setattr(tts_engine.shutil, "which", lambda b: "/usr/bin/piper")
+    assert tts_engine.piper_command() == ["/usr/bin/piper"]
+
+
+def test_no_piper_anywhere_is_none(monkeypatch):
+    monkeypatch.setattr("importlib.util.find_spec", lambda name: None)
+    monkeypatch.setattr(tts_engine.shutil, "which", lambda b: None)
+    assert tts_engine.piper_command() is None
+
+
+def test_synthesize_piper_spawns_the_module(monkeypatch, tmp_path):
+    """The argv the render actually runs, captured."""
+    seen = {}
+    out = tmp_path / "block_0.wav"
+
+    def fake_run(cmd, **kw):
+        seen["cmd"] = cmd
+        seen["text"] = kw.get("input")
+        out.write_bytes(b"RIFF")
+        class R: returncode = 0
+        return R()
+
+    monkeypatch.setattr(tts_engine, "piper_command", lambda: [sys.executable, "-m", "piper"])
+    import subprocess
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    ok = tts_engine._synthesize_piper("Hello.", {"voice": "en_US-lessac-medium"}, str(out))
+    assert ok is True
+    assert seen["cmd"][:3] == [sys.executable, "-m", "piper"]
+    assert seen["cmd"][3:5] == ["--model", "en_US-lessac-medium"]
+    assert seen["text"] == "Hello."
+
+
+def test_synthesize_piper_says_what_to_install_when_there_is_no_piper(monkeypatch, tmp_path, capsys):
+    monkeypatch.setattr(tts_engine, "piper_command", lambda: None)
+    assert tts_engine._synthesize_piper("Hi.", {}, str(tmp_path / "a.wav")) is False
+    assert "pip install piper-tts" in capsys.readouterr().out
+
+
+def test_the_probe_is_green_with_piper_importable_and_nothing_on_path(piper_on):
+    """The exact machine from 2026-09-07: six voice files, no PATH, all fine."""
+    for n in VoiceAssigner.PIPER_VOICES:
+        (piper_on / f"{n}.onnx").write_bytes(b"onnx")
+    row = sp.probe_voice_engine()
+    assert row["ok"] and row["state"] == "ok", row
+
+
+def test_the_download_lines_name_the_venv_python_not_a_bare_python(piper_on):
+    """A bare `python` is the system one unless the venv is activated — which is
+    how the voices would land in an interpreter that never reads them."""
+    fix = sp.probe_voice_engine()["fix"]
+    assert " -m piper.download_voices" in fix
+    assert "`python -m piper.download_voices" not in fix
 
 
 # ── SETUP.ps1 ────────────────────────────────────────────────────────────────

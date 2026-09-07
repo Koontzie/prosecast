@@ -356,8 +356,13 @@ def main() -> int:
             check("ffmpeg is the other row", "ffmpeg" in shown)
             check("Continue is disabled while the engine is not ok",
                   page.is_disabled("#fr-next"))
-            check("the disabled reason is the row's own fix",
-                  (page.text_content("#fr-why") or "").strip() == engine_row["fix"])
+            # It used to BE the row's own fix, printed a second time (E9.8).
+            check("there is a reason Continue is dark",
+                  (page.text_content("#fr-why") or "").strip() != "")
+            check("and it is not the fix text over again",
+                  engine_row["fix"][:40] not in (page.text_content("#fr-why") or ""))
+            check("the fix is still on the Continue button's tooltip",
+                  page.get_attribute("#fr-next", "title") == engine_row["fix"])
             check("there is a way to the full list",
                   page.locator("#fr-full-list").is_visible())
 
@@ -586,6 +591,68 @@ def main() -> int:
                   page.evaluate("document.body.classList.contains('setup-open')"))
             check("no 'you're set' while the engine is missing",
                   page.locator("#su-banner").count() == 0)
+
+            print("--- step 2 prints the probe's fix once, not twice ---")
+            # `suRow` renders `row.fix` formatted, with its backticked commands
+            # as <code>. #fr-why printed the same text again underneath it as raw
+            # markdown — backticks, newlines and all (Windows, 2026-09-07). The
+            # row says what to do; #fr-why says only why Continue is dark.
+            calls.clear()
+            boot(page, calls=calls, status=firstrun, config=cfg_first)
+            page.wait_for_selector("#firstrun-modal-overlay:not(.hidden)", timeout=8000)
+            page.evaluate("fr.step = 1; frGo(2);")
+            page.wait_for_selector("#fr-step-2:not(.fr-hidden)", timeout=8000)
+            engine_fix = next(r for r in firstrun["rows"] if r["key"] == "voice_engine")["fix"]
+            needle = "Auto-detect picks ElevenLabs"
+            check("the fixture's fix text is the one on screen", needle in engine_fix)
+            step2 = page.text_content("#fr-step-2") or ""
+            check("the fix text appears exactly once",
+                  step2.count(needle) == 1, f"{step2.count(needle)} times")
+            check("the row is where it appears",
+                  needle in (page.text_content("#fr-probe-rows") or ""))
+            why = page.text_content("#fr-why") or ""
+            check("#fr-why is shown and says why", why.strip() != ""
+                  and not page.locator("#fr-why").is_hidden(), why[:70])
+            check("#fr-why does not repeat the fix", needle not in why, why[:70])
+            check("no raw backticks anywhere in step 2", "`" not in step2,
+                  step2[step2.find("`") - 20:step2.find("`") + 20] if "`" in step2 else "")
+
+            print("--- an uncast sample book casts itself, with no wizard in sight ---")
+            # Same machine, one screen later. With an engine already chosen the
+            # wizard does not fire at all, init() opens the only book — and the
+            # casting modal came up for the ONE book that ships its own cast
+            # (`main.py --sample --tts stub` leaves it with no voice map).
+            calls.clear()
+            boot(page, calls=calls, status=ready, config=cfg_ready,
+                 books_at_boot=[SAMPLE_BOOK_ROW],
+                 cast_candidates=fixture("cast_candidates_uncast.json"),
+                 sample_fixture={"slug": "sample_book", "exists": True,
+                                 "chapters": 2, "recast": True})
+            page.wait_for_selector(".chapter-row", timeout=8000)
+            check("the wizard did not fire (an engine is chosen)",
+                  page.locator("#firstrun-modal-overlay").is_hidden())
+            check("it cast the sample instead of asking",
+                  any(m == "POST" and pth == "/books/sample" for m, pth, _, _ in calls))
+            check("the casting modal never appeared",
+                  not page.evaluate("window.__castingEverShown"))
+            check("the chapter list is what is on screen",
+                  page.locator(".chapter-row").count() > 0,
+                  page.locator(".chapter-row").count())
+
+            print("--- ...but a real book with no cast still asks ---")
+            # The sample is the only book ProseCast decides for. Anyone else's
+            # book with no voice map is a casting decision, and it stays one.
+            calls.clear()
+            other = dict(fixture("cast_candidates_uncast.json"))
+            boot(page, calls=calls, status=ready, config=cfg_ready,
+                 books_at_boot=[{"slug": "parade", "title": "A Parade of Horribles",
+                                 "chapters": 3, "unresolved": 0}],
+                 cast_candidates=other)
+            page.wait_for_selector("#casting-modal-overlay:not(.hidden)", timeout=8000)
+            check("the casting modal opened for a real book",
+                  page.evaluate("window.__castingEverShown"))
+            check("and nothing was cast behind anyone's back",
+                  not any(pth == "/books/sample" for _, pth, _, _ in calls))
 
             print("--- a failure lands in the wizard with a way out ---")
             calls.clear()

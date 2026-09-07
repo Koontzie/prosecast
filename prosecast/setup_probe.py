@@ -88,10 +88,24 @@ def _voice_file(name: str) -> Path:
     return _voices_dir() / f"{name}.onnx"
 
 
+def _venv_python() -> str:
+    """How to name ProseCast's own interpreter in a command someone will paste.
+
+    Not `python`: a bare `python` is the *system* one unless the venv has been
+    activated, and the Windows launcher never activates it — the same trap that
+    made the Piper probe say "not installed" on 2026-09-07. Not `sys.executable`
+    either; that is an absolute path, and the ffmpeg row already taught us that
+    accurate and useless are different things. This is the path SETUP.sh and
+    SETUP.ps1 both create.
+    """
+    return r".venv\Scripts\python" if _OS == "Windows" else ".venv/bin/python"
+
+
 def _download_hint(names: list[str]) -> str:
     """The exact commands, one per line — the Setup page and the wizard both
     print a probe's `fix` verbatim, so this has to be runnable as written."""
-    lines = "\n".join(f"`python -m piper.download_voices {n}`" for n in names)
+    py = _venv_python()
+    lines = "\n".join(f"`{py} -m piper.download_voices {n}`" for n in names)
     return (lines + "\nRun these from the ProseCast folder — Piper looks for "
             "voices in the folder it is started in.")
 
@@ -193,12 +207,16 @@ def _voice_engine_row() -> dict:
                     "Chatterbox is the free upgrade.", engine=engine)
 
     if engine == "piper":
-        from prosecast.tts_engine import VoiceAssigner
+        from prosecast.tts_engine import VoiceAssigner, piper_command
         wanted = list(VoiceAssigner.PIPER_VOICES)
         missing = [v for v in wanted if not _voice_file(v).exists()]
         have = len(wanted) - len(missing)
 
-        if not _which("piper"):
+        # Not `_which("piper")`: the binary is only on PATH while the venv is
+        # activated, and the Windows launcher runs uvicorn through the venv's
+        # python without activating it. `piper_command()` asks the interpreter
+        # ProseCast is running in, which is the one that will do the speaking.
+        if not piper_command():
             return _row("voice_engine", "Voice engine", False, "missing",
                         "Piper · not installed",
                         "Install Piper (`pip install piper-tts`), then download its voices: "

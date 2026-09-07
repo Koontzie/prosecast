@@ -207,12 +207,13 @@ The **Setup page** (⚙ in the header) is the full list: one row per service,
 green / amber / red, each with the command that fixes it.
 
 Not on a Mac? On Windows, `SETUP.ps1` above has already installed Piper and
-its voices. On Linux, install [Piper](https://github.com/rhasspy/piper), make
-sure `piper` is on your `PATH`, and download the six voice files into the
-ProseCast folder — the Setup page prints the exact
-`python -m piper.download_voices …` line for each one that is missing. Then
-pick Piper on the Setup page (or set `"tts_engine": "piper"` in
-`config.json`).
+its voices. On Linux, `.venv/bin/pip install piper-tts` and download the six
+voice files into the ProseCast folder — the Setup page prints the exact
+`.venv/bin/python -m piper.download_voices …` line for each one that is
+missing, and Piper looks for voices in the folder ProseCast is started in.
+Then pick Piper on the Setup page (or set `"tts_engine": "piper"` in
+`config.json`). ProseCast runs Piper as a module of its own interpreter, so
+nothing has to be on your `PATH`.
 
 ### Rung 2 — Chatterbox voices
 

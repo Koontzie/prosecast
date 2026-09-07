@@ -524,3 +524,16 @@ def test_sample_fixture_still_matches_this_endpoint(client, sandbox):
     live["job_id"] = "FIXTURE"
     assert live == json.loads((FIXTURES / "sample_book.json").read_text()), \
         "sample_book.json has drifted from /books/sample — regenerate it"
+
+
+# ── the UI knows which book this is (E9.8) ───────────────────────────────────
+
+def test_the_page_and_the_server_mean_the_same_book():
+    """`loadBook` casts the sample book silently instead of showing the casting
+    modal — the one book whose cast ProseCast owns. If the two slugs drift, that
+    branch quietly stops firing and a stranger meets the casting modal again
+    (Windows, 2026-09-07)."""
+    html = (Path(__file__).resolve().parent.parent / "static" / "index.html").read_text(encoding="utf-8")
+    assert f"const SAMPLE_SLUG = '{server.SAMPLE_SLUG}';" in html, \
+        f"static/index.html must declare SAMPLE_SLUG = '{server.SAMPLE_SLUG}'"
+

@@ -8,6 +8,8 @@ piper (local), say (macOS), gtts (Google TTS), stub (silent WAV)
 import hashlib
 import json
 import os
+import shutil
+import sys
 import wave
 from pathlib import Path
 
@@ -46,7 +48,7 @@ class VoiceAssigner:
 
     # Piper resolves `<name>.onnx` from the CURRENT WORKING DIRECTORY (see
     # _synthesize_piper), so these files live in the ProseCast folder itself.
-    # Download them with `python -m piper.download_voices <name>`; the Setup
+    # Download them with `<venv python> -m piper.download_voices <name>`; the Setup
     # page prints the exact lines for whichever are missing.
     #
     # Index 0 is the narrator. Three female, three male, so a cast of five has
@@ -268,18 +270,42 @@ def _synthesize_gtts(text: str, voice_cfg: dict, out_path: str) -> bool:
 
 # ── Piper backend ─────────────────────────────────────────────────────────────
 
+def piper_command() -> list[str] | None:
+    r"""The argv prefix that runs Piper, or None if Piper is not installed.
+
+    `[sys.executable, "-m", "piper"]` first, so ProseCast runs the Piper that
+    lives in the interpreter it is itself running in. The bare `piper` binary
+    is only on PATH while the venv is *activated*, and `start-prosecast.ps1`
+    deliberately does not activate it — it runs `.venv\Scripts\python.exe -m
+    uvicorn` — so on Windows on 2026-09-07 the probe said "Piper - not
+    installed" with six voice files sitting in the folder beside it.
+
+    A PATH binary is still honoured, second, for a Piper installed outside the
+    venv (Linux distro package, Homebrew, a standalone build).
+    """
+    try:
+        import importlib.util
+        if importlib.util.find_spec("piper") is not None:
+            return [sys.executable, "-m", "piper"]
+    except Exception:
+        pass                                  # a broken install is not installed
+    exe = shutil.which("piper")
+    return [exe] if exe else None
+
+
 def _synthesize_piper(text: str, voice_cfg: dict, out_path: str) -> bool:
     import subprocess
     voice = voice_cfg.get('voice', 'en_US-lessac-medium')
+    cmd = piper_command()
+    if not cmd:
+        print("    [Piper] piper is not installed — pip install piper-tts")
+        return False
     try:
         proc = subprocess.run(
-            ['piper', '--model', voice, '--output_file', out_path],
+            cmd + ['--model', voice, '--output_file', out_path],
             input=text, capture_output=True, text=True, timeout=30
         )
         return proc.returncode == 0 and os.path.exists(out_path)
-    except FileNotFoundError:
-        print("    [Piper] piper not found in PATH")
-        return False
     except Exception as e:
         print(f"    [Piper error] {e}")
         return False
@@ -634,9 +660,11 @@ class TTSEngine:
             return 'chatterbox'
         try:
             import subprocess
-            r = subprocess.run(['piper', '--help'], capture_output=True, timeout=3)
-            if r.returncode == 0:
-                return 'piper'
+            cmd = piper_command()
+            if cmd:
+                r = subprocess.run(cmd + ['--help'], capture_output=True, timeout=10)
+                if r.returncode == 0:
+                    return 'piper'
         except Exception:
             pass
         try:

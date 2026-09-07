@@ -111,7 +111,7 @@ foreach ($v in $PiperVoices) {
   Write-Host "  downloading $v ..."
   & $venvPy -m piper.download_voices $v
   if ($LASTEXITCODE -eq 0 -and (Test-Path "$v.onnx")) { Ok $v }
-  else { Fail "$v did not download - re-run this script, or: py -m piper.download_voices $v" }
+  else { Fail "$v did not download - re-run this script, or: .venv\Scripts\python -m piper.download_voices $v" }
 }
 
 Write-Host ""

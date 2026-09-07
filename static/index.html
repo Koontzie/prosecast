@@ -405,7 +405,9 @@
     .su-row .su-body { flex: 1; min-width: 0; }
     .su-row .su-label { font-size: .88rem; color: #ddd; }
     .su-row .su-detail { font-size: .78rem; color: #777; margin-top: 2px; word-break: break-word; }
-    .su-row .su-fix { font-size: .78rem; color: #c9b27a; margin-top: 5px; line-height: 1.5; }
+    /* `fix` is deliberately multi-line — one runnable command per line (the six
+       Piper download_voices lines). Without pre-line they ran together. */
+    .su-row .su-fix { font-size: .78rem; color: #c9b27a; margin-top: 5px; line-height: 1.5; white-space: pre-line; }
     .su-row .su-fix code { background: #1e1e1e; padding: 1px 5px; border-radius: 3px; font-size: .74rem; color: #ddd; }
 
     .su-fields { display: grid; grid-template-columns: 150px 1fr; gap: 8px 12px; align-items: center; margin-top: 12px; }
@@ -2130,6 +2132,12 @@ html[data-theme="onair"] {
 </div>
 
 <script>
+// The built-in demo book's slug. Mirrors `SAMPLE_SLUG` in server.py, and
+// tests/test_sample_book.py fails if the two drift — the UI treats this one
+// book differently (it casts itself) and it must be the same book the server
+// means by that.
+const SAMPLE_SLUG = 'sample_book';
+
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
   books: [],
@@ -2272,6 +2280,25 @@ async function loadBook(slug) {
   // top of the wizard and the wizard was never seen again (Windows, 2026-09-06).
   // Casting the sample is step 4's job, through POST /books/sample.
   const wizardUp = typeof isFirstRunOpen === 'function' && isFirstRunOpen();
+
+  // The sample book is the one book ProseCast casts for you (server.py's
+  // `_ensure_sample_cast` — it ships its own cast in SAMPLE_CHARACTER_PROFILES),
+  // so an uncast sample is a missing demo asset, not a decision anyone is
+  // waiting to make. `main.py --sample --tts stub` — SETUP.sh's and SETUP.ps1's
+  // smoke test — leaves the book with no voice map at all, so opening it from
+  // the book list put a stranger in front of the casting modal for the one book
+  // that needs no casting (Windows, 2026-09-07). POST /books/sample is
+  // idempotent and, with the IR already on disk, answers synchronously.
+  if (candidates && !candidates.has_voice_map && slug === SAMPLE_SLUG && !wizardUp) {
+    try {
+      await postJSON('/books/sample', {});
+      candidates.has_voice_map = true;
+      state.hasVoiceMap = true;
+    } catch (e) {
+      console.error('[sample cast]', e);   // fall through to the modal
+    }
+  }
+
   if (candidates && !candidates.has_voice_map && candidates.characters.length > 1
       && !wizardUp) {
     showCastingModal(slug, candidates, chapData);
@@ -3322,10 +3349,17 @@ function frRenderStep2() {
   const engineRow = frRow('voice_engine'), ffmpegRow = frRow('tool_ffmpeg');
   document.getElementById('fr-probe-rows').innerHTML =
     suRow(engineRow) + suRow(ffmpegRow);
+  // suRow already prints `row.fix` — formatted, with its backticked commands as
+  // <code>. This line used to print the same text again as raw markdown right
+  // underneath it (Windows, 2026-09-07). It says why Continue is dark and
+  // points at the row; the row says what to do.
   const why = document.getElementById('fr-why');
   const blocked = !(engineRow && engineRow.ok);
   why.classList.toggle('fr-hidden', !blocked);
-  why.textContent = blocked ? ((engineRow && engineRow.fix) || 'The voice engine is not answering yet.') : '';
+  why.textContent = !blocked ? ''
+    : engineRow && engineRow.fix
+      ? "ProseCast can't read you anything until the voice engine answers — the fix is in the row above."
+      : 'The voice engine is not answering yet.';
 }
 
 async function frRecheck() {
