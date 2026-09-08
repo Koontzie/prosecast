@@ -50,3 +50,6 @@ start-prosecast.ps1
 # authored.
 start-prosecast.command
 start-prosecast.sh
+
+# The opt-in macOS shortcut, built from icon.icns by SETUP.sh when asked.
+ProseCast.app/

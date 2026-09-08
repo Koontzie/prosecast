@@ -16,13 +16,14 @@
 #   6. creates config.json from config.example.json if you don't have one
 #   7. runs a silent end-to-end smoke test of the pipeline
 #   8. writes start-prosecast.ps1 - the file you double-click from now on
+#   9. offers to put a shortcut on your desktop (only if you say yes)
 # Nothing here needs a GPU.
 #
-# Tested by Tyler on Windows 11 (2026-09-06) as a sequence of manual steps:
-# the winget installs, the venv, the three pip installs, four voice downloads,
-# the config copy and the smoke test. The --isolated flag and the two new
-# voices (hfc_female, jenny_dioco) are from this script and have not been run
-# on Windows yet.
+# Run by Tyler on a real Windows 11 laptop from a fresh clone (2026-09-07), and
+# again after the E9.8 stream-encoding fix. Step 9 - the desktop shortcut - is
+# from 2026-09-08 and has NOT been run on Windows: there is no PowerShell on
+# the Mac it was written on. What is checkable from here is pytest-checked
+# (tests/test_setup_scripts.py); the rest was linted by eye.
 
 # Deliberately NOT 'Stop'. Under 'Stop', redirecting a native command's stderr
 # (`2>$null`) raises NativeCommandError in Windows PowerShell 5.1, which would
@@ -171,6 +172,51 @@ Start-Job { Start-Sleep -Seconds 3; Start-Process "http://localhost:8000" } | Ou
 '@
 Set-Content -Path "start-prosecast.ps1" -Value $launcher -Encoding UTF8
 Ok "wrote start-prosecast.ps1"
+
+Write-Host ""
+Write-Host "=== 9. Desktop shortcut (optional) ==="
+# Asked for, never assumed, and never silently replacing one that is already
+# there. Someone else's Desktop is not ours to write to.
+$icon = Join-Path $PSScriptRoot "icon.ico"
+if (-not (Test-Path $icon)) {
+  Warn "no icon.ico in this folder - skipping the shortcut."
+  Write-Host "      .venv\Scripts\python scripts\make_icons.py" -ForegroundColor Cyan
+} else {
+  $desktop = [Environment]::GetFolderPath('Desktop')
+  $lnkPath = Join-Path $desktop "ProseCast.lnk"
+  $answer = Read-Host "  Make a desktop shortcut? This creates ProseCast.lnk on your Desktop. [y/N]"
+  if ($answer -match '^[Yy]') {
+    $go = $true
+    if (Test-Path $lnkPath) {
+      $overwrite = Read-Host "  $lnkPath already exists. Replace it? [y/N]"
+      if ($overwrite -notmatch '^[Yy]') {
+        Ok "left the existing Desktop shortcut alone"
+        $go = $false
+      }
+    }
+    if ($go) {
+      try {
+        # WScript.Shell is the only way to author a .lnk without a compiler,
+        # and it has shipped with Windows since forever.
+        $ws = New-Object -ComObject WScript.Shell
+        $lnk = $ws.CreateShortcut($lnkPath)
+        # powershell.exe rather than the .ps1 directly: a .ps1 double-click
+        # opens Notepad on a default Windows install.
+        $lnk.TargetPath       = "powershell.exe"
+        $lnk.Arguments        = "-File `"$(Join-Path $PSScriptRoot 'start-prosecast.ps1')`""
+        $lnk.WorkingDirectory = $PSScriptRoot
+        $lnk.IconLocation     = $icon
+        $lnk.Description      = "ProseCast - multi-voice audiobooks, made on your own machine"
+        $lnk.Save()
+        Ok "put ProseCast on your Desktop"
+      } catch {
+        Fail "could not create the shortcut: $($_.Exception.Message)"
+      }
+    }
+  } else {
+    Ok "no shortcut made - .\start-prosecast.ps1 is the way in"
+  }
+}
 
 Write-Host ""
 if ($script:Failed) {

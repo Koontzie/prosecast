@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
+     role="img" aria-label="ProseCast">
+  <title>ProseCast</title>
+  <!--
+    The ProseCast mark: a broadcast microphone in the On Air palette.
+
+    Source of truth. icon.png / icon.ico / icon.icns in the repo root are
+    generated from this file by scripts/make_icons.py — edit the SVG, re-run
+    the script, never hand-edit a raster.
+
+    Colours are lifted verbatim from the On Air skin's tokens in
+    static/index.html: --oa-bg #161009 (bakelite ground), --oa-gold #cd9a43
+    (brass), --oa-gold-hi #e2b463 (brass hover), --oa-line #33261a (hairline).
+
+    Drawn to survive 16px: four solid shapes, no strokes thinner than 30 units
+    at 512, no grille slots and no text. Anything finer turns to mush in a
+    favicon, which is the size this mark is seen at most often.
+  -->
+  <rect width="512" height="512" rx="112" fill="#161009"/>
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#33261a" stroke-width="16"/>
+
+  <!-- The mark runs 60..452 vertically: about 77% of the tile, which is what
+       it takes for the silhouette to still be a microphone at 16px. -->
+
+  <!-- capsule -->
+  <rect x="189" y="60" width="134" height="228" rx="67" fill="#e2b463"/>
+
+  <!-- yoke: the cradle the capsule hangs in -->
+  <path d="M 134 222 V 258 A 122 122 0 0 0 378 258 V 222"
+        fill="none" stroke="#cd9a43" stroke-width="34" stroke-linecap="round"/>
+
+  <!-- stem and base -->
+  <rect x="239" y="380" width="34" height="40" fill="#cd9a43"/>
+  <rect x="166" y="418" width="180" height="34" rx="17" fill="#cd9a43"/>
+</svg>
