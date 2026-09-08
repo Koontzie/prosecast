@@ -379,6 +379,29 @@ def test_setup_ps1_prints_the_command_before_it_offers_to_run_it():
     assert "Read-Host" in text
 
 
+SETUP_SH = Path(__file__).resolve().parent.parent / "SETUP.sh"
+
+
+def test_setup_sh_downloads_exactly_the_pool():
+    """Since E10 the Unix script installs Piper too — on Linux always, on macOS
+    when offered and accepted. Same list, same drift risk as SETUP.ps1."""
+    text = SETUP_SH.read_text(encoding="utf-8")
+    listed = re.findall(r"'(en_[A-Za-z]{2}-[\w]+-medium)'", text)
+    assert listed == VoiceAssigner.PIPER_VOICES, (
+        "SETUP.sh's PIPER_VOICES has drifted from VoiceAssigner.PIPER_VOICES")
+
+
+def test_both_setup_scripts_agree():
+    """One pool, three platforms. A voice added to one installer and not the
+    other is a user whose Setup page says '5 of 6' forever, on whichever OS
+    was forgotten."""
+    sh = re.findall(r"'(en_[A-Za-z]{2}-[\w]+-medium)'",
+                    SETUP_SH.read_text(encoding="utf-8"))
+    ps1 = re.findall(r"'(en_[A-Za-z]{2}-[\w]+-medium)'",
+                     SETUP_PS1.read_text(encoding="utf-8"))
+    assert sh == ps1
+
+
 def test_setup_ps1_is_plain_ascii():
     """Windows PowerShell 5.1 reads a BOM-less .ps1 as the system codepage, so
     a stray curly quote or box-drawing character becomes mojibake in a script

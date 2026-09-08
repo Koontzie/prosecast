@@ -44,3 +44,9 @@ tests/ui/*.png
 # Written by SETUP.ps1 for the machine it ran on — the file a Windows user
 # double-clicks. Generated, not authored.
 start-prosecast.ps1
+
+# Written by SETUP.sh for the machine it ran on — the launcher a Mac or Linux
+# user opens, the counterpart of start-prosecast.ps1 above. Generated, not
+# authored.
+start-prosecast.command
+start-prosecast.sh
