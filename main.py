@@ -33,6 +33,12 @@ from pathlib import Path
 # Add the project root to sys.path so "prosecast" package resolves
 sys.path.insert(0, str(Path(__file__).parent))
 
+# The IR report below prints ═ and →. Under a redirect (`main.py … *> $null`,
+# which is how SETUP.ps1 runs its smoke test) Windows encodes stdout as cp1252
+# and those characters killed the process with exit 1. See prosecast/console.py.
+from prosecast.console import use_utf8_streams
+use_utf8_streams()
+
 from prosecast.book_parser import parse_book, write_sample_book
 from prosecast.ir_generator import build_ir, save_ir
 from prosecast.tts_engine import TTSEngine

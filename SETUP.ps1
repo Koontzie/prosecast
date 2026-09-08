@@ -31,6 +31,15 @@
 $ErrorActionPreference = 'Continue'
 Set-Location -Path $PSScriptRoot
 
+# Every python this script starts must be able to PRINT the text of a book.
+# Step 7 sends the smoke test's output to $null, and a redirect makes stdout a
+# pipe - which Python on Windows encodes as cp1252 whatever the console is set
+# to. The IR report prints = and ->, so the run died with UnicodeEncodeError and
+# step 7 failed while the identical command typed by hand passed (2026-09-07).
+# main.py and server.py now fix their own streams (prosecast/console.py); this
+# line covers every OTHER python this script starts, including pip and spaCy.
+$env:PYTHONUTF8 = "1"
+
 $script:Failed = $false
 function Ok    { param($m) Write-Host "  [ok] $m"   -ForegroundColor Green }
 function Warn  { param($m) Write-Host "  [!]  $m"   -ForegroundColor Yellow }

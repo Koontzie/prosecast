@@ -55,15 +55,14 @@ from pydantic import BaseModel
 
 from prosecast import ingest as ingest_mod
 from prosecast import library as lib
+from prosecast.console import use_utf8_streams
 
-# Belt and braces, not the fix. The fix is that every text read and write in
-# this codebase names its encoding (E9.1, tests/test_encoding_guard.py) — but
-# a stranger's console is also full of book text, and on Windows that console
-# is cp1252 unless something says otherwise. If a curly quote ever comes back
-# as a mojibake smear, this line is the first thing to check.
-if sys.platform == "win32" and sys.flags.utf8_mode == 0:
-    print("ProseCast: this Python is not in UTF-8 mode. Nothing should break — "
-          "but start-prosecast.ps1 (written by SETUP.ps1) sets PYTHONUTF8=1 for you.")
+# E9.1 gave every text read and write in this codebase an explicit encoding.
+# The log is the other half: a stranger's console is full of book text, and on
+# Windows both the console and — worse, silently — any redirected pipe default
+# to cp1252. This used to be a printed tip that said "nothing should break";
+# it was wrong (E9.8), so it is a fix now instead of advice.
+use_utf8_streams()
 
 app = FastAPI(title="ProseCast")
 
