@@ -1,4 +1,4 @@
-# ProseCast — Session Handoff (2026-09-08)
+# ProseCast — Session Handoff (2026-09-08, E10)
 
 For the next Claude/CC session: read this + `STATUS.md`, then pick up at
 **"Where to start"**. Supersedes the 09-05 and 09-06 handoffs.
@@ -7,17 +7,17 @@ Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
 2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
 gmail author scrubbed) and force-pushed; every commit hash from before that
 day changed, so hashes quoted in older STATUS entries no longer resolve.
-**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **432 passed,
-1 skipped** (406 before E9.8, 375 before E9.7, 300 before E9, 297 before the
-librivox commit, 247 before E7, 231 before E6, 197 before E3) — the skip is
-`en_core_web_sm` missing from the venv; `bash SETUP.sh` installs and verifies
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **462 passed,
+1 skipped** (432 before E10, 406 before E9.8, 375 before E9.7, 300 before E9,
+297 before the librivox commit, 247 before E7, 231 before E6, 197 before E3) —
+the skip is `en_core_web_sm` missing from the venv; `bash SETUP.sh` installs and verifies
 it, after which the number is higher. Without tesseract a further 6 skip. Skips
 are healthy, not regressions. There are still **five** `tests/ui/` checks, and
 Playwright + chromium are installed in the Mac venv.
 
-**Push state: `main` is fully pushed through `8e3bc19` (STATUS chapter-close
-for E9.8). Nothing is local.** The E6/E7/E9 backlog this file used to warn
-about is gone — Tyler reviewed and pushed it.
+**Push state: pushed through `8e3bc19` (STATUS chapter-close for E9.8); the
+five E10 commits after it are LOCAL** — Tyler reviews and pushes. The E6/E7/E9
+backlog this file used to warn about is gone; he reviewed and pushed that.
 
 ---
 
@@ -31,7 +31,7 @@ UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05; since E6 on
 README, and since E7 the same day the voice bank is a page you can browse,
 audition and annotate rather than a JSON file. Since E9 it installs and speaks
 on **Windows** — twice from a fresh clone, E9.7 and E9.8 being what those two
-runs found. All of it is pushed.
+runs found, and since E10 (09-08) the same is true of Linux and the Mac.
 
 | Phase | What | State |
 |---|---|---|
@@ -44,8 +44,9 @@ runs found. All of it is pushed.
 | E6 | First-run wizard: engine → probe → optional brains → hears the sample book | ✓ 09-06 |
 | E7 | Voices tab: voice library + notes/tags/rating, audition + A/B, `hidden`, sourcing catalogue | ✓ 09-06 |
 | E9 | Windows: UTF-8 everywhere + guard test, wizard never loses you, six gendered Piper voices, `SETUP.ps1` | ✓ 09-06 |
-| **E9.7** | **Second Windows pass: start prompt, gendered casting on rung 1, a 10-block chapter 1** | **✓ 09-07** |
-| **E9.8** | **UTF-8 on the *streams*, Piper as a module, the sample casts itself, a `git pull` re-ingests the sample** | **✓ 09-07/08** |
+| E9.7 | Second Windows pass: start prompt, gendered casting on rung 1, a 10-block chapter 1 | ✓ 09-07 |
+| E9.8 | UTF-8 on the *streams*, Piper as a module, the sample casts itself, a `git pull` re-ingests the sample | ✓ 09-07/08 |
+| **E10** | **Install parity: SETUP.sh reaches a working engine, a launcher on every OS, an opt-in shortcut, and a mark to hang it on** | **✓ 09-08 (local commits)** |
 
 Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 `README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
@@ -80,14 +81,18 @@ Windows installs) sit on top of it. Of the four findings, **the render worker's
 whole-document write is the one to do first** — E3 guards around it with a
 blunt 409, and that guard can be relaxed the moment the merge fix lands.
 
-- **E10 — install parity — is the live chapter.** Windows gets a scripted
-  install that ends in working audio plus a double-clickable launcher; Mac and
-  Linux do not. Findings (a) and (b) at the top of the 09-07/08 STATUS entry
-  are its brief: `SETUP.sh` installs **no voice engine**, so a clean Linux
-  install passes all six steps and still reaches a wizard whose step 2 can
-  never go green; and outside Windows there is no launcher, only a uvicorn
-  command to type. Plus an opt-in desktop shortcut on all three platforms and
-  one icon to hang it on.
+- **E10 is done** (09-08, Claude Code on the Mac — see the STATUS entry).
+  Findings (a) and (b) from the 09-07/08 session are closed: `SETUP.sh`
+  installs a voice engine, writes a launcher, and offers a shortcut. What is
+  left of it is Tyler's, and none of it is checkable from here — the **Windows
+  shortcut and its .lnk icon** on the laptop, and a **clean Mac install on a
+  machine that has never seen the repo**. It also turned up a fifth finding
+  worth knowing: the Apple-Silicon `piper-tts` wheel cannot make sound at all
+  (key facts below).
+- **Next chapter is open.** The candidates, in the order they were last
+  agreed: **E8 / data safety** (the render worker's whole-document write, the
+  first of the four findings below) when Gideon is free, and the **cast
+  exchange** design.
 - **ElevenLabs affiliate** is approved and the link is in the README, the app
   and `docs/elevenlabs-setup.md`, each with the disclosure beside it. Nothing
   to do unless a new surface (the launch video, the website) shows the link —
@@ -111,9 +116,9 @@ blunt 409, and that guard can be relaxed the moment the merge fix lands.
     E9.8 finding; `.\start-prosecast.ps1` must show the Piper row **green**
     without the venv activated; and the two newer Piper voices' gender judged
     **by ear** (they were read off their datasets, not heard).
-- **Next after E10:** E8 (data safety, `docs/CC_BRIEF_data_safety.md`) when
-  Gideon is free — it is the render worker's whole-document write, the first of
-  the four findings below.
+- **E8** is `docs/CC_BRIEF_data_safety.md`; it is the render worker's
+  whole-document write, the first of the four findings below, and the guard
+  E3 put around it can be deleted the moment it lands.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
@@ -160,6 +165,13 @@ guards around the second one rather than fixing it.**
   new Voices view's licence badge reads. The fix is to key on the audio hash
   or to record the rename back into the manifest; either way it is a decision
   about Tyler's own filing, so E7 named it rather than guessing.
+
+* **Piper cannot make sound on Apple Silicon, and it is not ours to fix
+  (found 09-08).** Upstream: every `piper-tts` wheel back to 1.5.0 bundles a
+  libespeak-ng whose data path points at the machine it was built on. `SETUP.sh`
+  detects it and says so; nothing else can be done from here. Worth re-testing
+  whenever piper-tts publishes a new macOS wheel — the check is
+  `piper_can_speak()` in `SETUP.sh`, one line to run by hand.
 
 * **`docs/chatterbox-contract.md` is stale on one point (found 09-08).** It
   records Gideon returning `"type": "turbo"` as of 2026-07-10. That capture
@@ -348,11 +360,54 @@ disk and does not care who wrote it. Esc from the wizard goes to Setup unless
 that run made a book, in which case it goes to the book; the Skip link always
 goes to Setup.
 
-**The README is a contract (09-05).** It promises: ffmpeg required, tesseract
-scans-only, poppler not needed, Python 3.11+, `SETUP.sh` verifies each step,
-the setup wizard opens until an engine has been chosen (a config.json alone is
-not the test), `main.py --llm-model` defaults to the configured model. If code
-changes make any of those false, change the README in the same commit.
+**The README is a contract (09-05, extended 09-08).** It promises: ffmpeg
+required, tesseract scans-only, poppler not needed, Python 3.11+, `SETUP.sh`
+verifies each step, the setup wizard opens until an engine has been chosen (a
+config.json alone is not the test), `main.py --llm-model` defaults to the
+configured model. **And since E10:** the two setup scripts run the same nine
+steps, both install Piper and its six voices (offered rather than forced on
+macOS), both write a launcher, both offer a desktop shortcut that defaults to
+no and never replaces one without asking, and the Apple-Silicon Piper wheel is
+named as broken. If code changes make any of those false, change the README in
+the same commit.
+
+**Install parity (E10, 09-08).** `SETUP.sh` and `SETUP.ps1` are now the same
+script in two languages: nine steps, ✓/✗ per step, a launcher at step 8 and an
+opt-in shortcut at step 9. Four things to know.
+
+*Everything that touches the machine goes through `ask()`.* One function, two
+arguments (prompt, and what Enter means), and **no terminal means no** for all
+of it regardless of the default — a pipe or a CI job never downloads 400 MB,
+writes to a Desktop or starts a server. It is the one piece of shell in this
+repo that is executed by a test rather than read: `tests/test_setup_scripts.py`
+lifts it out of the file and drives it through a real pty.
+
+*`bad` records, `die` exits.* `SETUP.sh` used to have only the exiting kind, so
+one voice that failed to download would have ended the install. It now mirrors
+`SETUP.ps1`'s Fail/Die split: `bad` prints a ✗, sets `FAILED`, and the run ends
+on the summary line. `install_piper` therefore never returns non-zero — under
+`set -e` that would be a dead stop.
+
+*The Apple-Silicon `piper-tts` wheel is mute, and the installer proves it.*
+Every version back to 1.5.0 bundles a libespeak-ng whose data path is baked to
+the machine it was BUILT on (`/Users/runner/work/piper1-gpl/…`); the correct
+directory piper passes in is ignored and `ESPEAK_DATA_PATH` does not rescue it.
+It installs, the voices download, `probe_voice_engine` counts six files and
+goes **green**, and every render writes a zero-byte wav. `piper_can_speak()`
+phonemizes one sentence — no voice model needed, so it answers in a second —
+**before** the 400 MB. A mute Piper is a `warn` on macOS (`say` still works)
+and a `bad` on Linux (it is the only built-in engine there). Windows is
+unaffected: E9's install rendered the sample on Piper.
+
+*No launcher activates a venv.* `start-prosecast.command` / `.sh` / `.ps1` all
+name the venv's python and run uvicorn as a module — the rule E9.8 learned when
+the Setup page said "Piper — not installed" with six voice files beside it. The
+macOS `.app` bundle follows it too by not launching a server at all: it hands
+the `.command` to Terminal, so there is one launch path and a window someone
+can read and close. All three launchers and `ProseCast.app/` are gitignored;
+`icon.png` / `.ico` / `.icns` are committed, generated from
+`docs/assets/prosecast-icon.svg` by `scripts/make_icons.py` (Playwright's
+chromium is the rasterizer — no new dependency).
 
 **Config (new, 09-03).** `prosecast/config.py` resolves *defaults <
 `config.json` < env vars*. `config.json` is gitignored and holds Tyler's
