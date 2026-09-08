@@ -88,12 +88,13 @@ page. `preflight.py` guards GPU co-residency before renders.
 The UI is the primary surface; the CLI drives the same modules. Nothing is CLI-only since E3:
 
 ```bash
-bash SETUP.sh                                           # venv, deps, spaCy model (verified), config.json, tools, smoke test
-.venv/bin/uvicorn server:app --port 8000                # the app; first run opens the setup wizard
+bash SETUP.sh                                           # venv, deps, voice engine, spaCy (verified), config.json, tools, smoke test, launcher
+./start-prosecast.command                               # the app (Linux: ./start-prosecast.sh); first run opens the setup wizard
+.venv/bin/python -m uvicorn server:app --port 8000      # the same thing by hand
 .venv/bin/python main.py "<book title>" --use-existing-ir --llm-scene   # AI attribution pass — also available in the UI (E3)
 .venv/bin/python scripts/align_words.py <slug>          # word timings after a render — also available in the UI (E3)
 .venv/bin/python main.py --sample --tts stub            # silent smoke test
-.venv/bin/pytest tests/ -q                              # ~245 tests; spaCy/tesseract-gated ones skip cleanly
+.venv/bin/pytest tests/ -q                              # 432 tests; spaCy/tesseract-gated ones skip cleanly
 ```
 
 ## IR Attribution Pipeline (ir_generator.py)
@@ -334,10 +335,12 @@ Long-horizon feature. Architecture decisions now must not block it — keep IR e
 
 ## Dependencies
 
-`bash SETUP.sh` does all of this and verifies each step. **On Windows it is
-`.\SETUP.ps1`** (PowerShell) — same steps, plus `piper-tts` and the six Piper
-voice files into the repo root, and it writes `start-prosecast.ps1` as the
-double-click entry point. By hand:
+`bash SETUP.sh` does all of this and verifies each step; **on Windows it is
+`.\SETUP.ps1`** (PowerShell). Since E10 the two run the **same nine steps**:
+both install `piper-tts` and the six Piper voice files into the repo root (on
+macOS that one is offered, not forced — `say` already works), both write the
+launcher (`start-prosecast.command` / `.sh` / `.ps1`, all gitignored), and both
+end by offering a desktop shortcut, default no. By hand:
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate     # Python 3.11+

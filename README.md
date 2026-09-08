@@ -116,10 +116,10 @@ brew install python ffmpeg          # + tesseract if you have scans
 sudo apt install python3 python3-venv ffmpeg   # + tesseract-ocr
 ```
 
-### Windows (tested 2026-09-06)
+### Windows (tested 2026-09-06, and again from a fresh clone 2026-09-07)
 
 Installed from scratch on a rebuilt Windows 11 laptop and played the sample
-book end to end. In PowerShell:
+book end to end, twice. In PowerShell:
 
 ```powershell
 winget install -e --id Python.Python.3.12
@@ -136,12 +136,13 @@ cd prosecast
 .\start-prosecast.ps1
 ```
 
-`SETUP.ps1` does everything `SETUP.sh` does, plus installing Piper and
-downloading its six voice files (about 400 MB) into the ProseCast folder —
-Piper looks for voices in the folder it is started in. It is safe to re-run and
-prints a ✓ or ✗ per step. `start-prosecast.ps1` is the file you double-click
-from then on: it starts the server and opens your browser. The setup wizard
-takes it from there.
+`SETUP.ps1` and `SETUP.sh` do the same nine steps. Both install Piper and its
+six voice files (about 400 MB) into the ProseCast folder — Piper looks for
+voices in the folder it is started in. Both are safe to re-run and print a ✓ or
+✗ per step, and both end by offering a **desktop shortcut** (default no; it
+will not replace an existing one without asking). `start-prosecast.ps1` is the
+file you double-click from then on: it starts the server and opens your
+browser. The setup wizard takes it from there.
 
 If Windows says *"running scripts is disabled on this system"*, allow local
 scripts once, for your account only:
@@ -173,17 +174,42 @@ cd prosecast
 bash SETUP.sh
 ```
 
-`SETUP.sh` creates a virtualenv, installs the Python dependencies, downloads
-the spaCy English model *and checks that it loads*, creates `config.json` from
-the example if you don't have one, checks for `ffmpeg`, and runs a silent
-smoke test of the whole pipeline. Every step prints a ✓ or tells you exactly
-what to install. It is safe to re-run.
+`SETUP.sh` creates a virtualenv, installs the Python dependencies, **gets you a
+voice engine**, downloads the spaCy English model *and checks that it loads*,
+creates `config.json` from the example if you don't have one, checks for
+`ffmpeg`, runs a silent smoke test of the whole pipeline, and writes the
+launcher you open from then on. Every step prints a ✓ or tells you exactly what
+to install. It is safe to re-run.
 
-Then start the app:
+Two of those steps ask you something, and both default to no:
+
+- **On Linux it installs Piper and its six voice files** (about 400 MB) without
+  asking, because otherwise there is nothing on the machine that can speak. On
+  a Mac, `say` already works, so it *offers* Piper instead — "~400 MB — install
+  now? [y/N]". Either way it makes Piper prove it can actually produce sound
+  before spending the download, and tells you if it can't.
+- **At the end it offers a desktop shortcut.** Say yes and you get a
+  double-clickable ProseCast on your desktop; say nothing and you get the
+  launcher and no changes outside the ProseCast folder. It never replaces a
+  shortcut that is already there without asking again. On Linux that is a
+  `.desktop` entry; on macOS it is a small `ProseCast.app` that opens the
+  launcher in Terminal, because a `.command` file cannot carry a custom icon.
+  *(The macOS bundle is built and checked by script but has not yet been
+  double-clicked out of a real Finder — if its icon or behaviour is off, that
+  is the reason.)*
+
+Then start the app — this is the file the script just wrote, and the one you
+use from now on:
 
 ```bash
-.venv/bin/uvicorn server:app --port 8000
+./start-prosecast.command    # macOS
+./start-prosecast.sh         # Linux
 ```
+
+It starts the server and opens your browser; closing the window stops the
+server. (`SETUP.sh` also offers to start it for you the first time.) If you
+would rather run it yourself, `.venv/bin/python -m uvicorn server:app --port
+8000` is exactly what the launcher does.
 
 Open <http://localhost:8000>. On first run it opens a **short setup wizard**:
 pick a voice engine (on a Mac, system voices are already selected and need
@@ -206,14 +232,21 @@ no other services installed.
 The **Setup page** (⚙ in the header) is the full list: one row per service,
 green / amber / red, each with the command that fixes it.
 
-Not on a Mac? On Windows, `SETUP.ps1` above has already installed Piper and
-its voices. On Linux, `.venv/bin/pip install piper-tts` and download the six
-voice files into the ProseCast folder — the Setup page prints the exact
-`.venv/bin/python -m piper.download_voices …` line for each one that is
-missing, and Piper looks for voices in the folder ProseCast is started in.
-Then pick Piper on the Setup page (or set `"tts_engine": "piper"` in
-`config.json`). ProseCast runs Piper as a module of its own interpreter, so
-nothing has to be on your `PATH`.
+Not on a Mac? The setup script has already installed Piper and its six voices
+— `SETUP.ps1` on Windows, `SETUP.sh` on Linux. Pick **Piper** in the wizard (or
+on the Setup page, or set `"tts_engine": "piper"` in `config.json`) and it
+should go green. ProseCast runs Piper as a module of its own interpreter, so
+nothing has to be on your `PATH`, and Piper looks for its `.onnx` voices in the
+folder ProseCast is started in — which is why they live in the ProseCast folder
+rather than somewhere tidier. If any are missing, the Setup page prints the
+exact `.venv/bin/python -m piper.download_voices …` line for each one.
+
+**One known problem, on Apple Silicon Macs only:** the `piper-tts` wheel there
+ships an espeak-ng that cannot find its own data files, so Piper installs and
+then makes silence. Every version back to 1.5.0 does it and there is nothing
+ProseCast can do about it, so `SETUP.sh` checks and tells you rather than
+letting you find out at render time. On a Mac this costs you nothing — `say` is
+already the default and Chatterbox (rung 2) is the upgrade worth making.
 
 ### Rung 2 — Chatterbox voices
 
