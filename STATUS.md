@@ -13,8 +13,130 @@ guarding around it rather than fixing it. Rulebook render + C4 still open.
 install: ProseCast now installs and speaks on Windows with `SETUP.ps1` and no
 terminal afterwards, and **E9.7 (09-07)** polished what the fresh-clone re-run
 found — a start prompt, gendered casting on rung 1, and a 10-block chapter 1 so
-the wizard reaches sound faster. E9 is pushed; E9.7's commits are LOCAL.
-**Updated:** 2026-09-07
+the wizard reaches sound faster. **E9.8 (09-07/08)** is the second Windows
+run's six findings: Piper as a module, the sample casting itself, one copy of
+the fix text, UTF-8 on the *streams* as well as the files, and a sample book
+that notices when `git pull` moved the text underneath it. **Everything
+through `862c3a8` is pushed; the four commits after it are LOCAL** — Tyler
+reviews and pushes.
+**Updated:** 2026-09-08
+
+## Session 2026-09-07/08 (Claude Code, Mac) — E9.8: the second Windows run
+
+Tyler installed from a fresh clone on the Windows laptop with `SETUP.ps1` a
+second time and found six things. Three were fixed and pushed on 09-07
+(`862c3a8`); the other three were written on 09-07 and finished, verified and
+committed on 09-08, with two stale sentences swept up alongside them.
+**Tests 406 → 432 passed, 1 skipped. All five `tests/ui/` checks green.**
+
+**The three in `862c3a8` (pushed):** Piper is invoked as `sys.executable -m
+piper` rather than a bare binary on PATH — `start-prosecast.ps1` never
+activates the venv, so the Setup page said "Piper — not installed" with six
+voice files sitting beside it; an uncast sample book opened outside the wizard
+now casts itself silently through `POST /books/sample` instead of showing the
+casting modal; and wizard step 2 prints the probe's fix once, not twice.
+
+**The bug the rest of it is about.** `SETUP.ps1`'s step 7 failed while the
+identical command typed into the console passed. The script runs its smoke test
+as `& $venvPy main.py --sample --tts stub *> $null`, and **that redirect makes
+stdout a pipe** — Python on Windows encodes a pipe with the ANSI code page,
+cp1252, whatever the console is set to. The `═` rule and the `→` in main.py's
+IR report raised `UnicodeEncodeError` and the process exited 1. Proven on the
+laptop: exit 1 with `PYTHONUTF8` unset, exit 0 with it set. **E9.1's sweep
+could not have caught this** — it gave every *file* read and write an explicit
+encoding, and streams are not files.
+
+- **`prosecast/console.py`** — `use_utf8_streams()`, reconfiguring stdout and
+  stderr to utf-8 with `errors="replace"`, guarded on
+  `hasattr(stream, "reconfigure")` because pytest, some CI runners and a plain
+  `StringIO` swap in objects that lack it. `main.py` calls it before it prints
+  anything; `server.py` calls it in place of the E9 tip that said "nothing
+  should break", which was wrong. `errors="replace"` because diagnostic output
+  must never be the reason an install fails.
+- **`$env:PYTHONUTF8 = "1"` at the top of `SETUP.ps1`.** It was only ever in
+  the generated `start-prosecast.ps1` — which is exactly why the launcher was
+  fine and the setup script was not. It stays in the launcher too. The line in
+  `SETUP.ps1` covers every *other* python the script starts: pip, spaCy,
+  `piper.download_voices`.
+- **`tests/test_console_encoding.py`** — 10 tests that force the Windows
+  failure mode on a Mac: `PYTHONIOENCODING=cp1252` in the child's environment,
+  `PYTHONUTF8` stripped from it, and output always captured so the stream is a
+  **pipe and never a tty**. The first test asserts the premise still bites (an
+  unfixed python dies on `═ → ✓`); the rest run the real
+  `main.py --sample --tts stub` through it, into a tmp library, and read the
+  report back out of the pipe. Without `console.py` they fail.
+- **The sample book notices a `git pull`.** `POST /books/sample` was idempotent
+  on `ir.json` existing — right for "the wizard ran twice", wrong for "the user
+  updated". E9.7c re-split the sample to a 10-block chapter 1 and the laptop
+  kept the 31-block one straight through the pull, losing it only because
+  SETUP.ps1's smoke test happens to rewrite the book. The ingest now stamps
+  `ingest.sample_text_sha` (12 hex of the shipped `SAMPLE_TEXT`) into the IR
+  and the endpoint re-ingests when it does not match. **No stamp means stale by
+  definition**, which is the one-time re-ingest every existing install wants;
+  an unreadable IR is not "up to date" either. Re-ingesting discards
+  `renders/` — block wavs are keyed by position and a re-split moves the lines
+  out from under them — and **only** that directory, **only** that slug:
+  `corrections.jsonl` is untouched and no other book is ever considered. The
+  response answers `reingested: true` beside the `job_id` rather than
+  `exists: false`, which would be a lie.
+- **Two stale sentences.** `SETUP.sh` still closed with "it lands on the Setup
+  page and shows what is green, what is missing, and how to fix each row" —
+  since E6 the first run opens the wizard, so it now says what `SETUP.ps1` and
+  the README say. And `tag_mapper._map_chatterbox`'s inline note said `pace`
+  was unmapped "until the cfg_weight direction is confirmed by listening",
+  contradicting its own header three lines up, where the 2026-07-13 listen
+  tests concluded cfg_weight should deliberately *not* be emitted. Comment
+  only; no behaviour changed.
+- **One test-infrastructure fix, found the hard way.** `tts_engine`,
+  `word_aligner` and `tag_generator` each resolve their service URL at **import
+  time**, before the autouse config fixture can point `PROSECAST_CONFIG` at a
+  tmp file — so any test that let the engine auto-detect was probing Gideon
+  across Tailscale, and `_chatterbox_reachable` is 8 s, a 1 s pause and 8 s
+  again by design. With that machine asleep it cost 17 s a call and turned a
+  20 s suite into a ten-minute one that looked exactly like a hang.
+  `tests/conftest.py` now rebinds those constants to `127.0.0.1:9` — a port
+  nothing listens on, refused instantly. Being *closed* is the point.
+
+**Still Tyler's to verify — none of it is checkable from a Mac:**
+
+- **On the Windows laptop: `git pull`, then `.\SETUP.ps1` with `PYTHONUTF8`
+  unset.** Step 7 must pass **on its own** — that is the whole finding.
+- **`.\start-prosecast.ps1` must show the Piper row green** without the venv
+  activated. That is `862c3a8`'s first fix and it has never been run.
+
+**Findings from testing this chapter — recorded, no code written for any of
+them:**
+
+- **(a) A clean-clone Linux install passes `SETUP.sh` end to end and still
+  cannot reach a voice.** All six steps green, smoke test passes, the server
+  starts, `GET /` returns 200, and `/setup/status` reports engine `auto` so the
+  wizard fires — but `SETUP.sh` installs **no voice engine**, while `SETUP.ps1`
+  installs piper and six voice files. A fresh Linux user therefore reaches a
+  wizard whose **step 2 can never go green**. macOS escapes it only because
+  `say` is already there. **E10 material.**
+- **(b) There is no launcher outside Windows.** `start-prosecast.ps1` is a
+  file you double-click; everyone else types a uvicorn command. **E10
+  material**, together with (a) and an opt-in desktop shortcut.
+- **(c) Chatterbox base runs on an RTX 4060 Laptop 8GB.** 3187 MiB of 8188,
+  ready in 96.6 s, installed via devnen's `start.bat` **Portable Mode** — which
+  downloads its own Python, so there is **no Python prerequisite** — with
+  `config.yaml`'s `repo_id` changed from the shipped chatterbox-turbo to
+  chatterbox **before the first run**. ~2 minutes to render the 10-block
+  chapter 1 there, against Gideon's 20 blocks in 30 s.
+- **(d) That render sounded rushed and shouted — and the mapper is not the
+  suspect.** `tag_mapper`'s header documents the 2026-07-13 listen-test
+  revision that deliberately does not emit `cfg_weight` (swept
+  0.25/0.35/0.5/0.7/0.9; the server default 0.5 beat every deviation in both
+  directions), so it is tuned, not untuned. What differed is the **voices**:
+  the laptop auto-cast from devnen's 28 stock predefined voices rather than
+  Tyler's curated references. Open question — **stock Chatterbox voices may
+  need their own exaggeration band** — and the mapper stays as it is until
+  someone listens on purpose.
+- **(e) `docs/chatterbox-contract.md` is stale on one point.** It records
+  Gideon returning `"type": "turbo"` as of 2026-07-10. That capture predates
+  the switch to base, and `preflight.py` aborts any render on a turbo model, so
+  Gideon has been running base ever since. Everything else in the doc still
+  holds.
 
 ## Session 2026-09-07 (Claude Code, Mac) — E9.7: polish from the fresh-clone Windows run
 
