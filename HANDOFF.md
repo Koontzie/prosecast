@@ -1,19 +1,23 @@
-# ProseCast — Session Handoff (2026-09-06)
+# ProseCast — Session Handoff (2026-09-08)
 
 For the next Claude/CC session: read this + `STATUS.md`, then pick up at
-**"Where to start"**. Supersedes the 09-05 handoffs.
+**"Where to start"**. Supersedes the 09-05 and 09-06 handoffs.
 
 Repo: `Koontzie/prosecast`, branch `main`. **The history was rewritten on
 2026-09-05** (`git filter-repo`, home-network host / NAS user / Mac path /
-gmail author scrubbed) and force-pushed; every commit hash from before this
-session changed, so hashes quoted in older STATUS entries no longer resolve.
-**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **375 passed,
-1 skipped** (300 before E9, 297 before the librivox commit, 247 before E7, 231
-before E6, 197 before E3) — the skip is `en_core_web_sm` missing from the venv;
-`bash SETUP.sh` installs and verifies it, after which the number is higher.
-Without tesseract a further 6 skip. Skips are healthy, not regressions. There
-are still **five** `tests/ui/` checks, and Playwright + chromium are installed
-in the Mac venv.
+gmail author scrubbed) and force-pushed; every commit hash from before that
+day changed, so hashes quoted in older STATUS entries no longer resolve.
+**CLAIY's clone must be re-cloned, not pulled.** Tests on the Mac: **432 passed,
+1 skipped** (406 before E9.8, 375 before E9.7, 300 before E9, 297 before the
+librivox commit, 247 before E7, 231 before E6, 197 before E3) — the skip is
+`en_core_web_sm` missing from the venv; `bash SETUP.sh` installs and verifies
+it, after which the number is higher. Without tesseract a further 6 skip. Skips
+are healthy, not regressions. There are still **five** `tests/ui/` checks, and
+Playwright + chromium are installed in the Mac venv.
+
+**Push state: `main` is fully pushed through `8e3bc19` (STATUS chapter-close
+for E9.8). Nothing is local.** The E6/E7/E9 backlog this file used to warn
+about is gone — Tyler reviewed and pushed it.
 
 ---
 
@@ -25,9 +29,9 @@ whole-book resumable renders and word-accurate read-along — **every step in th
 UI**. Phase E ("UI-first") is complete as of E3 on 2026-09-05; since E6 on
 2026-09-06 the first run walks a stranger to the sound of a voice without a
 README, and since E7 the same day the voice bank is a page you can browse,
-audition and annotate rather than a JSON file. Since E9, also the same day, it
-installs and speaks on **Windows**. **E3 is pushed; E6's, E7's and E9's commits
-are local — Tyler reviews and pushes.**
+audition and annotate rather than a JSON file. Since E9 it installs and speaks
+on **Windows** — twice from a fresh clone, E9.7 and E9.8 being what those two
+runs found. All of it is pushed.
 
 | Phase | What | State |
 |---|---|---|
@@ -35,18 +39,20 @@ are local — Tyler reviews and pushes.**
 | E1 | Full-page reader view | ✓ 09-03 |
 | E4.1–E4.3 | `config.json`, `/setup/status` probes, Setup page, EL affiliate compliance | ✓ 09-03 |
 | E2.1–E2.4 | Upload-as-job, PDF ingest on PyMuPDF, ingest wizard, OCR for scans | ✓ 09-04 |
-| **E5** | README, `SETUP.sh`, `docs/PHILOSOPHY.md`, history scrub, `CLAUDE.md` refresh | **✓ 09-05** |
-| **E3** | **Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card** | **✓ 09-05** |
-| **E6** | **First-run wizard: engine → probe → optional brains → hears the sample book** | **✓ 09-06 (local commits)** |
-| **E7** | **Voices tab: voice library + notes/tags/rating, audition + A/B, `hidden`, sourcing catalogue** | **✓ 09-06 (local commits)** |
-| **E9** | **Windows: UTF-8 everywhere + guard test, wizard never loses you, six gendered Piper voices, `SETUP.ps1`** | **✓ 09-06 (local commits)** |
+| E5 | README, `SETUP.sh`, `docs/PHILOSOPHY.md`, history scrub, `CLAUDE.md` refresh | ✓ 09-05 |
+| E3 | Pipeline-in-UI: AI pass + align as jobs on a second worker, Pipeline card | ✓ 09-05 |
+| E6 | First-run wizard: engine → probe → optional brains → hears the sample book | ✓ 09-06 |
+| E7 | Voices tab: voice library + notes/tags/rating, audition + A/B, `hidden`, sourcing catalogue | ✓ 09-06 |
+| E9 | Windows: UTF-8 everywhere + guard test, wizard never loses you, six gendered Piper voices, `SETUP.ps1` | ✓ 09-06 |
+| **E9.7** | **Second Windows pass: start prompt, gendered casting on rung 1, a 10-block chapter 1** | **✓ 09-07** |
+| **E9.8** | **UTF-8 on the *streams*, Piper as a module, the sample casts itself, a `git pull` re-ingests the sample** | **✓ 09-07/08** |
 
 Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 `README.md` and `docs/PHILOSOPHY.md`; keep them true when things change.
 
 ---
 
-## What happened on 09-05 (one long chapter, all committed; push pending Tyler)
+## What happened on 09-05 (one long chapter, committed and long since pushed)
 
 1. **History audit and rewrite.** Clean of secrets and copyrighted files; not
    clean of the Tailscale IP (1,564×), the NAS `user@host` pair (121×),
@@ -68,56 +74,46 @@ Specs: `docs/ROADMAP_PHASE_E_UI.md`. The public-facing story is now
 ## Where to start
 
 **The plan Tyler approved, in order:** publish → ElevenLabs application → E3 →
-cast exchange design → the four findings below. The first three are done, and
-E6 (the first-run wizard, 09-06) is done on top of them; **the cast exchange is
-next**. Of the four findings, **the render worker's
-whole-document write is now the one to do first** — E3 guards around it with a
+cast exchange design → the four findings below. All of that except the last two
+is done, and E6–E9.8 (the first-run wizard, the Voices tab, and two real
+Windows installs) sit on top of it. Of the four findings, **the render worker's
+whole-document write is the one to do first** — E3 guards around it with a
 blunt 409, and that guard can be relaxed the moment the merge fix lands.
 
-- **If Tyler has not yet flipped the repo public:** nothing for a session to
-  do first — he flips it, submits the application with the URL, and tests the
-  README on the gaming laptop (rungs 1–2). Anything the laptop test turns up
-  is a README/SETUP fix, small and Cowork-able.
+- **E10 — install parity — is the live chapter.** Windows gets a scripted
+  install that ends in working audio plus a double-clickable launcher; Mac and
+  Linux do not. Findings (a) and (b) at the top of the 09-07/08 STATUS entry
+  are its brief: `SETUP.sh` installs **no voice engine**, so a clean Linux
+  install passes all six steps and still reaches a wizard whose step 2 can
+  never go green; and outside Windows there is no launcher, only a uvicorn
+  command to type. Plus an opt-in desktop shortcut on all three platforms and
+  one icon to hang it on.
 - **ElevenLabs affiliate** is approved and the link is in the README, the app
   and `docs/elevenlabs-setup.md`, each with the disclosure beside it. Nothing
   to do unless a new surface (the launch video, the website) shows the link —
   then the same disclosure + attribution rules apply.
-- **E3 is done** (09-05, Claude Code on the Mac, verified against Gideon —
-  see the STATUS entry for the numbers). What is left of it is Tyler's to
-  check: the card against a **large** book (Parade, 115 chapters — the sample
-  book has one scene and cannot exercise a long run), whether a pass that runs
-  for tens of minutes wants a **cancel** button, and the overlap guard's
-  wording in practice.
-- **E6 is done** (09-06, Claude Code on the Mac — see the STATUS entry). The
-  first run opens a wizard that ends by playing the sample book: 15.7 s from
-  the button to audio, on `say`, on a library that had never existed. What is
-  left of it is Tyler's: the wizard on a **non-Mac** (Piper), the **ElevenLabs**
-  path end to end (its two-click cost warning was checked; no credit was spent),
-  path end to end (its two-click cost warning was checked; no credit was spent).
-  The `SETUP.sh` gap E6 found — a `config.json` written before anyone had
-  chosen anything, so the wizard never fired on the documented install path —
-  **is closed by E6.8**: `config.example.json` leaves `tts_engine` on `auto`
-  and the hook asks whether an engine has been chosen, not whether a file
-  exists.
-- **E7 is done** (09-06, Claude Code on the Mac — see the STATUS entry).
-  `docs/CC_BRIEF_voices_tab.md` ran end to end. What is left of it is Tyler's,
-  and it is all **ears**: nothing in that view was judged by listening. Open
-  the 🎤 Voices chip, run the audition line through the 20 LibriVox US voices,
-  A/B the candidates for NARRATOR, and hide the ones that do not work — hiding
-  now actually removes a voice from auto-casting, so it is worth doing
-  properly. **Before uploading anything new, read the `librivox_voices/`
-  MANIFEST finding below** — it will bite on the next upload.
-- **E9 is done** (09-06, Claude Code on the Mac — see the STATUS entry). What
-  is left is Tyler's and none of it is checkable from a Mac: re-run on the
-  laptop from a **fresh clone** with `SETUP.ps1` (it has never been executed),
-  judge the **two new Piper voices' gender by ear** (read off their datasets,
-  not heard), and see the wizard once on a machine where the sample book
-  already exists.
-- **Next after that:** E8 (data safety, `docs/CC_BRIEF_data_safety.md`) when
+- **What is still Tyler's, from the phases already shipped** — none of it
+  blocks a session, all of it needs his hands or his ears:
+  - **E3:** the Pipeline card against a **large** book (Parade, 115 chapters —
+    the sample has one scene and cannot exercise a long run), whether a pass
+    that runs for tens of minutes wants a **cancel** button, and the overlap
+    guard's wording in practice.
+  - **E6:** the **ElevenLabs** path end to end (its two-click cost warning was
+    checked; no credit was spent).
+  - **E7:** all **ears**, and nothing in that view has been judged by
+    listening. Open the 🎤 Voices chip, run the audition line through the 20
+    LibriVox US voices, A/B the candidates for NARRATOR, and hide the ones that
+    do not work — hiding really does remove a voice from auto-casting. **Before
+    uploading anything new, read the `librivox_voices/` MANIFEST finding
+    below** — it will bite on the next upload.
+  - **E9.7/E9.8, on the Windows laptop:** `git pull`, then `.\SETUP.ps1` with
+    `PYTHONUTF8` **unset** — step 7 must pass on its own, which is the whole
+    E9.8 finding; `.\start-prosecast.ps1` must show the Piper row **green**
+    without the venv activated; and the two newer Piper voices' gender judged
+    **by ear** (they were read off their datasets, not heard).
+- **Next after E10:** E8 (data safety, `docs/CC_BRIEF_data_safety.md`) when
   Gideon is free — it is the render worker's whole-document write, the first of
-  the four findings below. Then the **installer**: the nine manual steps E9
-  documented are its specification, and it is a design session before it is a
-  build.
+  the four findings below.
 - **Cast exchange** — a design session, not a build. PHILOSOPHY.md's
   "Sharing casts and voices" section is the spec-of-record for what it must
   be; the one code prerequisite it names is re-keying shared corrections by a
@@ -164,6 +160,21 @@ guards around the second one rather than fixing it.**
   new Voices view's licence badge reads. The fix is to key on the audio hash
   or to record the rename back into the manifest; either way it is a decision
   about Tyler's own filing, so E7 named it rather than guessing.
+
+* **`docs/chatterbox-contract.md` is stale on one point (found 09-08).** It
+  records Gideon returning `"type": "turbo"` as of 2026-07-10. That capture
+  predates the switch to base, and `preflight.py` aborts any render on a turbo
+  model, so Gideon has been running base ever since. Everything else holds.
+
+* **Open question, no code: stock Chatterbox voices may need their own
+  exaggeration band (found 09-08).** The laptop's first Chatterbox render
+  sounded rushed and shouted, but `tag_mapper` is not the suspect — its header
+  documents the 2026-07-13 listen tests that swept cfg_weight
+  0.25/0.35/0.5/0.7/0.9 and concluded the server default beat every deviation,
+  so it is tuned rather than untuned. What differed is the **voices**: that
+  machine auto-cast from devnen's 28 stock predefined voices, not Tyler's
+  curated references. The mapper stays as it is until someone listens on
+  purpose.
 
 Fixed 09-05 in E3: the plain-`open` writes of `ir.json` are gone.
 `scene_attributor.run_scene_pass`'s checkpoint, `cast_profiler`'s checkpoint
@@ -271,8 +282,9 @@ hold the two sides — `setup_status_setup_sh.json` (a config.json, nothing
 chosen → fires) and `setup_status_chatterbox.json` (chosen and answering →
 must not fire).
 
-**Windows (09-06, E9).** It works, and it was installed from scratch on a real
-Windows 11 laptop to find out. Four things a session needs to know:
+**Windows (09-06 E9, 09-07 E9.7, 09-07/08 E9.8).** It works, and it was
+installed from scratch on a real Windows 11 laptop **twice** to find out — the
+second time from a fresh clone. Seven things a session needs to know:
 
 *Every text read and write names its encoding, and a test enforces it.*
 `tests/test_encoding_guard.py` walks `server.py`, `main.py`, `prosecast/` and
@@ -285,20 +297,46 @@ of scope because they are different functions with no `encoding` parameter.
 **Do not add a bare `open()` to those four locations; the suite will catch it,
 but it is faster to not.**
 
+*Streams are not files, and E9.1's sweep could not have caught that (E9.8).*
+`prosecast/console.py`'s `use_utf8_streams()` reconfigures stdout and stderr to
+utf-8 with `errors="replace"`, guarded on `hasattr(stream, "reconfigure")`
+because pytest, some CI runners and a plain `StringIO` swap in objects that
+lack it. `main.py` calls it before it prints anything and `server.py` calls it
+at import. The bug: `SETUP.ps1`'s smoke test redirects stdout, a redirect makes
+stdout a **pipe**, and Python on Windows encodes a pipe with the ANSI code page
+whatever the console is set to — so `═` and `→` raised `UnicodeEncodeError` and
+step 7 failed while the identical command typed by hand passed. `SETUP.ps1` now
+also sets `$env:PYTHONUTF8 = "1"` at the top, for every *other* python it
+starts (pip, spaCy, `piper.download_voices`).
+`tests/test_console_encoding.py` forces the Windows failure mode on a Mac —
+`PYTHONIOENCODING=cp1252` in the child's env, `PYTHONUTF8` stripped, output
+always captured so the stream is a pipe and never a tty.
+
 *Piper resolves `<name>.onnx` from the CURRENT WORKING DIRECTORY.* That is why
 the voice files live in the repo root (gitignored) rather than somewhere
-tidier, why `SETUP.ps1` downloads them there, and why `probe_voice_engine`
+tidier, why the setup scripts download them there, and why `probe_voice_engine`
 looks there. `PIPER_VOICES` is six voices and `PIPER_VOICE_META` carries their
 gender **in code**, not in `voice_meta.json`, so a fresh clone auto-casts
 correctly before anyone edits an overlay; the overlay is merged over it and
-still wins. Adding a voice to the pool means adding it to `SETUP.ps1` too —
-`tests/test_piper_voices.py` fails if they drift.
+still wins. Adding a voice to the pool means adding it to **both** setup
+scripts — `tests/test_piper_voices.py` fails if they drift.
+
+*Piper is invoked as a MODULE, not a binary on PATH (E9.8).*
+`tts_engine.piper_command()` returns `[sys.executable, "-m", "piper"]` when the
+module imports, and only falls back to `shutil.which("piper")` when it does
+not. `start-prosecast.ps1` never activates the venv, so the venv's `Scripts/`
+is not on PATH and the Setup page said "Piper — not installed" with six voice
+files sitting beside it. The same is true of every launcher this project
+generates: **none of them activate anything, they all name the venv's python
+directly.**
 
 *`SETUP.ps1` and `start-prosecast.ps1` are the Windows entry points.* The
 second is generated by the first and gitignored. **Neither has ever been run on
-this Mac** — there is no PowerShell here. What is checkable is pytest-checked
-(voice list, `--isolated` on every pip line, plain ASCII); the rest was linted
-by eye, and the script's own header says which steps Tyler ran by hand.
+this Mac** — there is no PowerShell here. `SETUP.ps1` *has* been run twice on
+the real laptop (09-07 and, pending Tyler, the E9.8 re-run). What is checkable
+here is pytest-checked (voice list, `--isolated` on every pip line, plain
+ASCII, the launcher's contents, print-before-prompt); the rest was linted by
+eye.
 
 *The wizard suppresses the casting modal.* `init()` opens the only book when
 the library holds exactly one, so on a machine where `main.py --sample` had
@@ -430,7 +468,45 @@ render anyway is a bug this repo has shipped before.
 **Hermetic tests.** `tests/conftest.py` points every test at an empty tmp
 `config.json` (autouse). Without it the suite depends on the developer's real
 config — which is exactly how `test_default_is_localhost` failed on the Mac
-and passed in a container.
+and passed in a container. **And (09-08) it rebinds `tts_engine`,
+`word_aligner` and `tag_generator`'s service URLs to `127.0.0.1:9`** — those
+three resolve their URL at **import time**, before the config fixture can act,
+so any test that let the engine auto-detect was probing Gideon across
+Tailscale. `_chatterbox_reachable` is 8 s, a 1 s pause and 8 s again by design;
+with that machine asleep it cost 17 s a call and turned a 20 s suite into a
+ten-minute one that looked exactly like a hang. Port 9 being **closed** is the
+point — refused instantly. No test may reach for the home server.
+
+**The sample book is versioned by the text it came from (E9.8, 09-08).** The
+ingest stamps `ingest.sample_text_sha` — 12 hex of the shipped `SAMPLE_TEXT` —
+into the IR, and `POST /books/sample` re-ingests when it does not match. **No
+stamp means stale by definition** (the one-time re-ingest every install that
+predates this wants), and an unreadable IR is not "up to date" either. It was
+idempotent on `ir.json` existing before, which is right for "the wizard ran
+twice" and wrong for "the user pulled": E9.7c re-split the sample and the
+laptop kept the old 31-block chapter 1 straight through a `git pull`.
+Re-ingesting discards `renders/` — block wavs are keyed by position and a
+re-split moves the lines out from under them — and **only** that directory,
+**only** that slug. `corrections.jsonl` is untouched and no other book is ever
+considered. The response says `reingested: true` beside the `job_id`, not
+`exists: false`, which would be a lie.
+
+**Chapter 1 of the sample is a product decision, not an accident (E9.7c).**
+10 blocks, chapter 2 is 40; 50 total, 26 dialogue, unchanged by the move. The
+wizard renders chapter 1 while a stranger watches a progress line, so its
+length is how long the first run *feels*. A test fails if it grows past 12.
+Moving the break cost no attribution — 26 dialogue and 9 unresolved either way.
+
+**Gender on rung 1 comes from two shipped tables (E9.7b).** With no Ollama,
+`character_profiles` is empty for every book, so E9.3's gender-aware auto-cast
+had nothing to be aware of and the sample cast Elizabeth and Jane as men.
+`book_parser.SAMPLE_CHARACTER_PROFILES` ships the sample's own cast (two of the
+four are **surnames** — "Darcy", "Bingley" — which no name table can or should
+resolve), and `cast_profiler` carries a ~650-name table of common English given
+names as the rules-only last resort, behind titles and behind the LLM. The part
+worth defending is `AMBIGUOUS_NAMES`: 88 genuinely unisex names it refuses to
+answer for. **When in doubt, leave it out** — an omission costs a round-robin
+voice, a wrong entry costs a re-render of every line that character speaks.
 
 **ElevenLabs affiliate — compliance is not optional.** Link:
 `https://try.elevenlabs.io/dmylr2z8w3w9` (`EL_SIGNUP_URL` in
@@ -454,10 +530,11 @@ re-run the script; never edit the JSON by hand. Machine-dependent fields
 `tests/synthetic.py` holds the sample novel/play/rulebook text and the PDF/scan
 builders that the tests *and* the generator share.
 
-**Four headless UI checks live in the repo** (not collected by pytest; they need
+**Five headless UI checks live in the repo** (not collected by pytest; they need
 `pip install playwright && playwright install chromium`):
 `tests/ui/check_timeline_and_names.py`, `tests/ui/check_ingest_wizard.py`,
-`tests/ui/check_pipeline_card.py` and `tests/ui/check_first_run.py`. Run all four after touching
+`tests/ui/check_pipeline_card.py`, `tests/ui/check_first_run.py` and
+`tests/ui/check_voices.py`. Run all five after touching
 `static/index.html` — Playwright and chromium are installed in the Mac venv now,
 so `.venv/bin/python tests/ui/check_*.py` works without the container. They caught three bugs before Tyler
 saw them, including a `.hidden` class that had no CSS rule outside
@@ -488,7 +565,12 @@ removed) — the merger falls back to pure-WAV concat and works fine; fix
 belongs in the E5 install story. Goldeye still holds ~15 GB of unattributed
 VRAM (leading theory: long-uptime Chatterbox leak) — check `nvidia-smi`
 before the rulebook overnight render. Chatterbox now reports **40** predefined
-voices (was 34).
+voices (was 34). **Chatterbox base runs on an RTX 4060 Laptop 8 GB** (found
+09-08): 3187 MiB of 8188, ready in 96.6 s, installed via devnen's `start.bat`
+**Portable Mode** — which downloads its own Python, so there is **no Python
+prerequisite** — with `config.yaml`'s `repo_id` changed from the shipped
+chatterbox-turbo to chatterbox *before the first run*. ~2 minutes for the
+10-block chapter 1 there, against Gideon's 20 blocks in 30 s.
 
 ---
 
