@@ -167,8 +167,10 @@ def _map_chatterbox(tags: dict) -> dict:
 
     exaggeration = round(min(0.85, max(0.20, exaggeration)), 2)
     # Deliberately NO `speed`: speed_factor time-stretch = echo (see header note).
-    # `pace` is currently unmapped for chatterbox until the cfg_weight direction
-    # is confirmed by listening.
+    # Deliberately NO `cfg_weight` either: the 2026-07-13 listen tests swept it
+    # and the server default (0.5) won in both directions (see header). It is a
+    # stability knob, not a pace knob, so `pace` stays unmapped for chatterbox —
+    # punctuation and sentence rhythm in the text carry pacing.
     return {"exaggeration": exaggeration}
 
 
