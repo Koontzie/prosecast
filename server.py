@@ -699,12 +699,50 @@ def _ensure_sample_cast() -> bool:
     return True
 
 
+def _sample_text_changed(ir_path: Path) -> bool:
+    """Is the sample book on disk older than the sample text ProseCast ships?
+
+    This endpoint is idempotent on `ir.json` existing, which is exactly right for
+    "the wizard ran twice" and exactly wrong for "the user ran `git pull`".
+    E9.7c re-split the sample so chapter 1 is 10 blocks instead of 31; the
+    Windows laptop kept the old book through a pull and only lost it because
+    SETUP.ps1's smoke test happens to rewrite it (2026-09-07).
+
+    An IR with no stamp at all predates the stamp, so it is stale by definition —
+    which is the one-time re-ingest every existing install wants.
+    """
+    from prosecast.book_parser import sample_text_sha
+    try:
+        stamped = (_load_ir(ir_path).get("ingest") or {}).get("sample_text_sha")
+    except Exception:
+        return True                           # unreadable is not "up to date"
+    return stamped != sample_text_sha()
+
+
+def _stamp_sample_text(ir_path: Path) -> None:
+    """Record which shipped text this book was made from, beside the rest of the
+    ingest provenance. Atomic, like every other write of this file."""
+    from prosecast.book_parser import sample_text_sha
+    ir = _load_ir(ir_path)
+    ir.setdefault("ingest", {})["sample_text_sha"] = sample_text_sha()
+    lib.write_json_atomic(ir_path, ir)
+
+
+def _discard_sample_audio() -> None:
+    """Throw away the sample book's renders. Only ever the sample book, and only
+    `renders/` — audio for text that no longer exists is keyed to block numbers
+    that have moved, and re-splitting the book leaves exactly that behind.
+    """
+    shutil.rmtree(lib.renders_dir(SAMPLE_SLUG), ignore_errors=True)
+
+
 def _cast_the_sample(job: dict, result: dict) -> None:
     """Runs inside the ingest job, before it is marked done — a poller that sees
     `done` and immediately posts a render must not beat the voice map to disk."""
     job["stage"] = "casting"
     job["detail"] = "giving everyone a voice"
     try:
+        _stamp_sample_text(lib.ir_path(SAMPLE_SLUG))
         job["recast"] = _ensure_sample_cast()
     except Exception as e:                    # the book is fine; say what failed
         job["cast_error"] = str(e)
@@ -731,13 +769,19 @@ def create_sample_book():
     returning a `job_id` to poll at `/render_status/{job_id}` like any other
     ingest.
 
+    The one exception to "already there is enough" is a sample book made from a
+    *different* shipped text — someone who ran `git pull` (see
+    `_sample_text_changed`). That re-ingests, discards the audio that belonged to
+    the old text, and answers `reingested: true` alongside the `job_id`.
+
     Either way the sample book ends up cast for the active engine (see
     `_ensure_sample_cast`); `recast` says whether that had to be redone, which
     is the caller's signal that audio already on disk came from another engine
     and the render wants `force=true`.
     """
     ir_path = lib.ir_path(SAMPLE_SLUG)
-    if ir_path.exists():
+    existed = ir_path.exists()
+    if existed and not _sample_text_changed(ir_path):
         try:
             chapters = len(_load_ir(ir_path).get("chapters", []))
         except Exception:
@@ -753,16 +797,26 @@ def create_sample_book():
         raise HTTPException(status_code=500,
                             detail=f"Could not write the sample book to {path}: {e}")
 
+    # Re-ingesting over an existing book: the wavs on disk were made from text
+    # that no longer exists, and they are keyed by block number.
+    if existed:
+        _discard_sample_audio()
+
     job_id = uuid.uuid4().hex[:10]
     _render_jobs[job_id] = {
         "job_id": job_id, "kind": "ingest", "book_slug": SAMPLE_SLUG, "mode": "novel",
         "ocr": False,
         "status": "running", "progress": 0, "total": len(ingest_mod.STAGES),
-        "stage": "queued", "detail": "preparing the sample book",
+        "stage": "queued",
+        "detail": "updating the sample book" if existed else "preparing the sample book",
         "error": None, "result": None,
     }
     threading.Thread(target=_run_sample_job, daemon=True, name=f"ingest-{SAMPLE_SLUG}",
                      args=(job_id, path)).start()
+    if existed:
+        # A different shape from the first-call response on purpose: the caller
+        # polls the job either way, and "exists: false" would be a lie.
+        return {"slug": SAMPLE_SLUG, "exists": True, "reingested": True, "job_id": job_id}
     return {"slug": SAMPLE_SLUG, "exists": False, "job_id": job_id}
 
 

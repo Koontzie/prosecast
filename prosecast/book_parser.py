@@ -5,6 +5,7 @@ Parses EPUB or plain-text files into a list of chapter dicts:
   [{"title": str, "text": str}, ...]
 """
 
+import hashlib
 import posixpath
 import re
 import xml.etree.ElementTree as ET
@@ -310,6 +311,19 @@ SAMPLE_CHARACTER_PROFILES = {
     "Bingley":   {"gender": "masculine", "age": "adult", "voice_hints": "bright, eager",
                   "confidence": 1.0, "evidence": "the sample book's own cast", "method": "shipped"},
 }
+
+
+def sample_text_sha() -> str:
+    """A fingerprint of the shipped sample text, stamped into the sample book's
+    IR at ingest so ProseCast can tell an out-of-date sample from a current one.
+
+    `POST /books/sample` is idempotent on `ir.json` existing, which is right for
+    "the wizard ran twice" and wrong for "the user ran `git pull`": the laptop on
+    2026-09-07 still had the 31-block chapter 1 that E9.7c replaced, and only
+    kept it because SETUP.ps1's smoke test happened to rewrite the book. Twelve
+    hex digits — this identifies a file we ship, it does not defend against one.
+    """
+    return hashlib.sha256(SAMPLE_TEXT.encode("utf-8")).hexdigest()[:12]
 
 
 def write_sample_book(path: str):

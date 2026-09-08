@@ -140,6 +140,109 @@ def test_second_call_is_a_no_op(client, sandbox):
     assert lib.ir_path("sample_book").read_bytes() == before
 
 
+# ── ...unless the shipped text has moved on (E9.8) ───────────────────────────
+#
+# `git pull` does not touch library/, so an install that already had the sample
+# book kept the sample book it had. The Windows laptop still held the 31-block
+# chapter 1 that E9.7c replaced with a 10-block one, and only lost it because
+# SETUP.ps1's smoke test happens to rewrite the book from scratch (2026-09-07).
+
+def _stamp(value):
+    """Forge the stored fingerprint, as an older ProseCast would have left it."""
+    path = lib.ir_path("sample_book")
+    ir = json.loads(path.read_text(encoding="utf-8"))
+    if value is None:
+        ir.get("ingest", {}).pop("sample_text_sha", None)
+    else:
+        ir.setdefault("ingest", {})["sample_text_sha"] = value
+    path.write_text(json.dumps(ir), encoding="utf-8")
+
+
+def test_the_ingest_records_which_shipped_text_it_read(client, sandbox):
+    from prosecast.book_parser import sample_text_sha
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    ir = json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))
+    assert ir["ingest"]["sample_text_sha"] == sample_text_sha()
+
+
+def test_a_book_made_from_older_text_is_ingested_again(client, sandbox):
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    _stamp("0000deadbeef")                      # a sample from two versions ago
+
+    body = client.post("/books/sample").json()
+    assert body["reingested"] is True and "job_id" in body
+    assert body["exists"] is True, "the book did exist — say so"
+    _wait(client, body["job_id"])
+
+    from prosecast.book_parser import sample_text_sha
+    ir = json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))
+    assert ir["ingest"]["sample_text_sha"] == sample_text_sha()
+
+
+def test_a_book_from_before_the_stamp_existed_is_ingested_again(client, sandbox):
+    """Every install that predates E9.8 is in this state, once."""
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    _stamp(None)
+    body = client.post("/books/sample").json()
+    assert body.get("reingested") is True
+    _wait(client, body["job_id"])
+
+
+def test_an_unreadable_ir_is_ingested_again(client, sandbox):
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    lib.ir_path("sample_book").write_text("{not json", encoding="utf-8")
+    body = client.post("/books/sample").json()
+    assert body.get("reingested") is True
+    _wait(client, body["job_id"])
+    assert json.loads(lib.ir_path("sample_book").read_text(encoding="utf-8"))["chapters"]
+
+
+def test_audio_for_text_that_no_longer_exists_is_thrown_away(client, sandbox):
+    """Block wavs are keyed by position, so a re-split leaves audio pointing at
+    lines that have moved. Only renders/, and only this book."""
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    blocks = lib.renders_dir("sample_book") / "ch0_blocks"
+    blocks.mkdir(parents=True, exist_ok=True)
+    stale = blocks / "block_0000.wav"
+    stale.write_bytes(b"RIFFstale")
+    keep = lib.book_dir("sample_book") / "corrections.jsonl"
+    keep.write_text('{"kept": true}\n', encoding="utf-8")
+
+    _stamp("0000deadbeef")
+    body = client.post("/books/sample").json()
+    _wait(client, body["job_id"])
+
+    assert not stale.exists(), "audio from the old text survived the re-ingest"
+    assert keep.read_text(encoding="utf-8") == '{"kept": true}\n', \
+        "corrections are Tyler's labor and are append-only — never touched here"
+
+
+def test_a_current_sample_is_never_re_ingested(client, sandbox):
+    """The guard against a wizard that re-reads the book every time it opens."""
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    before = lib.ir_path("sample_book").read_bytes()
+    for _ in range(3):
+        body = client.post("/books/sample").json()
+        assert "job_id" not in body and "reingested" not in body
+    assert lib.ir_path("sample_book").read_bytes() == before
+
+
+def test_no_other_book_is_ever_re_ingested(client, sandbox):
+    """`_discard_sample_audio` and the staleness check are scoped to one slug."""
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    lib.ensure_book_dir("study")
+    ir = lib.ir_path("study")
+    ir.write_text(json.dumps({"book_title": "Study", "chapters": []}), encoding="utf-8")
+    wav = lib.renders_dir("study") / "ch0.wav"
+    wav.parent.mkdir(parents=True, exist_ok=True)
+    wav.write_bytes(b"RIFFkeep")
+
+    _stamp("0000deadbeef")
+    _wait(client, client.post("/books/sample").json()["job_id"])
+    assert wav.read_bytes() == b"RIFFkeep"
+    assert json.loads(ir.read_text(encoding="utf-8"))["book_title"] == "Study"
+
+
 # ── the casting that makes it playable ───────────────────────────────────────
 #
 # The render preflight aborts on a book with no voice_map, and on one whose map
