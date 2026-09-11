@@ -119,6 +119,16 @@ def router(*, calls: list, live_job: bool = False):
                                      f"wait for it to finish, then remove the book."}, 409)
             books[:] = [b for b in books if b["slug"] != slug]
             return js({"trashed": f"{slug}__20260911T000000Z"})
+        if path.endswith("/duplicate") and req.method == "POST":
+            slug = path.split("/")[2]
+            src = next((b for b in books if b["slug"] == slug), None)
+            if src is None:
+                return js({"detail": f"No book '{slug}'"}, 404)
+            clone_slug = f"{slug}_2"
+            clone_title = f"{ORIGINAL_TITLE.get(slug, src['title'])} (copy)"
+            books.append({**src, "slug": clone_slug, "title": clone_title,
+                          "hidden": False, "pinned": False})
+            return js({"slug": clone_slug, "title": clone_title})
         if path.startswith("/chapters/"):
             slug = path.rsplit("/", 1)[-1]
             book = next((b for b in books if b["slug"] == slug), None)
@@ -309,6 +319,27 @@ def main() -> int:
                   page.locator(f'.book-row[data-slug="{target2["slug"]}"]').count() == 1)
             check("the honest server sentence reached the screen, not a generic 'failed'",
                   "render is running" in note or "render" in note.lower(), note)
+
+            print("--- Duplicate: one confirmation, then a new row appears ---")
+            boot(page, calls=calls)
+            dupdialogs = []
+            page.on("dialog", lambda d: (dupdialogs.append(d.message), d.accept()))
+            source = visible[0]
+            calls.clear()
+            page.locator(f'.book-row[data-slug="{source["slug"]}"] .book-menu-btn').click()
+            page.wait_for_timeout(100)
+            page.locator(f'.book-row[data-slug="{source["slug"]}"] .book-pop button',
+                        has_text="Duplicate").click()
+            page.wait_for_timeout(300)
+            check("a confirmation was shown", len(dupdialogs) == 1, dupdialogs)
+            check("it says no audio is copied",
+                  dupdialogs and "no audio yet" in dupdialogs[0], dupdialogs)
+            posts = [c for c in calls if c[0] == "POST" and c[1].endswith("/duplicate")]
+            check("exactly one POST .../duplicate went out", len(posts) == 1, posts)
+            check("the original row is still there",
+                  page.locator(f'.book-row[data-slug="{source["slug"]}"]').count() == 1)
+            check("a new row for the clone appeared",
+                  page.locator(f'.book-row[data-slug="{source["slug"]}_2"]').count() == 1)
 
             print("--- nothing overflows at 1280px ---")
             over = page.evaluate(

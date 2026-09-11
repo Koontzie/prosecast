@@ -2414,6 +2414,11 @@ function bookMenuHTML(b) {
   renameBtn.addEventListener('click', (e) => { e.stopPropagation(); bookRenameStart(b.slug); });
   pop.appendChild(renameBtn);
 
+  const dupBtn = document.createElement('button');
+  dupBtn.textContent = 'Duplicate…';
+  dupBtn.addEventListener('click', (e) => { e.stopPropagation(); bookDuplicateStart(b.slug, b.title); });
+  pop.appendChild(dupBtn);
+
   const removeBtn = document.createElement('button');
   removeBtn.textContent = 'Remove…';
   removeBtn.addEventListener('click', (e) => { e.stopPropagation(); bookRemoveStart(b.slug, b.title); });
@@ -2549,6 +2554,27 @@ async function bookRemoveConfirm(slug) {
     await refreshBooks();
   } catch (e) {
     showUploadNote(`Could not remove that book — ${e.message}`);
+  }
+}
+
+// Duplicate: same text, same cast, no audio yet — the confirmation says so,
+// because block audio URLs are absolute and a clone that looked "cached"
+// would actually be playing the original's wavs (E11.5b).
+function bookDuplicateStart(slug, title) {
+  closeAllBookMenus();
+  const ok = confirm(
+    `Duplicate “${title}”?\n\n` +
+    `The copy gets the same text and the same cast — but no audio yet. ` +
+    `Nothing already rendered is copied.`);
+  if (ok) bookDuplicateConfirm(slug);
+}
+
+async function bookDuplicateConfirm(slug) {
+  try {
+    await fetchDetailJSON(`/books/${encodeURIComponent(slug)}/duplicate`, {method: 'POST'});
+    await refreshBooks();
+  } catch (e) {
+    showUploadNote(`Could not duplicate that book — ${e.message}`);
   }
 }
 

@@ -6,6 +6,8 @@ Endpoints:
   GET  /books                                   → list of processed books (library/<slug>/ir.json)
   PATCH /books/{book_slug}/shelf                → hide/pin/rename a book (shelf.json; never ir.json)
   DELETE /books/{book_slug}                     → move a book to library/.trash/ (never deletes)
+  POST /books/{book_slug}/duplicate              → clone ir.json/voice_map/corrections/shelf,
+                                                  never renders/, with every audio pointer reset
   POST /books/upload                            → save an .epub/.txt/.pdf, report format +
                                                   mode guess + PDF chapter split (no ingest)
   POST /books/ingest                            → ingest an upload in a mode (novel/narrator/
@@ -554,6 +556,50 @@ def remove_book(book_slug: str):
     dest_name = f"{book_slug}__{stamp}"
     shutil.move(str(lib.book_dir(book_slug)), str(lib.TRASH_DIR / dest_name))
     return {"trashed": dest_name}
+
+
+@app.post("/books/{book_slug}/duplicate")
+def duplicate_book(book_slug: str):
+    """'Same text, same cast, no audio yet.'
+
+    Copies ir.json, voice_map.json, corrections.jsonl and shelf.json only —
+    never renders/ or exports/ — and then resets every audio pointer in the
+    COPY's ir.json. Block audio URLs are absolute paths (many still pointing
+    at the legacy output/ layout), so a plain copy would report every block
+    cached while actually playing the original's wavs, and trashing the
+    original would silently gut the clone. This is the one place in this
+    chapter a NEW ir.json is written — never the original's.
+    """
+    _require_known_slug(book_slug)
+    src_ir = _load_ir(lib.ir_path(book_slug))
+    title = src_ir.get("book_title", book_slug)
+    new_slug = ingest_mod.slug_for(title)
+
+    lib.book_dir(new_slug).mkdir(parents=True, exist_ok=True)  # NOT ensure_book_dir — that
+    # also creates renders/, and the clone must start with none.
+    for copier, path_fn in (
+        (shutil.copy2, lib.voice_map_path),
+        (shutil.copy2, lib.journal_path),
+        (shutil.copy2, lib.shelf_path),
+    ):
+        src = path_fn(book_slug)
+        if src.exists():
+            copier(str(src), str(path_fn(new_slug)))
+
+    clone_ir = copy.deepcopy(src_ir)
+    for chapter in clone_ir.get("chapters", []):
+        for block in chapter.get("blocks", []):
+            block["cacheKey"] = None
+            for variant in block.get("audioVariants", {}).values():
+                variant["url"] = None
+                variant["cached"] = False
+    lib.write_json_atomic(lib.ir_path(new_slug), clone_ir)
+
+    shelf = lib.read_shelf(new_slug)
+    shelf["display_title"] = f"{title} (copy)"
+    lib.write_shelf(new_slug, shelf)
+
+    return {"slug": new_slug, "title": f"{title} (copy)"}
 
 
 # ── POST /books/upload → inspect; POST /books/ingest → do it (E2.1) ──────────

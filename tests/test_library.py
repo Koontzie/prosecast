@@ -11,8 +11,8 @@ nothing under library/ is ever actually deleted.
 Offline and hermetic, like tests/test_sample_book.py: tmp library, no real
 book ever touched.
 """
+import json
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -219,14 +219,13 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures"
 
 
 def test_books_library_fixture_still_matches_this_endpoint(client, sandbox):
-    import json as _json
     make_book("study", title="The Study")
     make_book("sample_book", title="Sample Book")
     client.patch("/books/study/shelf",
                  json={"pinned": True, "display_title": "Carl's <Rulebook>"})
     client.patch("/books/sample_book/shelf", json={"hidden": True})
     live = client.get("/books?include_hidden=true").json()
-    saved = _json.loads((FIXTURES / "books_library.json").read_text())
+    saved = json.loads((FIXTURES / "books_library.json").read_text())
     live_by_slug = {b["slug"]: b for b in live}
     saved_by_slug = {b["slug"]: b for b in saved}
     for slug in ("study", "sample_book"):
@@ -235,3 +234,90 @@ def test_books_library_fixture_still_matches_this_endpoint(client, sandbox):
                 f"books_library.json has drifted from /books — regenerate it ({slug}.{field})")
     assert live_by_slug["study"]["title"] == saved_by_slug["study"]["title"], \
         "books_library.json has drifted from /books — regenerate it (study.title)"
+
+
+# ── POST /books/{slug}/duplicate — E11.5b, the careful one ─────────────────
+#
+# "Same text, same cast, no audio yet." Block audio URLs are ABSOLUTE paths —
+# she_kills_monsters has 612 of them, carl_rpg_core_rulebook 966 — so a plain
+# copy would report the clone's blocks as cached while actually playing the
+# original's wavs (renderer.block_needs_synthesis checks os.path.exists on
+# the stored url). This fixture mimics that: real-looking absolute urls,
+# cached: true, on a book that also has a renders/ directory and a
+# corrections.jsonl, so the "renders/ never copied" and "journal IS copied"
+# assertions both have something to fail against if they're wrong.
+
+def make_book_with_audio(slug: str, title: str) -> Path:
+    d = lib.ensure_book_dir(slug)
+    ir = study_ir()
+    ir["book_title"] = title
+    for chapter in ir["chapters"]:
+        for i, block in enumerate(chapter["blocks"]):
+            block["cacheKey"] = f"key-{i}"
+            for variant_name, variant in block["audioVariants"].items():
+                url = str(d / "renders" / f"ch0_blocks" / f"block_{i:04d}.wav")
+                block["audioVariants"][variant_name] = {"url": url, "cached": True}
+    lib.write_json_atomic(lib.ir_path(slug), ir)
+    lib.voice_map_path(slug).write_text(
+        json.dumps({"map": {"Darcy": "voice-a"}}), encoding="utf-8")
+    lib.journal_path(slug).write_text(
+        '{"ts": "2026-09-11T00:00:00+00:00", "event": "speaker_change"}\n', encoding="utf-8")
+    lib.write_shelf(slug, {"hidden": False, "pinned": True, "sort_index": None,
+                            "display_title": None})
+    blocks_dir = d / "renders" / "ch0_blocks"
+    blocks_dir.mkdir(parents=True, exist_ok=True)
+    (blocks_dir / "block_0000.wav").write_bytes(b"RIFF....WAVEfake")
+    (d / "renders" / "ch0.wav").write_bytes(b"RIFF....WAVEfake")
+    return d
+
+
+def test_duplicate_resets_every_audio_pointer_and_never_copies_renders(client, sandbox):
+    make_book_with_audio("original", title="Original Book")
+    original_ir_bytes = lib.ir_path("original").read_bytes()
+
+    r = client.post("/books/original/duplicate")
+    assert r.status_code == 200
+    clone_slug = r.json()["slug"]
+    assert clone_slug != "original"
+
+    # the original is untouched
+    assert lib.ir_path("original").read_bytes() == original_ir_bytes
+
+    # the clone exists with the right supporting files, and NO renders/
+    clone_dir = lib.book_dir(clone_slug)
+    assert (clone_dir / "ir.json").exists()
+    assert (clone_dir / "voice_map.json").exists()
+    assert (clone_dir / "corrections.jsonl").exists()
+    assert (clone_dir / "shelf.json").exists()
+    assert not (clone_dir / "renders").exists()
+
+    clone_ir = json.loads((clone_dir / "ir.json").read_text(encoding="utf-8"))
+    variants = [v for ch in clone_ir["chapters"] for b in ch["blocks"]
+                for v in b["audioVariants"].values()]
+    assert variants, "fixture produced no variants to check"
+    assert all(v["cached"] is False for v in variants)
+    assert all(v["url"] is None for v in variants)
+    assert all(b["cacheKey"] is None for ch in clone_ir["chapters"] for b in ch["blocks"])
+
+    # the clone is distinguishable in the sidebar without touching either book_title
+    clone_shelf = lib.read_shelf(clone_slug)
+    assert clone_shelf["display_title"] == "Original Book (copy)"
+    assert clone_ir["book_title"] == "Original Book"
+
+    # voice_map and the journal really were copied, not just created empty
+    assert json.loads((clone_dir / "voice_map.json").read_text(encoding="utf-8")) == \
+        json.loads(lib.voice_map_path("original").read_text(encoding="utf-8"))
+    assert (clone_dir / "corrections.jsonl").read_text(encoding="utf-8") == \
+        lib.journal_path("original").read_text(encoding="utf-8")
+
+
+def test_duplicate_never_overwrites_an_existing_slug(client, sandbox):
+    make_book_with_audio("original", title="Original Book")
+    first = client.post("/books/original/duplicate").json()["slug"]
+    second = client.post("/books/original/duplicate").json()["slug"]
+    assert first != second
+    assert lib.book_dir(first).exists() and lib.book_dir(second).exists()
+
+
+def test_duplicate_unknown_slug_404s(client, sandbox):
+    assert client.post("/books/nope/duplicate").status_code == 404
