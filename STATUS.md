@@ -17,7 +17,26 @@ exchange** design (PHILOSOPHY.md is the spec-of-record) or **E8 / data safety**
 findings. Rulebook render + C4 still open.
 **Everything through `8e3bc19` is pushed; the five E10 commits after it are
 LOCAL** — Tyler reviews and pushes.
-**Updated:** 2026-09-08
+**Updated:** 2026-09-11
+
+## Session 2026-09-11 (Cowork) — the GPU lease
+
+Not a ProseCast feature: an infrastructure rule ProseCast now has to obey.
+ProseCast and AnimaForge share Chatterbox and Goldeye's single 3090 Ti, and
+concurrent sessions were breaking each other — one unloading a model the other
+was mid-render on. `gpu-lease.sh` (in `gideon-infra`, deployed to
+`/mnt/bolt/ai/scripts/`) is now an enforceable mutex; `CLAUDE.md` gained a
+fourth working rule requiring it before any command that loads, unloads, or
+restarts a GPU-resident service, and before long renders. Short Chatterbox
+calls over HTTP don't need it — the lease is for model lifecycle, not every
+request.
+
+The host is referenced as `$GOLDEYE_HOST`, never literally. The first draft of
+that rule hardcoded the Tailscale address into this repo — the exact host the
+09-05 history rewrite existed to scrub, in the repo going public. Caught before
+commit. Worth remembering that the scrub protects history, not new writes.
+
+One commit: `7d5df1d`. Nothing else in this repo changed.
 
 ## Session 2026-09-08 (Claude Code, Mac) — E10: the parity chapter
 
