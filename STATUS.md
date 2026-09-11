@@ -15,8 +15,11 @@ audio and a file you double-click is no longer Windows-only. Next: the **cast
 exchange** design (PHILOSOPHY.md is the spec-of-record) or **E8 / data safety**
 — the render worker's whole-document write, the first of the four HANDOFF
 findings. Rulebook render + C4 still open.
-**Everything through `8e3bc19` is pushed; the five E10 commits after it are
-LOCAL** — Tyler reviews and pushes.
+**Everything through `f09a252` is pushed — the five E10 commits landed on
+`origin/main` after the 09-08 entry was written, which said they were local.
+What is LOCAL now is `origin/main..HEAD`: the three E11 commits plus two
+GPU-lease commits from a concurrent session, interleaved — pushing E11 pushes
+those too** — Tyler reviews and pushes.
 **Updated:** 2026-09-11
 
 ## Session 2026-09-11 (Claude Code, Mac) — E11: the shelf chapter
