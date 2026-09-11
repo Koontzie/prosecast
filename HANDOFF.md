@@ -585,15 +585,51 @@ re-run the script; never edit the JSON by hand. Machine-dependent fields
 `tests/synthetic.py` holds the sample novel/play/rulebook text and the PDF/scan
 builders that the tests *and* the generator share.
 
-**Five headless UI checks live in the repo** (not collected by pytest; they need
+**Six headless UI checks live in the repo** (not collected by pytest; they need
 `pip install playwright && playwright install chromium`):
 `tests/ui/check_timeline_and_names.py`, `tests/ui/check_ingest_wizard.py`,
-`tests/ui/check_pipeline_card.py`, `tests/ui/check_first_run.py` and
-`tests/ui/check_voices.py`. Run all five after touching
-`static/index.html` — Playwright and chromium are installed in the Mac venv now,
-so `.venv/bin/python tests/ui/check_*.py` works without the container. They caught three bugs before Tyler
-saw them, including a `.hidden` class that had no CSS rule outside
-`.modal-overlay`, so every "hidden" section of the wizard was rendering anyway.
+`tests/ui/check_pipeline_card.py`, `tests/ui/check_first_run.py`,
+`tests/ui/check_voices.py` and `tests/ui/check_library_menu.py` (E11). Run all
+six after touching `static/index.html` — Playwright and chromium are installed
+in the Mac venv now, so `.venv/bin/python tests/ui/check_*.py` works without
+the container. They caught three bugs before Tyler saw them, including a
+`.hidden` class that had no CSS rule outside `.modal-overlay`, so every
+"hidden" section of the wizard was rendering anyway.
+
+**Shelf state (E11, 09-11).** `library/<slug>/shelf.json` holds hidden/
+pinned/`display_title`/`sort_index` — view state, not book data, and
+deliberately disposable (losing it costs Tyler a checkbox, never labor). It is
+its own file rather than a field on `ir.json` for exactly one reason: the
+render worker holds one IR snapshot per job and writes the whole document back
+after every block (this section's "correction made during a render" finding,
+above), so a hide/rename landing as an IR field could be silently clobbered by
+a render finishing seconds later. `shelf.json` is written and read
+independently and can never lose that race. `GET /books` reads it for every
+book, `PATCH /books/{slug}/shelf` writes it; neither ever touches `ir.json`.
+This is a workaround for the whole-document-write finding, not a fix for it —
+the finding above (its surgical fix: the render worker re-reading and merging
+only the fields it owns) is still open.
+
+**Removal moves, never deletes; there is no empty-trash.** `DELETE
+/books/{slug}` is `shutil.move` into `library/.trash/<slug>__<UTC stamp>/` —
+never `rm`/`rmtree` — and refuses 409 while any render/ingest/pipeline job is
+live on that book (`list_book_slugs()` globs one level deep, so a trashed
+book's `ir.json` is already invisible to it — no `.trash` exclusion needed).
+Bringing a book back is one `mv`. Emptying the trash is deliberately not a
+button — trashed books just accumulate until Tyler deals with them by hand
+(README "Managing the library").
+
+**A duplicated book resets every audio pointer, on purpose.** `POST
+/books/{slug}/duplicate` copies `ir.json`/`voice_map.json`/
+`corrections.jsonl`/`shelf.json` only, never `renders/` or `exports/`, then in
+the COPY's `ir.json` sets every block's `audioVariants[*].url` to `null`,
+`cached` to `false`, and clears `cacheKey`. Block audio URLs are **absolute
+paths** (`she_kills_monsters` has 612 of them, `carl_rpg_core_rulebook` 966),
+so a plain copy would report the clone's blocks as cached while
+`renderer.block_needs_synthesis` actually played the *original's* wavs off
+disk — and trashing the original would silently gut the clone. This is the
+one place in E11 a *new* `ir.json` is written; the original's is never
+touched.
 
 **On Air is the DEFAULT skin.** `localStorage['prosecast-theme'] || 'onair'`,
 read by an inline script at parse time. Setting `data-theme` after load does

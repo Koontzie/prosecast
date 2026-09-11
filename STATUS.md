@@ -19,6 +19,40 @@ findings. Rulebook render + C4 still open.
 LOCAL** — Tyler reviews and pushes.
 **Updated:** 2026-09-11
 
+## Session 2026-09-11 (Claude Code, Mac) — E11: the shelf chapter
+
+Library management: every book row gets a `⋯` menu — **Hide**, **Rename…**,
+**Duplicate…**, **Remove…** — plus a **Pin to top**, so Tyler can clean up the
+sidebar before recording without deleting anything. `library/<slug>/shelf.json`
+is new, disposable view state (`hidden`/`pinned`/`sort_index`/`display_title`),
+kept off `ir.json` on purpose so the render worker's whole-document write
+(HANDOFF, "Known-real", finding 2) can never clobber a hide/rename that lands
+mid-render. Removal is `shutil.move` into `library/.trash/<slug>__<UTC
+stamp>/` — never `rm` — and refuses 409 while any render/ingest/pipeline job
+is live on that book; there's no empty-trash button, on purpose. Duplicate
+copies the IR/voice-map/journal/shelf but never `renders/`, and resets every
+audio pointer in the *clone's* `ir.json` (absolute URLs — `she_kills_monsters`
+alone has 612 of them — meant a plain copy would report the clone as cached
+while actually playing the original's wavs).
+
+`renderBookList` was rebuilt with `createElement`/`textContent` while in
+there — it used to interpolate `b.title` straight into an `onclick`
+attribute, and a `display_title` makes an apostrophe or `<` in a title
+trivially reachable where `book_title` mostly wasn't.
+
+**Tests: 462 → 483 passed, 1 skipped** (21 new in `tests/test_library.py`).
+**Six** `tests/ui/` checks now, all green: `check_library_menu.py` is new,
+both skins, screenshots saved. Verified against the real library by hand
+(the brief's YELLOW step): hid, renamed, removed and restored
+`showrunner_run_sheet` through the running server — `ir.json`'s bytes and
+mtime were identical before and after the rename, the trash directory held
+`ir.json`/`voice_map.json`/`corrections.jsonl`/`renders/`, and one `mv`
+brought the book back with its rendered audio intact. Nothing was rendered.
+
+Two commits, both local: `E11: the shelf chapter` (Steps 1–4) and `E11.5: pin
+and duplicate` (Steps 5–6 — pin shipped with Step 1's shelf schema already,
+duplicate is new). This entry is the chapter-close (Step 7).
+
 ## Session 2026-09-11 (Cowork) — the GPU lease
 
 Not a ProseCast feature: an infrastructure rule ProseCast now has to obey.

@@ -99,7 +99,7 @@ page. `preflight.py` guards GPU co-residency before renders.
 - **`prosecast/tts_engine.py`** — backends: `chatterbox` (primary), `elevenlabs`, `piper`, `say`, `gtts`, `stub`.
 - **`prosecast/word_aligner.py`** — word timings via an OpenAI-compatible `/v1/audio/transcriptions` server (faster-whisper / Speaches).
 - **`prosecast/m4b_export.py`** — chapterized `.m4b` via ffmpeg.
-- **`prosecast/library.py`** — the only place book paths are built: `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, renders/, exports/}`.
+- **`prosecast/library.py`** — the only place book paths are built: `library/<slug>/{ir.json, voice_map.json, corrections.jsonl, shelf.json, renders/, exports/}`. `shelf.json` (E11) is disposable hidden/pinned/display_title view state, kept out of `ir.json` on purpose; `library/.trash/<slug>__<UTC stamp>/` is where a removed book goes — moved, never deleted.
 - **`prosecast/config.py`**, **`setup_probe.py`**, **`preflight.py`** — config, Setup-page probes, GPU preflight.
 
 ### CLI
