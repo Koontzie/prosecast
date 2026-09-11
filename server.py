@@ -4,6 +4,8 @@ ProseCast — Phase 3a/3b/3c local web server
 Endpoints:
   GET  /                                        → index.html UI
   GET  /books                                   → list of processed books (library/<slug>/ir.json)
+  PATCH /books/{book_slug}/shelf                → hide/pin/rename a book (shelf.json; never ir.json)
+  DELETE /books/{book_slug}                     → move a book to library/.trash/ (never deletes)
   POST /books/upload                            → save an .epub/.txt/.pdf, report format +
                                                   mode guess + PDF chapter split (no ingest)
   POST /books/ingest                            → ingest an upload in a mode (novel/narrator/
@@ -458,21 +460,100 @@ def _default_voice_map(characters: list[str], engine: str,
 # ── /books ────────────────────────────────────────────────────────────────────
 
 @app.get("/books")
-def list_books():
+def list_books(include_hidden: bool = Query(default=False)):
     books = []
     for slug in lib.list_book_slugs():
         try:
             with open(lib.ir_path(slug), encoding="utf-8") as f:
                 ir = json.load(f)
+            shelf = lib.read_shelf(slug)
+            if shelf["hidden"] and not include_hidden:
+                continue
             books.append({
                 "slug": slug,
-                "title": ir.get("book_title", slug),
+                "title": shelf["display_title"] or ir.get("book_title", slug),
                 "chapters": len(ir.get("chapters", [])),
                 "unresolved": ir.get("unresolved_count", 0),
+                "hidden": shelf["hidden"],
+                "pinned": shelf["pinned"],
             })
         except Exception:
             pass
+    books.sort(key=lambda b: (not b["pinned"], b["title"].casefold()))
     return books
+
+
+# ── Shelf: hide / pin / rename / remove a book without touching ir.json ───────
+#
+# shelf.json is disposable view state, kept out of ir.json on purpose — see
+# lib.read_shelf's docstring. Removal moves the whole book directory into
+# library/.trash/ rather than deleting it; there is no empty-trash endpoint,
+# deliberately (README "Managing the library").
+
+def _any_live_job(slug: str) -> dict | None:
+    """The queued-or-running render/ingest/pipeline job for this book, if any."""
+    with _jobs_lock:
+        for j in _render_jobs.values():
+            if j.get("book_slug") == slug and j.get("status") in ("queued", "running"):
+                return j
+    return None
+
+
+def _require_known_slug(slug: str) -> None:
+    if slug not in lib.list_book_slugs():
+        raise HTTPException(status_code=404, detail=f"No book '{slug}'")
+
+
+_SHELF_FIELDS = {"hidden", "pinned", "display_title"}
+
+
+@app.patch("/books/{book_slug}/shelf")
+def update_shelf(book_slug: str, body: dict):
+    _require_known_slug(book_slug)
+    unknown = set(body) - _SHELF_FIELDS
+    if unknown:
+        raise HTTPException(status_code=400,
+                            detail=f"Unknown shelf field(s): {', '.join(sorted(unknown))}")
+
+    patch: dict = {}
+    for field in ("hidden", "pinned"):
+        if field in body:
+            if not isinstance(body[field], bool):
+                raise HTTPException(status_code=400, detail=f"{field} must be true or false")
+            patch[field] = body[field]
+    if "display_title" in body:
+        title = body["display_title"]
+        if title is not None:
+            if not isinstance(title, str) or not title.strip() or len(title) > 200:
+                raise HTTPException(
+                    status_code=400,
+                    detail="display_title must be a non-empty string of 200 characters or "
+                           "fewer, or null")
+            title = title.strip()
+        patch["display_title"] = title
+
+    shelf = lib.read_shelf(book_slug)
+    shelf.update(patch)
+    lib.write_shelf(book_slug, shelf)
+    _journal(book_slug, "shelf", patch)
+    return shelf
+
+
+@app.delete("/books/{book_slug}")
+def remove_book(book_slug: str):
+    _require_known_slug(book_slug)
+    live = _any_live_job(book_slug)
+    if live is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"'{book_slug}' has a {live.get('kind', 'job')} running right now — "
+                   f"wait for it to finish, then remove the book.")
+
+    lib.TRASH_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    dest_name = f"{book_slug}__{stamp}"
+    shutil.move(str(lib.book_dir(book_slug)), str(lib.TRASH_DIR / dest_name))
+    return {"trashed": dest_name}
 
 
 # ── POST /books/upload → inspect; POST /books/ingest → do it (E2.1) ──────────

@@ -62,6 +62,46 @@
     .book-btn:hover { background: #1e1e1e; color: #fff; }
     .book-btn.active { border-left-color: #7c6dfa; color: #fff; background: #1c1c2e; }
     .book-btn small { display: block; color: #555; font-size: .75rem; margin-top: 2px; }
+    .book-row { position: relative; display: flex; align-items: stretch; }
+    .book-row .book-btn { flex: 1; min-width: 0; }
+    .book-title { word-break: break-word; }
+    .book-pin { color: #e0b25c; margin-right: 3px; }
+    .book-badge {
+      display: inline-block; font-size: .6rem; letter-spacing: .06em; text-transform: uppercase;
+      color: #888; border: 1px solid #333; border-radius: 3px; padding: 0 4px; margin-left: 6px;
+    }
+    .book-menuwrap { position: relative; flex-shrink: 0; display: flex; align-items: center; padding-right: 8px; }
+    .book-menu-btn {
+      background: none; border: 1px solid transparent; color: #666; border-radius: 6px;
+      cursor: pointer; font-size: .82rem; padding: 3px 7px;
+    }
+    .book-menu-btn:hover { color: #eee; border-color: #444; background: #1c1c1c; }
+    .book-pop {
+      position: absolute; right: 6px; top: calc(100% - 4px); z-index: 20; min-width: 150px;
+      background: #1b1b1b; border: 1px solid #333; border-radius: 8px; padding: 4px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.6);
+    }
+    .book-pop button {
+      display: block; width: 100%; text-align: left; background: none; border: none;
+      color: #bbb; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-size: .76rem;
+    }
+    .book-pop button:hover { background: #262626; color: #fff; }
+    .book-toolbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 10px 14px 2px; font-size: .68rem; color: #666;
+    }
+    .book-toolbar .lib-chip {
+      background: none; border: 1px solid #2a2a2a; color: #777; padding: 2px 9px;
+      border-radius: 11px; cursor: pointer; font-size: .68rem; white-space: nowrap;
+    }
+    .book-toolbar .lib-chip:hover { color: #ddd; border-color: #555; }
+    .book-toolbar .lib-chip.on { color: #c9c1ff; border-color: #4a3f8a; background: #1e1c33; }
+    .book-rename-row { padding: 6px 14px; }
+    .book-rename-row input {
+      width: 100%; background: #111; border: 1px solid #2a2a2a; color: #ddd;
+      padding: 6px 9px; border-radius: 6px; font-size: .8rem;
+    }
+    .book-rename-row input:focus { outline: none; border-color: #7c6dfa; }
 
     /* ── Main ── */
     main {
@@ -1330,6 +1370,21 @@ html[data-theme="onair"] {
 [data-theme="onair"] .book-btn:hover { background: var(--oa-raised); color: var(--oa-cream); }
 [data-theme="onair"] .book-btn.active { border-left-color: var(--oa-gold); color: var(--oa-cream); background: var(--oa-gold-bg); }
 [data-theme="onair"] .book-btn small { color: var(--oa-dim); font-family: var(--oa-mono); font-size: .68rem; }
+[data-theme="onair"] .book-pin { color: var(--oa-gold); }
+[data-theme="onair"] .book-badge { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); border-radius: 2px; }
+[data-theme="onair"] .book-menu-btn { color: var(--oa-mut); }
+[data-theme="onair"] .book-menu-btn:hover { color: var(--oa-cream); border-color: var(--oa-mut); background: var(--oa-raised); }
+[data-theme="onair"] .book-pop { background: var(--oa-raised); border-color: var(--oa-line2); border-radius: 4px; }
+[data-theme="onair"] .book-pop button { color: var(--oa-cream2); font-family: var(--oa-mono); }
+[data-theme="onair"] .book-pop button:hover { background: var(--oa-panel); color: var(--oa-cream); }
+[data-theme="onair"] .book-toolbar { color: var(--oa-dim); font-family: var(--oa-mono); }
+[data-theme="onair"] .book-toolbar .lib-chip { border-color: var(--oa-line2); color: var(--oa-mut); font-family: var(--oa-mono); border-radius: 2px; }
+[data-theme="onair"] .book-toolbar .lib-chip:hover { color: var(--oa-cream2); border-color: var(--oa-mut); }
+[data-theme="onair"] .book-toolbar .lib-chip.on { color: var(--oa-gold); border-color: var(--oa-gold); background: var(--oa-gold-bg); }
+[data-theme="onair"] .book-rename-row input {
+  background: var(--oa-panel); border-color: var(--oa-line2); color: var(--oa-cream2); font-family: var(--oa-mono);
+}
+[data-theme="onair"] .book-rename-row input:focus { border-color: var(--oa-gold); color: var(--oa-cream); }
 [data-theme="onair"] #add-book-btn { border-color: var(--oa-line2); color: var(--oa-mut); }
 [data-theme="onair"] #add-book-btn:hover { border-color: var(--oa-gold-dim); color: var(--oa-gold); background: var(--oa-gold-bg); }
 [data-theme="onair"] #add-book-btn .spinner { border-color: var(--oa-line2); border-top-color: var(--oa-gold); }
@@ -1783,6 +1838,11 @@ html[data-theme="onair"] {
 </header>
 
 <aside>
+  <div class="book-toolbar">
+    <span id="book-count"></span>
+    <button class="lib-chip" id="book-show-hidden" data-on="0" onclick="toggleShowHiddenBooks()"
+            title="Hidden books are kept out of the sidebar (and out of frame when recording), but never deleted">show hidden</button>
+  </div>
   <div id="book-list">
     <p style="padding:16px;color:#444;font-size:.8rem;">Loading books…</p>
   </div>
@@ -2153,6 +2213,7 @@ const state = {
   colorIdx: 0,
   activeBlock: null,   // timeline entry currently playing
   bookCharacters: [],  // character list for the loaded book
+  showHidden: false,   // sidebar "show hidden" toggle — UI-only, not persisted
 };
 
 const COLORS = ['spk-0','spk-1','spk-2','spk-3','spk-4'];
@@ -2222,10 +2283,9 @@ async function recheckEngine() {
 async function init() {
   loadEngineStatus();
   loadSetupChip();
-  const books = await fetchJSON('/books');
-  state.books = books;
-  renderBookList(books);
-  if (books.length === 1) loadBook(books[0].slug);
+  const books = await refreshBooks();
+  const visible = books.filter(b => !b.hidden);
+  if (visible.length === 1) loadBook(visible[0].slug);
 }
 
 async function fetchJSON(url, opts) {
@@ -2234,18 +2294,262 @@ async function fetchJSON(url, opts) {
   return r.json();
 }
 
+// Like fetchJSON, but surfaces the server's own sentence (HTTPException's
+// `detail`) instead of a bare status code — the shelf/remove endpoints spend
+// real words on their errors ("a render is running"), not codes.
+async function fetchDetailJSON(url, opts) {
+  const r = await fetch(url, opts);
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err.detail || `HTTP ${r.status}`);
+  }
+  return r.json();
+}
+
 // ── Sidebar ────────────────────────────────────────────────────────────────
+// GET /books?include_hidden=true always — the "show hidden" chip is a client-
+// side filter over one fetch, not a round trip per toggle, and the count line
+// (mirroring the Voices view's, E7) can then tell the whole truth even while
+// hidden rows are out of view.
+async function refreshBooks() {
+  const books = await fetchJSON('/books?include_hidden=true');
+  state.books = books;
+  renderBookList(books);
+  return books;
+}
+
 function renderBookList(books) {
-  if (!books.length) {
-    bookList.innerHTML = '<p style="padding:16px;color:#444;font-size:.8rem;">No processed books found in output/.</p>';
+  const hiddenCount = books.filter(b => b.hidden).length;
+  const countEl = document.getElementById('book-count');
+  if (countEl) {
+    const bits = [`${books.length} book${books.length === 1 ? '' : 's'}`];
+    if (hiddenCount) bits.push(`${hiddenCount} hidden`);
+    countEl.textContent = bits.join(' · ');
+  }
+  const toggle = document.getElementById('book-show-hidden');
+  if (toggle) toggle.classList.toggle('on', state.showHidden);
+
+  const shown = state.showHidden ? books : books.filter(b => !b.hidden);
+
+  bookList.innerHTML = '';
+  if (!shown.length) {
+    const p = document.createElement('p');
+    p.style.cssText = 'padding:16px;color:#444;font-size:.8rem;';
+    p.textContent = books.length
+      ? `Nothing to show — ${hiddenCount} hidden book${hiddenCount === 1 ? ' is' : 's are'} out of view. Try “show hidden”.`
+      : 'No processed books found in output/.';
+    bookList.appendChild(p);
     return;
   }
-  bookList.innerHTML = books.map(b => `
-    <button class="book-btn" onclick="loadBook('${b.slug}')" data-slug="${b.slug}">
-      ${b.title}
-      <small>${b.chapters} chapters</small>
-    </button>
-  `).join('');
+
+  for (const b of shown) {
+    const row = document.createElement('div');
+    row.className = 'book-row';
+    row.dataset.slug = b.slug;
+
+    const btn = document.createElement('button');
+    btn.className = 'book-btn' + (b.slug === state.currentBook ? ' active' : '');
+    btn.dataset.slug = b.slug;
+    btn.addEventListener('click', () => loadBook(b.slug));
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'book-title';
+    if (b.pinned) {
+      const pin = document.createElement('span');
+      pin.className = 'book-pin';
+      pin.textContent = '📌';
+      titleSpan.appendChild(pin);
+    }
+    titleSpan.appendChild(document.createTextNode(b.title));
+    if (b.hidden) {
+      const badge = document.createElement('span');
+      badge.className = 'book-badge';
+      badge.textContent = 'hidden';
+      titleSpan.appendChild(badge);
+    }
+    btn.appendChild(titleSpan);
+
+    const small = document.createElement('small');
+    small.textContent = `${b.chapters} chapter${b.chapters === 1 ? '' : 's'}`;
+    btn.appendChild(small);
+    row.appendChild(btn);
+    row.appendChild(bookMenuHTML(b));
+    bookList.appendChild(row);
+  }
+}
+
+// ── The ⋯ menu: hide/unhide, rename, remove ─────────────────────────────────
+// Built with createElement + textContent throughout — a title carrying a `'`
+// or `<` (a display_title makes this trivially reachable, where an ir.json
+// book_title mostly wasn't) must never be interpolated into HTML or an inline
+// handler. See tests/ui/check_library_menu.py.
+
+function bookMenuHTML(b) {
+  const wrap = document.createElement('div');
+  wrap.className = 'book-menuwrap';
+
+  const menuBtn = document.createElement('button');
+  menuBtn.className = 'book-menu-btn';
+  menuBtn.title = 'More';
+  menuBtn.textContent = '⋯';
+  menuBtn.addEventListener('click', (e) => { e.stopPropagation(); toggleBookMenu(b.slug); });
+  wrap.appendChild(menuBtn);
+
+  const pop = document.createElement('div');
+  pop.className = 'book-pop vv-hidden';
+  pop.id = `book-pop-${cssEscape(b.slug)}`;
+
+  const hideBtn = document.createElement('button');
+  hideBtn.textContent = b.hidden ? 'Unhide' : 'Hide';
+  hideBtn.addEventListener('click', (e) => { e.stopPropagation(); bookSetHidden(b.slug, !b.hidden); });
+  pop.appendChild(hideBtn);
+
+  const pinBtn = document.createElement('button');
+  pinBtn.textContent = b.pinned ? 'Unpin' : 'Pin to top';
+  pinBtn.addEventListener('click', (e) => { e.stopPropagation(); bookSetPinned(b.slug, !b.pinned); });
+  pop.appendChild(pinBtn);
+
+  const renameBtn = document.createElement('button');
+  renameBtn.textContent = 'Rename…';
+  renameBtn.addEventListener('click', (e) => { e.stopPropagation(); bookRenameStart(b.slug); });
+  pop.appendChild(renameBtn);
+
+  const removeBtn = document.createElement('button');
+  removeBtn.textContent = 'Remove…';
+  removeBtn.addEventListener('click', (e) => { e.stopPropagation(); bookRemoveStart(b.slug, b.title); });
+  pop.appendChild(removeBtn);
+
+  wrap.appendChild(pop);
+  return wrap;
+}
+
+function cssEscape(s) {
+  return String(s).replace(/[^a-zA-Z0-9_-]/g, c => '_' + c.charCodeAt(0).toString(16));
+}
+
+function closeAllBookMenus() {
+  document.querySelectorAll('.book-pop').forEach(p => p.classList.add('vv-hidden'));
+}
+
+function toggleBookMenu(slug) {
+  const pop = document.getElementById(`book-pop-${cssEscape(slug)}`);
+  if (!pop) return;
+  const wasOpen = !pop.classList.contains('vv-hidden');
+  closeAllBookMenus();
+  if (!wasOpen) pop.classList.remove('vv-hidden');
+}
+
+document.addEventListener('click', closeAllBookMenus);
+
+function toggleShowHiddenBooks() {
+  state.showHidden = !state.showHidden;
+  renderBookList(state.books);
+}
+
+async function bookSetHidden(slug, hidden) {
+  closeAllBookMenus();
+  try {
+    await fetchDetailJSON(`/books/${encodeURIComponent(slug)}/shelf`, {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({hidden}),
+    });
+    await refreshBooks();
+  } catch (e) {
+    showUploadNote(`Could not ${hidden ? 'hide' : 'unhide'} that book — ${e.message}`);
+  }
+}
+
+async function bookSetPinned(slug, pinned) {
+  closeAllBookMenus();
+  try {
+    await fetchDetailJSON(`/books/${encodeURIComponent(slug)}/shelf`, {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pinned}),
+    });
+    await refreshBooks();
+  } catch (e) {
+    showUploadNote(`Could not pin that book — ${e.message}`);
+  }
+}
+
+// Rename: an inline field in the row itself, in the house style — never
+// window.prompt (Rename… in the E11 brief).
+function bookRenameStart(slug) {
+  closeAllBookMenus();
+  const row = bookList.querySelector(`.book-row[data-slug="${CSS.escape(slug)}"]`);
+  if (!row) return;
+  const book = state.books.find(b => b.slug === slug);
+  const existing = row.parentElement.querySelector('.book-rename-row');
+  if (existing) existing.remove();
+
+  const wrap = document.createElement('div');
+  wrap.className = 'book-rename-row';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.maxLength = 200;
+  input.placeholder = 'Book title (blank clears the override)';
+  input.value = book ? book.title : '';
+  wrap.appendChild(input);
+  row.after(wrap);
+  input.focus();
+  input.select();
+
+  // Removing `wrap` fires a synchronous blur on `input` while still inside
+  // the DOM's own removeChild call — the blur listener below would call
+  // save() again mid-removal and the browser throws "node is no longer a
+  // child of this node". `done` makes every path (Enter, Escape, blur)
+  // one-shot instead of relying on isConnected, which isn't false yet when
+  // that reentrant blur fires.
+  let done = false;
+  const save = () => {
+    if (done) return;
+    done = true;
+    bookRenameSave(slug, input.value, wrap);
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') save();
+    else if (e.key === 'Escape') { done = true; wrap.remove(); }
+  });
+  input.addEventListener('blur', save);
+}
+
+async function bookRenameSave(slug, value, wrap) {
+  wrap.remove();
+  const trimmed = value.trim();
+  try {
+    await fetchDetailJSON(`/books/${encodeURIComponent(slug)}/shelf`, {
+      method: 'PATCH', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({display_title: trimmed || null}),
+    });
+    await refreshBooks();
+  } catch (e) {
+    showUploadNote(`Could not rename that book — ${e.message}`);
+  }
+}
+
+// Remove: one honest confirmation, no typed title — it moves to
+// library/.trash/ and Tyler can `mv` it back, so it does not need the
+// ceremony a truly irreversible delete would.
+function bookRemoveStart(slug, title) {
+  closeAllBookMenus();
+  const ok = confirm(
+    `Remove “${title}” from the library?\n\n` +
+    `This moves it to library/.trash/ — it is not deleted, and can be ` +
+    `restored with one \`mv\` from a terminal.`);
+  if (ok) bookRemoveConfirm(slug);
+}
+
+async function bookRemoveConfirm(slug) {
+  try {
+    await fetchDetailJSON(`/books/${encodeURIComponent(slug)}`, {method: 'DELETE'});
+    if (state.currentBook === slug) {
+      state.currentBook = null;
+      mainEl.innerHTML = '<p class="idle-msg">Pick a book from the sidebar.</p>';
+    }
+    await refreshBooks();
+  } catch (e) {
+    showUploadNote(`Could not remove that book — ${e.message}`);
+  }
 }
 
 // ── Book / chapter list ────────────────────────────────────────────────────
@@ -3473,9 +3777,7 @@ async function hearTheSample(say, remember, beforePlay) {
   await pollRenderStatus(started.job_id, j => say(frRenderLine(j)));
 
   say('almost there…');
-  const books = await fetchJSON('/books');
-  state.books = books;
-  renderBookList(books);
+  await refreshBooks();
   await loadBook(sample.slug);
   if (beforePlay) beforePlay();
   playChapter(sample.slug, 0);
@@ -5201,9 +5503,7 @@ async function ingestConfirm() {
 
     ingestWiz.running = false;
     document.getElementById('ingest-modal-overlay').classList.add('hidden');
-    const books = await fetchJSON('/books');
-    state.books = books;
-    renderBookList(books);
+    await refreshBooks();
     showUploadNote(`Added “${started.title}” — read as ${MODE_LABEL[started.mode] || started.mode}.`);
     await loadBook(started.slug);
   } catch (e) {

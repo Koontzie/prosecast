@@ -177,6 +177,20 @@ def main() -> None:
     started["job_id"] = "FIXTURE"
     write("sample_book.json", started, "POST /books/sample (first call)")
 
+    # ── E11: the shelf chapter — GET /books with hidden/pinned/display_title ──
+    # One book pinned and renamed (title carries a quote and an angle bracket
+    # on purpose — tests/ui/check_library_menu.py proves the row survives
+    # that without a hand-written mock being kinder than the real endpoint),
+    # one hidden. Restored to plain state afterward so later fixtures below
+    # (cast_candidates) see the sample book undecorated.
+    client.patch(f"/books/{slug}/shelf",
+                 json={"pinned": True, "display_title": "Carl's <Rulebook>"})
+    client.patch(f"/books/{started['slug']}/shelf", json={"hidden": True})
+    write("books_library.json", client.get("/books?include_hidden=true").json(),
+          "GET /books?include_hidden=true (one pinned+renamed, one hidden)")
+    client.patch(f"/books/{slug}/shelf", json={"pinned": False, "display_title": None})
+    client.patch(f"/books/{started['slug']}/shelf", json={"hidden": False})
+
     # The shape that decides whether the casting modal opens over a book, in
     # the state the Windows machine was actually in on 2026-09-06: the sample
     # book exists (SETUP.sh's `main.py --sample --tts stub` made it from a

@@ -362,6 +362,32 @@ disposable. Back up the rest; `scripts/backup_library.sh` is one way.
 
 ---
 
+## 🗄️ Managing the library
+
+Every book row has a `⋯` menu:
+
+- **Hide** — a view filter, nothing more. A hidden book stays exactly where
+  it is on disk; it's just out of the sidebar (and out of frame if you're
+  recording). Toggle **show hidden** to see it again, or to unhide it.
+- **Rename…** — an inline override for the sidebar title. It never touches
+  the book's own `book_title` in `ir.json`; clear the field to go back to it.
+- **Remove…** — moves the whole book directory to `library/.trash/`. Nothing
+  is deleted, and it refuses (409) while a render, ingest or AI pass is live
+  on that book. There's no empty-trash button on purpose — trashed books just
+  sit there until you deal with them yourself. To bring one back:
+
+  ```bash
+  mv "library/.trash/<slug>__<timestamp>" "library/<slug>"
+  ```
+
+  and to actually delete one for good, once you're sure:
+
+  ```bash
+  rm -rf "library/.trash/<slug>__<timestamp>"
+  ```
+
+---
+
 ## ✨ ElevenLabs (optional)
 
 The local tier is the product, not a trial: a whole book can be narrated on

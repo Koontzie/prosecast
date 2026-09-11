@@ -1,0 +1,18 @@
+[
+  {
+    "slug": "study",
+    "title": "Carl's <Rulebook>",
+    "chapters": 1,
+    "unresolved": 1,
+    "hidden": false,
+    "pinned": true
+  },
+  {
+    "slug": "sample_book",
+    "title": "Sample Book",
+    "chapters": 2,
+    "unresolved": 9,
+    "hidden": true,
+    "pinned": false
+  }
+]
