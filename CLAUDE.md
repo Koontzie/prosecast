@@ -18,7 +18,7 @@ The rest of this file is the standing technical reference (architecture,
 attribution layers, tag schema, engine notes). It is accurate for what it
 covers but does not track session state — HANDOFF and STATUS do.
 
-## Three working rules (each learned the expensive way — see HANDOFF)
+## Four working rules (each learned the expensive way — see HANDOFF)
 
 1. **Commit to the Mac as you go.** Work that exists only in a cloud container
    is not work; a whole feature was lost that way on 2026-09-04.
@@ -27,6 +27,25 @@ covers but does not track session state — HANDOFF and STATUS do.
    they drift.
 3. **After touching `static/index.html`, run all four checks in `tests/ui/`.**
    They need Playwright — installed in the Mac venv now, not in the device VM.
+4. **Never touch the GPU without the lease.** Goldeye has ONE 3090 Ti and
+   several sessions want it. Before anything that loads, unloads, or restarts a
+   GPU-resident service — `ollama run/stop/pull`, restarting `chatterbox-tts` /
+   `faster-whisper` / `comfyui`, or starting a long render — wrap it:
+
+   ```
+   ssh "$GOLDEYE_HOST" '/mnt/bolt/ai/scripts/gpu-lease.sh \
+     guard prosecast "<what you are doing>" -- <command>'
+   ```
+
+
+   `$GOLDEYE_HOST` is the server's SSH target, exported from your shell profile —
+   never hardcode it here; this repo's history was scrubbed of it once already.
+
+   Check first with `... gpu-lease.sh status`. **If it says HELD, another
+   project is mid-work — stop.** Do not run the command anyway, and never
+   `steal` without asking Tyler first. A crashed session's lease clears itself
+   after 15 minutes with no heartbeat. `guard` releases on any exit, including
+   failure and Ctrl-C, so use it rather than bare `acquire`/`release`.
 
 Also: every `ir.json` write goes through `lib.write_json_atomic()`; all book
 paths go through `prosecast/library.py`; `corrections.jsonl` is append-only;
