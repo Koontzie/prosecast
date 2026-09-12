@@ -174,7 +174,8 @@ def main() -> int:
             # On Air is the default and the choice is read from localStorage by an
             # inline script at parse time, so it must be set before navigation.
             page.add_init_script(
-                f"try {{ localStorage.setItem('prosecast-theme', '{skin}'); }} catch (e) {{}}")
+                f"try {{ localStorage.setItem('prosecast-theme', '{skin}'); "
+                "localStorage.setItem('prosecast-sidebar-open', '1'); } catch (e) {}")
             errs: list[str] = []
             page.on("pageerror", lambda e: errs.append(str(e)))
             page.on("console",

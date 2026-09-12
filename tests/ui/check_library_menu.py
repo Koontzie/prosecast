@@ -167,7 +167,8 @@ def main() -> int:
             print(f"\n=== {skin} skin ===")
             page = browser.new_page(viewport={"width": 1280, "height": 940})
             page.add_init_script(
-                f"try {{ localStorage.setItem('prosecast-theme', '{skin}'); }} catch (e) {{}}")
+                f"try {{ localStorage.setItem('prosecast-theme', '{skin}'); "
+                "localStorage.setItem('prosecast-sidebar-open', '1'); } catch (e) {}")
             errs: list[str] = []
             page.on("pageerror", lambda e: errs.append(str(e)))
             page.on("console",

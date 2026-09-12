@@ -5,7 +5,9 @@
     "chapters": 1,
     "unresolved": 1,
     "hidden": false,
-    "pinned": true
+    "pinned": true,
+    "rendered": 0,
+    "cast": false
   },
   {
     "slug": "sample_book",
@@ -13,6 +15,8 @@
     "chapters": 2,
     "unresolved": 9,
     "hidden": true,
-    "pinned": false
+    "pinned": false,
+    "rendered": 0,
+    "cast": true
   }
 ]

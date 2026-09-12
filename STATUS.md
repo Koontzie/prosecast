@@ -20,7 +20,142 @@ findings. Rulebook render + C4 still open.
 What is LOCAL now is `origin/main..HEAD`: the three E11 commits plus two
 GPU-lease commits from a concurrent session, interleaved — pushing E11 pushes
 those too** — Tyler reviews and pushes.
-**Updated:** 2026-09-11
+**Updated:** 2026-09-12
+
+## Session 2026-09-12 (Claude Code, Mac) — the library board
+
+`<main>`'s idle state — `Select a book to begin.` — is now a triage board:
+one tile per book, three things on it (title, one state phrase, one hairline
+progress bar) and nothing else, from a design handoff (`Library Board.dc.html`
++ `IMPLEMENT_library_board.md`, artboard 1A approved, 1B/1C rejected). The
+whole feature is one derived function, `bookState()` (`index.html`, next to
+`renderBookList`): `needs-casting` (no voice map, **or** any unresolved line
+even with one — that clause is what makes Frankenstein's 137 unresolved lines
+read "Needs casting" despite having a `voice_map.json`) → `cast` → `rendering`
+(`N of M rendered`) → `ready`. The first three render large and raised
+(actionable); `ready` renders small and flat (settled) — finished books are
+quieted, not hidden, so a shelf of eight ready books still reads calm rather
+than empty. `boardOrder()` partitions and ranks; the board is the idle view at
+`init()`, after removing the open book, and repainted by `refreshBooks()`
+whenever it's the one showing.
+
+`/books` gained two fields for this — `rendered` (count of chapters with a
+WAV on disk) and `cast` (`voice_map.json` exists) — six lines in the same loop
+that already builds the response, no new endpoint. Click routing differs by
+state on purpose: a `needs-casting` tile opens the chapter view *and* the
+casting prompt, everything else opens the chapter view alone — sending every
+tile to the same place would throw away the triage the board just did. This
+reuses `loadBook`'s existing pre-casting modal rather than building a second
+one; its trigger condition grew the same `unresolved > 0` clause so the two
+paths (the board's derived state and the modal that opens under it) can't
+disagree.
+
+**Tests: 483 passed, 1 skipped** (unchanged — `bookState`/`boardOrder`/click
+routing are pure JS with no pytest surface). **Seven** `tests/ui/` checks now:
+`check_library_board.py` is new, driving `bookState`/`boardOrder`/
+`renderLibraryBoard`/`openBookFor` directly against synthetic books covering
+all five branches plus the real `books_library.json` fixture. `books_library`
+fixture regenerated via `scripts/refresh_ui_fixtures.py` for the two new
+`/books` fields — no other fixture drifted. Verified live against the real
+library (eight real books, dev server restarted to pick up the `/books`
+change): all eight landed in the state the design doc's table predicted
+(Sample Book read `Needs casting` here — **this was a bug, corrected below,
+not a real state**), clicking a `needs-casting` tile raised the cast modal,
+clicking a `ready` tile went straight to the chapter view, both skins
+checked, no console errors.
+
+Two things the design doc flagged as open and left that way: whether a
+skipped casting prompt should ever reappear (currently: yes, every time the
+book is opened uncast — unchanged from the existing pre-casting-modal
+behavior, not a regression from this session), and whether `Render all`
+should refuse on an uncast book (untouched — 2B's header/pipeline-strip
+rewrite wasn't in this session's order of work, only the board and the click
+routing that lands on it).
+
+Nothing committed — Tyler reviews and commits.
+
+### Same-day correction — the unresolved bug, `partial`, hidden books, and the sidebar
+
+Tyler caught a real bug in the design doc's own rule before this shipped
+further: `bookState`'s `if (!b.cast || b.unresolved > 0) key = 'needs-casting'`
+sent **Sample Book** (cast, fully rendered, ships with the app) and **A
+Parade of Horribles** (cast, 0/115 rendered) to `needs-casting` on this
+machine, because neither has spaCy to fully resolve dialogue. The clause was
+also redundant for the one case it was written to justify — Frankenstein has
+no `voice_map.json` at all, so `!b.cast` already caught it without any help
+from `unresolved`. Fixed to `if (!b.cast) key = 'needs-casting';`, full stop;
+unresolved lines are a "review the attribution" problem, not a "pick voices"
+one, and get their own surfacing later if they need it. Also renamed the
+`'rendering'` state key to `'partial'` (it collided with `isRenderLive()`'s
+unrelated meaning), and gave the board its own dedicated fetch —
+`refreshLibraryBoard()` calls plain `/books`, never the sidebar's
+`/books?include_hidden=true` — so a hidden book can never reach the board's
+data even to be filtered out client-side; `boardOrder`'s own `!b.hidden`
+filter is now documented as a belt-and-braces guard, not the mechanism.
+
+Same session, separately requested: the 280px sidebar now collapses to a
+52px rail (`#sidebar-toggle`, wraps the rest in `#sidebar-content`), **open
+by default** — persisted in `localStorage`, absent choice means expanded,
+applied via an early inline `<script>` in `<head>` (same pattern as the
+skin choice) so there's no flash of the wrong width. The board fills the
+freed width using `@container` queries on `<main>` (`container-type:
+inline-size`) rather than viewport media queries, since the sidebar
+collapsing changes the pane's width independently of the window's; tile
+`aspect-ratio` relaxed from `.68` to `.82` so the grid's two rows fit a
+typical window height at the design's revised spacing (`padding: 40px 56px
+0`, grid `margin-top: 24px`).
+
+`tests/ui/check_library_menu.py` and `check_pipeline_card.py` needed a
+`prosecast-sidebar-open` init-script addition — both drive `.book-btn` rows
+directly and broke once the sidebar could start collapsed. `docs/design/
+library_board/` (the handoff bundle, not previously committed) now carries
+this correction as a dated changelog in `IMPLEMENT_library_board.md` plus a
+new §9 for the sidebar, and `README.md`'s own copy of the buggy rule and the
+"eight real books" table are corrected to match.
+
+**Tests: still 483 passed, 1 skipped.** `check_library_board.py` rewritten
+for the `partial` rename and the corrected four-branch rule, plus a new
+assertion that `refreshLibraryBoard()`'s own fetch never carries
+`include_hidden`. All **seven** `tests/ui/` checks green. Verified live
+again: Sample Book and A Parade now read correctly; sidebar defaults open,
+collapses to the rail, board reflows; a hidden-book count on the real
+library (5 hidden by hand while working) confirmed none of them reached the
+board. Nothing committed — Tyler reviews and commits.
+
+### Second correction pass — an updated design export, and a real reflow bug it caught
+
+A second, separately-exported copy of the design bundle (same day) turned
+out to predate the correction above — it still had the `unresolved`-clause
+bug and the closed-by-default sidebar — so nothing there overrode what was
+already fixed. But it did carry one requirement neither this session nor the
+first bundle had specified: **the grid's column count must match the wider
+of the actionable/settled rows, not a fixed 4** — a 3-book library at full
+width was rendering 3 tiles in a 4-column grid, leaving a dead track on the
+right that didn't reach the header rule's edge. Confirmed live: it was a
+real bug, visible on the actual dev machine's board.
+
+Fixed with two CSS custom properties on `.lb-grid` — `--lb-cols` (content:
+the max of the two row lengths, set once per render from JS) and
+`--lb-max-cols` (width: purely `@container`-driven, unchanged) — composed as
+`repeat(min(var(--lb-cols), var(--lb-max-cols)), minmax(0,1fr))`. `min()` as
+a `repeat()` track count is a CSS Values Level 4 feature; confirmed it
+resolves correctly in Chrome via `getComputedStyle`. A `.lb-row-break`
+(`grid-column: 1/-1; height:0`) spacer, emitted only when both groups are
+non-empty, forces settled tiles onto their own row regardless of whether the
+actionable count divides evenly into the column count — otherwise a settled
+tile could drift onto the tail of the actionable row.
+
+**Tests: still 483 passed, 1 skipped**, all seven `tests/ui/` checks green.
+`check_library_board.py` gained three checks: the column count follows
+content on the existing 3-actionable/2-settled fixture, the row-break sits
+between the two groups, and no spacer is emitted when one group is empty.
+Verified live in Chrome against both the real 3-book board and a synthetic
+3-actionable/2-settled case — confirmed via `getComputedStyle` that the
+resolved `grid-template-columns` is exactly 3 tracks, not 4, and that
+settled tiles land on a fresh row. `docs/design/library_board/Library
+Board.dc.html` refreshed from the new export (`support.js` unchanged);
+`README.md`/`IMPLEMENT_library_board.md` gained a documented §10 for this
+rather than losing the earlier correction's changes. Nothing committed.
 
 ## Session 2026-09-11 (Claude Code, Mac) — E11: the shelf chapter
 

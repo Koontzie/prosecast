@@ -8,6 +8,11 @@
     /* On Air theme: applied before styles to avoid flash; toggle in header */
     try { if ((localStorage.getItem('prosecast-theme') || 'onair') === 'onair')
       document.documentElement.dataset.theme = 'onair'; } catch (e) {}
+    /* Sidebar: open by default — collapsing to a 52px rail is opt-in.
+       Applied before styles to avoid a flash of the wrong width; only an
+       explicit prior "closed" collapses it. Toggle lives in the rail. */
+    try { if (localStorage.getItem('prosecast-sidebar-open') === '0')
+      document.documentElement.dataset.sidebar = 'collapsed'; } catch (e) {}
   </script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,6 +30,7 @@
         "sidebar main"
         "player player";
     }
+    html[data-sidebar="collapsed"] body { grid-template-columns: 52px 1fr; }
 
     /* ── Header ── */
     header {
@@ -37,16 +43,29 @@
       gap: 12px;
     }
     header h1 { font-size: 1.1rem; font-weight: 600; letter-spacing: .04em; color: #fff; }
+    header h1 .mic-svg { display: none; }
     header .tagline { font-size: .8rem; color: #666; }
 
     /* ── Sidebar ── */
+    /* Open is the default — no persisted choice yet means expanded.
+       html[data-sidebar="collapsed"] is the only thing that narrows it to
+       the 52px rail; see the early inline script in <head>. */
     aside {
       grid-area: sidebar;
       background: #141414;
       border-right: 1px solid #222;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
+    #sidebar-toggle {
+      flex: none; width: 100%; background: none; border: none;
+      border-bottom: 1px solid #222; color: #888; cursor: pointer;
+      padding: 14px 0; font-size: 1rem; text-align: center;
+    }
+    #sidebar-toggle:hover { color: #fff; background: #1c1c1c; }
+    #sidebar-content { display: flex; flex: 1; min-height: 0; flex-direction: column; }
+    html[data-sidebar="collapsed"] #sidebar-content { display: none; }
     #book-list {
       flex: 1;
       overflow-y: auto;
@@ -108,6 +127,7 @@
       grid-area: main;
       overflow-y: auto;
       padding: 24px;
+      container-type: inline-size;   /* the library board sizes its grid off this, not the viewport */
     }
     .book-title {
       font-size: 1.3rem; font-weight: 600; margin-bottom: 18px; color: #fff;
@@ -134,6 +154,82 @@
     }
     .unresolved-badge:hover { background: #4a2828; }
     .no-audio { font-size: .75rem; color: #3a3a3a; flex-shrink: 0; }
+
+    /* ── Library board — the idle-state triage view ── */
+    /* Cancels <main>'s own 24px padding so the board can use the pane's
+       own values (40/56/0) instead — the board fills <main>, sidebar
+       collapse is what actually frees the width for it. */
+    .lb-root { margin: -24px; padding: 40px 56px 0; }
+    .lb-header {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding-bottom: 22px; border-bottom: 1px solid #2a2a2a;
+    }
+    .lb-h { font-size: 1.5rem; font-weight: 600; color: #fff; }
+    .lb-header-right { display: flex; align-items: center; gap: 22px; }
+    .lb-count { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: #555; }
+    .lb-add {
+      font-size: .72rem; letter-spacing: .1em; text-transform: uppercase;
+      color: #cd9a43; background: none; border: 1px solid #cd9a43;
+      padding: 8px 16px; cursor: pointer; border-radius: 4px;
+    }
+    .lb-add:hover { color: #161009; background: #cd9a43; }
+    .lb-empty {
+      text-align: center; padding: 52px 0 44px; font-size: .72rem;
+      letter-spacing: .1em; text-transform: uppercase; color: #555;
+    }
+    .lb-grid {
+      /* --lb-cols (set per render, from JS) is how many books are in the
+         wider of the actionable/settled rows, capped at 4 — an unused track
+         reads as a dead strip, not as whitespace, so a 3-book library gets
+         3 columns even at full width. --lb-max-cols is the width's own cap;
+         min() lets the narrower of the two win without JS ever needing to
+         know the container's resolved width itself. */
+      --lb-cols: 4;
+      --lb-max-cols: 4;
+      display: grid; grid-template-columns: repeat(min(var(--lb-cols), var(--lb-max-cols)), minmax(0, 1fr));
+      gap: 22px; margin-top: 24px;
+    }
+    .lb-row-break { grid-column: 1 / -1; height: 0; }
+    /* Container queries, not viewport ones — the sidebar collapsing/opening
+       changes the pane's width independently of the window's. */
+    @container (max-width: 1200px) { .lb-grid { --lb-max-cols: 3; } }
+    @container (max-width: 900px)  { .lb-grid { --lb-max-cols: 2; } }
+    .lb-tile {
+      aspect-ratio: .82; display: flex; flex-direction: column; text-align: left;
+      border: 1px solid #2a2a2a; cursor: pointer; font-family: inherit; border-radius: 4px;
+    }
+    .lb-actionable {
+      background: #1c1c1c; border-top-width: 2px; padding: 26px 24px 22px;
+    }
+    .lb-settled { background: #0f0f0f; padding: 22px 20px 18px; }
+    .lb-actionable:hover, .lb-settled:hover { border-color: #444; }
+    .lb-title {
+      color: #fff; font-weight: 500; overflow-wrap: break-word;
+    }
+    .lb-actionable .lb-title { font-size: 1.5rem; line-height: 1.06; letter-spacing: -.015em; }
+    .lb-settled .lb-title { font-size: .95rem; font-weight: 400; line-height: 1.25; }
+    .lb-state {
+      margin-top: auto; padding-top: 20px; display: flex; align-items: center; gap: 9px;
+      font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: #999;
+    }
+    .lb-dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: #666; }
+    .lb-bar { margin-top: 16px; height: 2px; background: #2a2a2a; }
+    .lb-bar i { display: block; height: 2px; background: transparent; }
+
+    .lb-tile[data-state="needs-casting"] { border-top-color: #d8503a; }
+    .lb-tile[data-state="needs-casting"] .lb-dot { background: #d8503a; }
+    .lb-tile[data-state="needs-casting"] .lb-state { color: #d8503a; }
+    .lb-tile[data-state="cast"] { border-top-color: #cd9a43; }
+    .lb-tile[data-state="cast"] .lb-dot { background: #cd9a43; }
+    .lb-tile[data-state="partial"] { border-top-color: #e0b25c; }
+    .lb-tile[data-state="partial"] .lb-dot { background: #e0b25c; }
+    .lb-tile[data-state="partial"] .lb-state { color: #e0b25c; }
+    .lb-tile[data-state="partial"] .lb-bar i { background: #e0b25c; }
+    .lb-tile[data-state="ready"] .lb-dot { background: #63b3a0; }
+    .lb-tile[data-state="ready"] .lb-bar i { background: #63b3a0; }
+
+    @keyframes lb-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .28; } }
+    .lb-live { animation: lb-pulse 1.9s ease-in-out infinite; }
 
     /* ── Correction panel ── */
     #correction-panel {
@@ -1336,11 +1432,8 @@ html[data-theme="onair"] {
 /* ── header ── */
 [data-theme="onair"] header { background: linear-gradient(#1e1710, #181109); border-bottom-color: var(--oa-line); }
 [data-theme="onair"] header h1 { font-family: var(--oa-display); font-weight: 400; font-size: 1.15rem; letter-spacing: .02em; color: var(--oa-cream); }
-[data-theme="onair"] header h1 .mic { display: none; }
-[data-theme="onair"] header h1::before {
-  content: ""; display: inline-block; width: 9px; height: 9px; border-radius: 50%;
-  background: var(--oa-gold); box-shadow: 0 0 8px #cd9a4388; margin-right: 10px; vertical-align: 2px;
-}
+[data-theme="onair"] header h1 .mic-emoji { display: none; }
+[data-theme="onair"] header h1 .mic-svg { display: inline-block; margin-right: 10px; vertical-align: -3px; }
 [data-theme="onair"] header h1 .wm-accent { color: var(--oa-gold); }
 [data-theme="onair"] header .tagline { font-family: var(--oa-mono); font-size: .72rem; color: var(--oa-mut); }
 [data-theme="onair"] #theme-toggle { border-color: var(--oa-line2) !important; color: var(--oa-mut) !important; font-family: var(--oa-mono); }
@@ -1366,6 +1459,8 @@ html[data-theme="onair"] {
 
 /* ── sidebar ── */
 [data-theme="onair"] aside { background: var(--oa-panel); border-right-color: var(--oa-line); }
+[data-theme="onair"] #sidebar-toggle { border-color: var(--oa-line); color: var(--oa-mut); font-family: var(--oa-mono); }
+[data-theme="onair"] #sidebar-toggle:hover { color: var(--oa-cream); background: var(--oa-raised); }
 [data-theme="onair"] .book-btn { color: var(--oa-cream2); }
 [data-theme="onair"] .book-btn:hover { background: var(--oa-raised); color: var(--oa-cream); }
 [data-theme="onair"] .book-btn.active { border-left-color: var(--oa-gold); color: var(--oa-cream); background: var(--oa-gold-bg); }
@@ -1403,6 +1498,33 @@ html[data-theme="onair"] {
 [data-theme="onair"] .no-audio { color: var(--oa-dim); }
 [data-theme="onair"] .unresolved-badge { background: var(--oa-red-bg); color: var(--oa-red); font-family: var(--oa-mono); }
 [data-theme="onair"] .unresolved-badge:hover { background: #3a1c14; }
+
+/* ── Library board, on-air skin ── */
+[data-theme="onair"] .lb-header { border-bottom-color: var(--oa-line); }
+[data-theme="onair"] .lb-h { font-family: var(--oa-display); font-weight: 400; color: var(--oa-cream); }
+[data-theme="onair"] .lb-count { font-family: var(--oa-mono); color: var(--oa-dim); }
+[data-theme="onair"] .lb-add { font-family: var(--oa-mono); color: var(--oa-gold); border-color: var(--oa-gold); }
+[data-theme="onair"] .lb-add:hover { color: var(--oa-bg); background: var(--oa-gold); }
+[data-theme="onair"] .lb-empty { font-family: var(--oa-mono); color: var(--oa-dim); }
+[data-theme="onair"] .lb-tile { border-color: var(--oa-line); border-radius: 0; }
+[data-theme="onair"] .lb-actionable { background: var(--oa-raised); border-color: var(--oa-line2); }
+[data-theme="onair"] .lb-settled { background: var(--oa-bg); }
+[data-theme="onair"] .lb-actionable:hover { border-color: var(--oa-line2); }
+[data-theme="onair"] .lb-settled:hover { border-color: var(--oa-line2); }
+[data-theme="onair"] .lb-title { font-family: var(--oa-sans); color: var(--oa-cream); }
+[data-theme="onair"] .lb-state { font-family: var(--oa-mono); color: var(--oa-mut); }
+[data-theme="onair"] .lb-bar { background: var(--oa-line); }
+[data-theme="onair"] .lb-tile[data-state="needs-casting"] { border-top-color: var(--oa-red); }
+[data-theme="onair"] .lb-tile[data-state="needs-casting"] .lb-dot { background: var(--oa-red); }
+[data-theme="onair"] .lb-tile[data-state="needs-casting"] .lb-state { color: var(--oa-red); }
+[data-theme="onair"] .lb-tile[data-state="cast"] { border-top-color: var(--oa-gold-hi); }
+[data-theme="onair"] .lb-tile[data-state="cast"] .lb-dot { background: var(--oa-gold); }
+[data-theme="onair"] .lb-tile[data-state="partial"] { border-top-color: var(--oa-amber); }
+[data-theme="onair"] .lb-tile[data-state="partial"] .lb-dot { background: var(--oa-amber); }
+[data-theme="onair"] .lb-tile[data-state="partial"] .lb-state { color: var(--oa-amber); }
+[data-theme="onair"] .lb-tile[data-state="partial"] .lb-bar i { background: var(--oa-amber); }
+[data-theme="onair"] .lb-tile[data-state="ready"] .lb-dot { background: var(--oa-teal); }
+[data-theme="onair"] .lb-tile[data-state="ready"] .lb-bar i { background: var(--oa-teal); }
 [data-theme="onair"] .idle-msg { color: var(--oa-dim); }
 
 /* ── round buttons: play / preview / regen ── */
@@ -1824,7 +1946,7 @@ html[data-theme="onair"] {
 <body>
 
 <header>
-  <h1><span class="mic">🎙 </span>Prose<span class="wm-accent">Cast</span></h1>
+  <h1><span class="mic"><span class="mic-emoji">🎙 </span><svg class="mic-svg" viewBox="134 60 244 392" width="14" height="22" aria-hidden="true" focusable="false"><rect x="189" y="60" width="134" height="228" rx="67" fill="#e2b463"/><path d="M 134 222 V 258 A 122 122 0 0 0 378 258 V 222" fill="none" stroke="#cd9a43" stroke-width="34" stroke-linecap="round"/><rect x="239" y="380" width="34" height="40" fill="#cd9a43"/><rect x="166" y="418" width="180" height="34" rx="17" fill="#cd9a43"/></svg></span>Prose<span class="wm-accent">Cast</span></h1>
   <span class="tagline">multi-voice audiobook player</span>
   <div id="engine-strip">
     <span id="engine-plaque" title="Loading engine status…"><span class="dot"></span><span id="engine-name">CHECKING…</span></span>
@@ -1838,24 +1960,27 @@ html[data-theme="onair"] {
 </header>
 
 <aside>
-  <div class="book-toolbar">
-    <span id="book-count"></span>
-    <button class="lib-chip" id="book-show-hidden" data-on="0" onclick="toggleShowHiddenBooks()"
-            title="Hidden books are kept out of the sidebar (and out of frame when recording), but never deleted">show hidden</button>
+  <button id="sidebar-toggle" onclick="toggleSidebar()" title="Hide the library sidebar">✕</button>
+  <div id="sidebar-content">
+    <div class="book-toolbar">
+      <span id="book-count"></span>
+      <button class="lib-chip" id="book-show-hidden" data-on="0" onclick="toggleShowHiddenBooks()"
+              title="Hidden books are kept out of the sidebar (and out of frame when recording), but never deleted">show hidden</button>
+    </div>
+    <div id="book-list">
+      <p style="padding:16px;color:#444;font-size:.8rem;">Loading books…</p>
+    </div>
+    <div id="upload-error"></div>
+    <div id="upload-note"></div>
+    <input id="epub-file-input" type="file" accept=".epub,.txt,.pdf" style="display:none">
+    <button id="add-book-btn" onclick="triggerBookPicker()" title="Add a book — EPUB, TXT or PDF">
+      <span id="add-book-label">+ Add Book</span>
+    </button>
   </div>
-  <div id="book-list">
-    <p style="padding:16px;color:#444;font-size:.8rem;">Loading books…</p>
-  </div>
-  <div id="upload-error"></div>
-  <div id="upload-note"></div>
-  <input id="epub-file-input" type="file" accept=".epub,.txt,.pdf" style="display:none">
-  <button id="add-book-btn" onclick="triggerBookPicker()" title="Add a book — EPUB, TXT or PDF">
-    <span id="add-book-label">+ Add Book</span>
-  </button>
 </aside>
 
 <main id="main">
-  <p class="idle-msg">Select a book to begin.</p>
+  <p class="idle-msg">Loading library…</p>
 </main>
 
 <!-- Reader view: the expanded player. Shares #main's grid cell; body.reader-open swaps them. -->
@@ -2214,6 +2339,7 @@ const state = {
   activeBlock: null,   // timeline entry currently playing
   bookCharacters: [],  // character list for the loaded book
   showHidden: false,   // sidebar "show hidden" toggle — UI-only, not persisted
+  activeJob: null,     // {book_slug, status} for a render this tab started — drives the board's live dot
 };
 
 const COLORS = ['spk-0','spk-1','spk-2','spk-3','spk-4'];
@@ -2286,6 +2412,7 @@ async function init() {
   const books = await refreshBooks();
   const visible = books.filter(b => !b.hidden);
   if (visible.length === 1) loadBook(visible[0].slug);
+  else await refreshLibraryBoard();
 }
 
 async function fetchJSON(url, opts) {
@@ -2315,6 +2442,7 @@ async function refreshBooks() {
   const books = await fetchJSON('/books?include_hidden=true');
   state.books = books;
   renderBookList(books);
+  if (isBoardShown()) await refreshLibraryBoard();
   return books;
 }
 
@@ -2376,6 +2504,179 @@ function renderBookList(books) {
     row.appendChild(bookMenuHTML(b));
     bookList.appendChild(row);
   }
+}
+
+// ── Library board ────────────────────────────────────────────────────────────
+// The <main> pane's idle state: "what is the next move on this book?" Per
+// book, exactly three things — title, one state phrase, one hairline — and
+// nothing else. Design handoff: docs/design/library_board (2026-09-12).
+
+// The board's single source of truth. Four keys, one phrase each, one
+// progress fraction. Deliberately returns nothing else — the board shows
+// title + phrase + hairline and no fourth thing, so there is no fourth
+// field to be tempted by.
+//
+// Unresolved lines are NOT part of this rule, on purpose (2026-09-12
+// correction) — unresolved means "review the attribution", not "pick
+// voices", and routing an unresolved-but-cast book to the casting modal
+// gives the wrong next move. Sample Book ships cast and fully rendered but
+// can carry unresolved lines on a machine without spaCy; it must read
+// "Ready to play", not "Needs casting". If unresolved deserves its own
+// surfacing later, it gets its own phrase and click target, not this one.
+const BOOK_STATES = {
+  'needs-casting': { phrase: 'Needs casting',          tone: 'red'   },
+  'cast':          { phrase: 'Cast, not yet rendered', tone: 'gold'  },
+  'partial':       { phrase: null,                     tone: 'amber' }, // "N of M rendered"
+  'ready':         { phrase: 'Ready to play',          tone: 'teal'  },
+};
+
+function bookState(b) {
+  const total = b.chapters || 0;
+  const done  = b.rendered || 0;
+  let key;
+  if (!b.cast)          key = 'needs-casting';
+  else if (done === 0)  key = 'cast';
+  else if (done < total) key = 'partial';
+  else                  key = 'ready';
+  return {
+    key,
+    phrase: key === 'partial' ? `${done} of ${total} rendered`
+                               : BOOK_STATES[key].phrase,
+    tone: BOOK_STATES[key].tone,
+    progress: total ? done / total : 0,
+  };
+}
+
+const LB_ACTIONABLE = ['needs-casting', 'cast', 'partial'];
+const LB_RANK = ['needs-casting', 'partial', 'cast', 'ready'];
+
+// `/books` (no include_hidden) never returns a hidden book, so this filter
+// is a belt-and-braces guard, not the enforcement mechanism — the board must
+// never even fetch hidden books, see refreshLibraryBoard(). Hidden exists so
+// a book can be kept out of frame while recording; showing it here would
+// defeat that regardless of whether it renders.
+function boardOrder(books) {
+  return books
+    .filter(b => !b.hidden)
+    .map(b => ({ book: b, st: bookState(b) }))
+    .sort((a, z) =>
+      LB_RANK.indexOf(a.st.key) - LB_RANK.indexOf(z.st.key) ||
+      a.book.title.localeCompare(z.book.title));
+}
+
+function isRenderLive(slug) {
+  return !!(state.activeJob && state.activeJob.book_slug === slug
+            && state.activeJob.status === 'running');
+}
+
+function isBoardShown() {
+  return !!mainEl.querySelector('.lb-root');
+}
+
+function bookTile({ book, st }, variant) {
+  const el = document.createElement('button');
+  el.className = 'lb-tile lb-' + variant;
+  el.dataset.state = st.key;
+  el.type = 'button';
+  el.addEventListener('click', () => openBookFor(book, st));
+
+  const t = document.createElement('div');
+  t.className = 'lb-title';
+  t.textContent = book.title;                  // display_title-safe
+
+  const line = document.createElement('div');
+  line.className = 'lb-state';
+  const dot = document.createElement('span');
+  dot.className = 'lb-dot' + (st.key === 'partial' && isRenderLive(book.slug) ? ' lb-live' : '');
+  const phrase = document.createElement('span');
+  phrase.textContent = st.phrase;
+  line.append(dot, phrase);
+
+  const bar = document.createElement('div');
+  bar.className = 'lb-bar';
+  const fill = document.createElement('i');
+  fill.style.width = (st.progress * 100) + '%';
+  bar.appendChild(fill);
+
+  el.append(t, line, bar);
+  return el;
+}
+
+// needs-casting → open the book and raise the skippable casting prompt (the
+// same modal loadBook already shows for a book with no voice map at all).
+// Everything else → the chapter view, as it already works. Sending every
+// tile to the same place would discard the triage the board just did.
+function openBookFor(book, st) {
+  loadBook(book.slug);
+}
+
+// The board's own fetch — deliberately NOT include_hidden=true. Hidden
+// books exist to stay out of frame while recording; refreshBooks()'s
+// include_hidden=true fetch is for the sidebar's "show hidden" toggle only
+// and must never feed the board, even to be filtered out client-side.
+async function refreshLibraryBoard() {
+  const books = await fetchJSON('/books');
+  renderLibraryBoard(books);
+  return books;
+}
+
+function renderLibraryBoard(books) {
+  const ordered = boardOrder(books);
+
+  const root = document.createElement('div');
+  root.className = 'lb-root';
+
+  const header = document.createElement('div');
+  header.className = 'lb-header';
+  const h = document.createElement('h2');
+  h.className = 'lb-h';
+  h.textContent = 'Library';
+  const right = document.createElement('div');
+  right.className = 'lb-header-right';
+  const count = document.createElement('span');
+  count.className = 'lb-count';
+  count.textContent = `${ordered.length} book${ordered.length === 1 ? '' : 's'}`;
+  const add = document.createElement('button');
+  add.className = 'lb-add';
+  add.type = 'button';
+  add.textContent = '+ Add book';
+  add.title = 'Add a book — EPUB, TXT or PDF';
+  add.addEventListener('click', () => triggerBookPicker());
+  right.append(count, add);
+  header.append(h, right);
+  root.appendChild(header);
+
+  if (!ordered.length) {
+    const empty = document.createElement('p');
+    empty.className = 'lb-empty';
+    empty.textContent = 'Nothing cast yet';
+    root.appendChild(empty);
+  } else {
+    const actionable = ordered.filter(e => LB_ACTIONABLE.includes(e.st.key));
+    const settled = ordered.filter(e => !LB_ACTIONABLE.includes(e.st.key));
+
+    const grid = document.createElement('div');
+    grid.className = 'lb-grid';
+    // The wider of the two rows sets the column count (capped at 4 by CSS,
+    // see --lb-max-cols) — a smaller library should never leave a dead
+    // track on the right just because 4 is the ceiling.
+    grid.style.setProperty('--lb-cols', Math.max(actionable.length, settled.length, 1));
+    for (const entry of actionable) grid.appendChild(bookTile(entry, 'actionable'));
+    // Settled books always start a fresh row, regardless of how many
+    // actionable tiles came before them — without this, a grid whose
+    // actionable count isn't a multiple of the column count lets a settled
+    // tile drift onto the end of the actionable row.
+    if (actionable.length && settled.length) {
+      const rowBreak = document.createElement('div');
+      rowBreak.className = 'lb-row-break';
+      grid.appendChild(rowBreak);
+    }
+    for (const entry of settled) grid.appendChild(bookTile(entry, 'settled'));
+    root.appendChild(grid);
+  }
+
+  mainEl.innerHTML = '';
+  mainEl.appendChild(root);
 }
 
 // ── The ⋯ menu: hide/unhide, rename, remove ─────────────────────────────────
@@ -2549,9 +2850,9 @@ async function bookRemoveConfirm(slug) {
     await fetchDetailJSON(`/books/${encodeURIComponent(slug)}`, {method: 'DELETE'});
     if (state.currentBook === slug) {
       state.currentBook = null;
-      mainEl.innerHTML = '<p class="idle-msg">Pick a book from the sidebar.</p>';
     }
     await refreshBooks();
+    if (!state.currentBook) await refreshLibraryBoard();
   } catch (e) {
     showUploadNote(`Could not remove that book — ${e.message}`);
   }
@@ -5720,13 +6021,17 @@ async function renderChapter(slug, chIdx) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const {job_id} = await r.json();
 
+    state.activeJob = {book_slug: slug, status: 'running'};
     await pollRenderStatus(job_id, s => {
       const waiting = s.status === 'queued';
       btn.title = waiting ? `Queued (position ${s.queue_position + 1})` : 'Rendering…';
       if (labeled) btn.textContent = waiting ? `⏳ Queued #${s.queue_position + 1}` : 'Rendering…';
       updateRenderProgress(s);
+      if (isBoardShown()) refreshBooks();
     });
     hideRenderProgress();
+    state.activeJob = null;
+    await refreshBooks();
 
     // Refresh chapter data to update has_audio and badges
     const chapData = await fetchJSON(`/chapters/${slug}`);
@@ -5768,6 +6073,8 @@ async function renderChapter(slug, chIdx) {
       btn.classList.remove('error');
       if (labeled) btn.textContent = '⚡ Generate';
     }, 5000);
+  } finally {
+    state.activeJob = null;
   }
 }
 
@@ -5783,11 +6090,13 @@ async function renderAll(slug) {
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const {job_id} = await r.json();
 
+    state.activeJob = {book_slug: slug, status: 'running'};
     await pollRenderStatus(job_id, s => {
       btn.textContent = s.status === 'queued'
         ? `⏳ Queued #${s.queue_position + 1}`
         : `↺ Chapter ${s.progress + 1}/${s.total}…`;
       updateRenderProgress(s);
+      if (isBoardShown()) refreshBooks();   // repaint the board's tile on the same poll
     });
     hideRenderProgress();
 
@@ -5803,6 +6112,9 @@ async function renderAll(slug) {
       btn.disabled = false;
       setTimeout(() => { btn.textContent = '↺ Render all'; }, 8000);
     }
+  } finally {
+    state.activeJob = null;
+    await refreshBooks();
   }
 }
 
@@ -6201,6 +6513,28 @@ init().catch(e => {
     try { localStorage.setItem(KEY, next); } catch (e) {}
     apply(next);
   });
+})();
+</script>
+
+<script>
+/* ── Sidebar collapse (open by default; collapsing is opt-in) ── */
+(function () {
+  const KEY = 'prosecast-sidebar-open';
+  const btn = document.getElementById('sidebar-toggle');
+  function isOpen() { return document.documentElement.dataset.sidebar !== 'collapsed'; }
+  function paint() {
+    if (!btn) return;
+    btn.textContent = isOpen() ? '✕' : '☰';
+    btn.title = isOpen() ? 'Hide the library sidebar' : 'Show the library sidebar';
+  }
+  paint();
+  window.toggleSidebar = function () {
+    const open = !isOpen();
+    if (open) delete document.documentElement.dataset.sidebar;
+    else document.documentElement.dataset.sidebar = 'collapsed';
+    try { localStorage.setItem(KEY, open ? '1' : '0'); } catch (e) {}
+    paint();
+  };
 })();
 </script>
 </body>

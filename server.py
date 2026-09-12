@@ -471,13 +471,18 @@ def list_books(include_hidden: bool = Query(default=False)):
             shelf = lib.read_shelf(slug)
             if shelf["hidden"] and not include_hidden:
                 continue
+            n_ch = len(ir.get("chapters", []))
+            rendered = sum(1 for i in range(n_ch) if lib.chapter_wav_path(slug, i).exists())
+            cast = lib.voice_map_path(slug).exists()
             books.append({
                 "slug": slug,
                 "title": shelf["display_title"] or ir.get("book_title", slug),
-                "chapters": len(ir.get("chapters", [])),
+                "chapters": n_ch,
                 "unresolved": ir.get("unresolved_count", 0),
                 "hidden": shelf["hidden"],
                 "pinned": shelf["pinned"],
+                "rendered": rendered,
+                "cast": cast,
             })
         except Exception:
             pass
