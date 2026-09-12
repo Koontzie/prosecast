@@ -9,6 +9,19 @@ brief: nothing is regenerated, nothing is deleted, every migration has a `--dry-
 output goes into `STATUS.md` before anything is applied, and the acceptance number for "how
 many blocks would re-render" is ZERO.**
 
+> **Reconciliation note (added 2026-09-12).** Two things about this brief changed after it was
+> written. (1) **E12 (`CC_BRIEF_render_honesty.md`) ships first.** It touches `renderer.py`'s
+> per-block loop and the render worker's status logic. Re-verify this brief's four findings
+> against current code before running it, and expect the line numbers in Step 0 to have moved.
+> (2) **The ZERO re-render acceptance number above conflicts with Step 4.** Adding tag params
+> and model id to the cache key cannot be truthful for audio whose original tag and model
+> settings were never recorded. Stamping a new key onto that audio would assert a provenance
+> nobody verified. Resolution: give pre-E8 audio an explicit third state — mark it
+> `provenance: "pre-e8-unverified"`, let it play, exclude it from any cache-hit or
+> key-correctness claim, and let it re-render the next time someone intentionally edits that
+> block. That keeps forced re-renders at zero without writing a false key. Do not read ZERO as
+> permission to fabricate provenance.
+
 ---
 
 ## Mission
