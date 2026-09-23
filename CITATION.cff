@@ -6,7 +6,7 @@ authors:
   - family-names: Koontz
     given-names: Tyler
 repository-code: "https://github.com/Koontzie/prosecast"
-license: GPL-3.0
+license: AGPL-3.0
 date-released: 2026-09-05
 version: 0.9.0
 keywords:

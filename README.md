@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-cd9a43?style=flat-square"></a>
+  <a href="LICENSE"><img alt="License: AGPL-3.0" src="https://img.shields.io/badge/license-AGPL--3.0-cd9a43?style=flat-square"></a>
   <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-cd9a43?style=flat-square">
   <img alt="Runs locally" src="https://img.shields.io/badge/runs-100%25%20local-63b3a0?style=flat-square">
   <img alt="EPUB · PDF · TXT" src="https://img.shields.io/badge/reads-EPUB%20%C2%B7%20PDF%20%C2%B7%20TXT-cdbb97?style=flat-square">
@@ -473,5 +473,5 @@ feature. [**☕ ko-fi.com/tylerxkoontz**](https://ko-fi.com/tylerxkoontz)
 
 Never a gate — nothing in ProseCast is paywalled, and nothing will be.
 
-**License:** [GPL-3.0](LICENSE). Use it on books you own, for yourself.
+**License:** [AGPL-3.0](LICENSE). Use it on books you own, for yourself.
 Don't distribute generated audio of works you don't hold the rights to.
