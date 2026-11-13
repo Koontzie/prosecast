@@ -101,7 +101,7 @@ def _parse_xhtml_document(raw: bytes, fallback_title: str) -> list:
         if tag in HEADING_TAGS:
             if current_lines:
                 chapters.append({
-                    "title": _chapter_title(title_parts, doc_title, current_title),
+                    "title": _chapter_title(title_parts, doc_title, current_title) if title_parts else current_title,
                     "text": '\n\n'.join(current_lines).strip(),
                 })
                 current_lines = []
@@ -117,7 +117,7 @@ def _parse_xhtml_document(raw: bytes, fallback_title: str) -> list:
 
     if current_lines:
         chapters.append({
-            "title": _chapter_title(title_parts, doc_title, current_title),
+            "title": _chapter_title(title_parts, doc_title, current_title) if title_parts else current_title,
             "text": '\n\n'.join(current_lines).strip(),
         })
 
